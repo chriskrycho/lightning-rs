@@ -1,0 +1,6 @@
+[package]
+name = "ssgrs"
+version = "0.1.0"
+authors = ["Chris Krycho <chris@chriskrycho.com>"]
+
+[dependencies]
