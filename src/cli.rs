@@ -47,10 +47,10 @@ pub enum Commands {
 
 impl fmt::Display for Commands {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    match self {
-      &Commands::Generate => write!(f, "generate"),
-      &Commands::New => write!(f, "new"),
-      &Commands::Unspecified => write!(f, "error!!!"),  // TODO: something else!
+    match *self {
+      Commands::Generate => write!(f, "generate"),
+      Commands::New => write!(f, "new"),
+      _ => write!(f, "error!!!"),  // TODO: something else!
     }
   }
 }
