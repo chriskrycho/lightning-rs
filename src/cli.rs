@@ -38,6 +38,7 @@ mod subcommands {
         .alias("server"))
   }
 
+  // TODO: different templates will take different args, right?
   pub fn new<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name("new")
       .about("Create an item from a template")
