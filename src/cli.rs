@@ -6,14 +6,28 @@ use clap::{Arg, ArgMatches, App, AppSettings};
 // TODO: figure out a way, eventually, to customize arguments based on whatever
 // external tools are supplied---without requiring a rebuild. (Compare what
 // Cargo does.)
-pub fn cli<'a, 'b>(additional_args: &[Arg<'a, 'b>]) -> ArgMatches<'a> {
+pub fn cli<'a, 'b>(
+    additional_args: &[Arg<'a, 'b>],
+    additional_subcommands: &[App<'a, 'b>])
+    -> ArgMatches<'a> {
+
+  let mut args = vec![];
+  args.extend_from_slice(additional_args);
+
+  let mut subcommands = vec![
+    commands::generate(),
+    commands::new(),
+  ];
+
+  subcommands.extend_from_slice(additional_subcommands);
+
   App::new("SSG(rs)")
     .setting(AppSettings::ArgRequiredElseHelp)
     .version("0.1.0")
     .author(crate_authors!())
     .about("Meets my peculiar needs for generating static sites... *fast*.")
-    .subcommands(vec![subcommands::generate(), subcommands::new()])
-    .args(additional_args)
+    .subcommands(subcommands)
+    .args(&args)
     .get_matches()
 }
 
@@ -23,7 +37,7 @@ pub fn cli<'a, 'b>(additional_args: &[Arg<'a, 'b>]) -> ArgMatches<'a> {
 // e.g. the user (*me*, initially!) can e.g. just specify a location for
 // new templates in the configuration file, drop a template in there, and have
 // the generator pick it up correctly as one of the options.
-mod subcommands {
+mod commands {
   use clap::{Arg, App, SubCommand};
 
   pub fn generate<'a, 'b>() -> App<'a, 'b> {
