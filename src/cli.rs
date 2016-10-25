@@ -8,10 +8,9 @@ use clap::{Arg, ArgMatches, App, AppSettings, SubCommand};
 // TODO: figure out a way, eventually, to customize arguments based on whatever
 // external tools are supplied---without requiring a rebuild. (Compare what
 // Cargo does.)
-pub fn cli<'a, 'b>(
-    additional_args: &[Arg<'a, 'b>],
-    additional_subcommands: &[App<'a, 'b>])
-    -> ArgMatches<'a> {
+pub fn cli<'a, 'b>(additional_args: &[Arg<'a, 'b>],
+                   additional_subcommands: &[App<'a, 'b>])
+                   -> ArgMatches<'a> {
 
   let mut args = vec![];
   args.extend_from_slice(additional_args);
@@ -34,11 +33,6 @@ pub fn cli<'a, 'b>(
 }
 
 
-// TODO: figure out what the best way to programmatically generate new options
-// for these based on the state of the file system where it's run is, so that
-// e.g. the user (*me*, initially!) can e.g. just specify a location for
-// new templates in the configuration file, drop a template in there, and have
-// the generator pick it up correctly as one of the options.
 pub enum Commands {
   Generate,
   New,
@@ -60,7 +54,7 @@ impl<'a> From<&'a str> for Commands {
     match s {
       "generate" => Commands::Generate,
       "new" => Commands::New,
-      _ => Commands::Unspecified
+      _ => Commands::Unspecified,
     }
   }
 }
@@ -84,7 +78,12 @@ fn generate<'a, 'b>() -> App<'a, 'b> {
 
 /// Generate a new item from a template.
 ///
-/// TODO: different templates will take different args, right?
+/// TODO: different templates will take different args---figure out what the
+/// best way to programmatically generate new options for these based on the
+/// state of the file system where it's run is, so that e.g. the user (*me*,
+/// initially!) can e.g. just specify a location for new templates in the
+/// configuration file, drop a template in there, and have the generator pick it
+/// up correctly as one of the options.
 fn new<'a, 'b>() -> App<'a, 'b> {
   SubCommand::with_name("new")
     .about("Create an item from a template")

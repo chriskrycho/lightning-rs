@@ -4,5 +4,6 @@ version = "0.1.0"
 authors = ["Chris Krycho <chris@chriskrycho.com>"]
 
 [dependencies]
-cmd-pandoc = "0.2.0"
 clap = "2.15.0"
+glob = "0.2.11"
+syntect = "1.0.1"
