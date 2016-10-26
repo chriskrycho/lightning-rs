@@ -1,2 +1,3 @@
-# yassg-btwir
-Yet Another Static Site Generator (But This One's In Rust)
+# Lightning
+
+Yet another static site generator—but this one's written in Rust.

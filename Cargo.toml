@@ -1,5 +1,5 @@
 [package]
-name = "ssgrs"
+name = "lightning"
 version = "0.1.0"
 authors = ["Chris Krycho <chris@chriskrycho.com>"]
 
