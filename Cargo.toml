@@ -7,3 +7,4 @@ authors = ["Chris Krycho <chris@chriskrycho.com>"]
 clap = "2.15.0"
 glob = "0.2.11"
 syntect = "1.0.1"
+cmd-pandoc = { git = "https://github.com/chriskrycho/cmd-pandoc.git" }

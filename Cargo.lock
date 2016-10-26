@@ -3,6 +3,7 @@ name = "ssgrs"
 version = "0.1.0"
 dependencies = [
  "clap 2.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cmd-pandoc 0.2.0 (git+https://github.com/chriskrycho/cmd-pandoc.git)",
  "glob 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "syntect 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -64,6 +65,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "gcc 0.3.38 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "cmd-pandoc"
+version = "0.2.0"
+source = "git+https://github.com/chriskrycho/cmd-pandoc.git#148d1780fbde9bd99f812526a28ac1a2ccee3f26"
 
 [[package]]
 name = "flate2"
@@ -305,6 +311,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum chrono 0.2.25 (registry+https://github.com/rust-lang/crates.io-index)" = "9213f7cd7c27e95c2b57c49f0e69b1ea65b27138da84a170133fd21b07659c00"
 "checksum clap 2.15.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c3ad95014a5d1926493801463817b2e7e3ee64e051361a560f805c5320cd17b1"
 "checksum cmake 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)" = "dfcf5bcece56ef953b8ea042509e9dcbdfe97820b7e20d86beb53df30ed94978"
+"checksum cmd-pandoc 0.2.0 (git+https://github.com/chriskrycho/cmd-pandoc.git)" = "<none>"
 "checksum flate2 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)" = "3eeb481e957304178d2e782f2da1257f1434dfecbae883bafb61ada2a9fea3bb"
 "checksum fnv 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)" = "6cc484842f1e2884faf56f529f960cc12ad8c71ce96cc7abba0a067c98fee344"
 "checksum gcc 0.3.38 (registry+https://github.com/rust-lang/crates.io-index)" = "553f11439bdefe755bf366b264820f1da70f3aaf3924e594b886beb9c831bcf5"
