@@ -13,6 +13,7 @@ use std::path::Path;
 
 use clap::{Arg, App};
 use glob::glob;
+// TODO: switch to `rust-pandoc`
 use cmd_pandoc as pandoc;
 use cmd_pandoc::{PandocOption,OutputFormat,OutputFormatExt};
 use syntect::easy::HighlightLines;
