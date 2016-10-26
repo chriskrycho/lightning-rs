@@ -1,6 +1,8 @@
 # Lightning
 
-Yet another static site generator—but this one's written in Rust.
+Yet another static site generator—but this one's written in Rust. (And therefore, not to be confused with the [*other* lightning] static site generator: that one is written in Python.)
+
+[*other* lightning]: https://github.com/borismus/lightning
 
 ## Why?
 
