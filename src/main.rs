@@ -35,18 +35,6 @@ fn main() {
     }
   }
 
-  // TODO:
-  //   0. Determine command.
-  //   1. Load config.
-  //   2. Execute command. So: make functions to dispatch for commands!
-  //       - generate:
-  //           - get list of docs in source directory (from config)
-  //           - do the below!
-  //       - new
-  //           - get list of templates in source directory (from config)
-  //           - match to template specified or default (from config)
-  //           - generate the new file
-
   // In the vein of "MVP": let's start by just loading all the files. We'll
   // extract this all into standalone functions as necessary later.
 
@@ -83,13 +71,14 @@ fn main() {
       Err(err) => panic!("Failed pandoc-ing {}:\n{:?}", first_file, err),
     };
 
+    // TODO: syntect (#1)
+
     // TODO: extract this as part of the writing it out process.
     let ff_path = Path::new(first_file);
     let dest = Path::new("/Users/chris/Desktop")
       .join(ff_path.file_name().unwrap())
       .with_extension("html");
 
-    // TODO: syntect here for code snippets in the file!
     let mut fd = match OpenOptions::new()
         .write(true)
         .create(true)
