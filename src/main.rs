@@ -7,7 +7,7 @@ extern crate syntect;
 
 mod cli;
 
-use std::fs::{File,OpenOptions};
+use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::path::Path;
 
@@ -69,8 +69,10 @@ fn main() {
     let mut pandoc = Pandoc::new();
     pandoc.set_input_format(InputFormat::Markdown);
     pandoc.set_output_format(OutputFormat::Html5);
-    pandoc.add_option(PandocOption::Smart);
-    pandoc.add_option(PandocOption::NoHighlight);
+    pandoc.add_options(&[
+      PandocOption::Smart,
+      PandocOption::NoHighlight,
+    ]);
     pandoc.add_input(first_file);
     pandoc.set_output(OutputKind::Pipe);
 
