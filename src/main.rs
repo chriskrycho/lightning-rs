@@ -67,14 +67,14 @@ fn main() {
     let first_file = first_file.to_str().unwrap();
 
     let mut pandoc = Pandoc::new();
-    pandoc.set_input_format(InputFormat::Markdown);
-    pandoc.set_output_format(OutputFormat::Html5);
-    pandoc.add_options(&[
-      PandocOption::Smart,
-      PandocOption::NoHighlight,
-    ]);
-    pandoc.add_input(first_file);
-    pandoc.set_output(OutputKind::Pipe);
+    pandoc.set_input_format(InputFormat::Markdown)
+      .set_output_format(OutputFormat::Html5)
+      .add_options(&[
+        PandocOption::Smart,
+        PandocOption::NoHighlight,
+      ])
+      .add_input(first_file)
+      .set_output(OutputKind::Pipe);
 
     // TODO: don't panic, return a Result. That can then be a `try!` and
     //   eventually even a `?`.
