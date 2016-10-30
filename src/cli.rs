@@ -4,6 +4,10 @@ use std::fmt;
 
 use clap::{Arg, ArgMatches, App, AppSettings, SubCommand};
 
+// TODO: define this as the thing that `cli` actually returns (instead of
+// TODO: `ArgMatches`.
+struct Args {}
+
 
 // TODO: figure out a way, eventually, to customize arguments based on whatever
 // external tools are supplied---without requiring a rebuild. (Compare what
@@ -22,11 +26,11 @@ pub fn cli<'a, 'b>(additional_args: &[Arg<'a, 'b>],
 
   subcommands.extend_from_slice(additional_subcommands);
 
-  App::new("SSG(rs)")
+  App::new("Lightning")
     .setting(AppSettings::ArgRequiredElseHelp)
     .version("0.1.0")
     .author(crate_authors!())
-    .about("Meets my peculiar needs for generating static sites... *fast*.")
+    .about("A fast, reliable, configurable static site generator.")
     .subcommands(subcommands)
     .args(&args)
     .get_matches()
