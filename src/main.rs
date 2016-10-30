@@ -2,7 +2,7 @@
 #[macro_use]
 extern crate clap;
 extern crate glob;
-extern crate cmd_pandoc;
+extern crate pandoc;
 extern crate syntect;
 
 mod cli;
@@ -13,9 +13,7 @@ use std::path::Path;
 
 use clap::{Arg, App};
 use glob::glob;
-// TODO: switch to `rust-pandoc`
-use cmd_pandoc as pandoc;
-use cmd_pandoc::{PandocOption,OutputFormat,OutputFormatExt};
+use pandoc::{Pandoc,PandocOption,InputFormat,OutputFormat,OutputKind};
 use syntect::easy::HighlightLines;
 
 use cli::Commands;
@@ -67,21 +65,21 @@ fn main() {
     // Need to make item live long enough after unwrapping.
     let first_file = first_file.unwrap();
     let first_file = first_file.to_str().unwrap();
-    let processed_string = match pandoc::string_from_pandoc(
-      first_file,
-      &[PandocOption::To(OutputFormatExt::Fmt(OutputFormat::html5))
-      , PandocOption::Smart
-      , PandocOption::NoHighlight
-      ])
-    {
-      Ok(processed) => processed,
-      // TODO: don't panic, return a Result. That can then be a `try!` and
-      //   eventually even a `?`.
-      Err(why) =>
-        panic!("Could not process file {} with pandoc: {}.\n", first_file, why),
-    };
 
-    // TODO: syntect here for code snippets in the file!
+    let mut pandoc = Pandoc::new();
+    pandoc.set_input_format(InputFormat::Markdown);
+    pandoc.set_output_format(OutputFormat::Html5);
+    pandoc.add_option(PandocOption::Smart);
+    pandoc.add_option(PandocOption::NoHighlight);
+    pandoc.add_input(first_file);
+    pandoc.set_output(OutputKind::Pipe);
+
+    // TODO: don't panic, return a Result. That can then be a `try!` and
+    //   eventually even a `?`.
+    let output = match pandoc.execute_with_output() {
+      Ok(output) => output,
+      Err(err) => panic!("Failed pandoc-ing {}:\n{:?}", first_file, err),
+    };
 
     // TODO: extract this as part of the writing it out process.
     let ff_path = Path::new(first_file);
@@ -89,6 +87,7 @@ fn main() {
       .join(ff_path.file_name().unwrap())
       .with_extension("html");
 
+    // TODO: syntect here for code snippets in the file!
     let mut fd = match OpenOptions::new()
         .write(true)
         .create(true)
@@ -99,9 +98,9 @@ fn main() {
         panic!("Could not open {} for write: {}", dest.to_string_lossy(), why),
     };
 
-    match fd.write_all(processed_string.as_bytes()) {
+    match write!(fd, "{}", output) {
       Ok(_) => println!("BOOM."),
       Err(why) => panic!("... the other kind of BOOM. Alas.\n{}", why),
-    };
+    }
   }
 }
