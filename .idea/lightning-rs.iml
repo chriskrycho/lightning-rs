@@ -8,7 +8,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="Rust &lt;ssgrs&gt;" level="project" />
-    <orderEntry type="library" name="Cargo &lt;ssgrs&gt;" level="project" />
+    <orderEntry type="library" name="Rust &lt;lightning-rs&gt;" level="project" />
+    <orderEntry type="library" name="Cargo &lt;lightning-rs&gt;" level="project" />
   </component>
 </module>
