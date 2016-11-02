@@ -81,13 +81,6 @@ fn generate<'a, 'b>() -> App<'a, 'b> {
 
 
 /// Generate a new item from a template.
-///
-/// TODO: different templates will take different args---figure out what the
-/// best way to programmatically generate new options for these based on the
-/// state of the file system where it's run is, so that e.g. the user (*me*,
-/// initially!) can e.g. just specify a location for new templates in the
-/// configuration file, drop a template in there, and have the generator pick it
-/// up correctly as one of the options.
 fn new<'a, 'b>() -> App<'a, 'b> {
   SubCommand::with_name("new")
     .about("Create an item from a template")
