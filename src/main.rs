@@ -4,19 +4,24 @@ extern crate clap;
 extern crate glob;
 extern crate pandoc;
 extern crate syntect;
+extern crate xml;
 
 mod cli;
+mod syntax_highlighting;
 
+// Standard library
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::path::Path;
 
+// Third party
 use clap::{Arg, App};
 use glob::glob;
-use pandoc::{Pandoc,PandocOption,InputFormat,OutputFormat,OutputKind};
-use syntect::easy::HighlightLines;
+use pandoc::{Pandoc, PandocOption, InputFormat, OutputFormat, OutputKind};
 
+// First party
 use cli::Commands;
+use syntax_highlighting::syntax_highlight;
 
 
 fn main() {
@@ -48,7 +53,9 @@ fn main() {
 
   // TODO: we'll repeat this process on *all* of them instead of just one.
   //   Eventually we'll do that iteration with `rayon::par_iter::for_each()`.
-  if let Some(first_file) = markdown_files.next() /* -> Option<Path> */ {
+  if let Some(first_file) = markdown_files.next()
+  // -> Option<Path>
+  {
     // TODO: extract this into a nice function to call in a for loop/foreach.
     // Need to make item live long enough after unwrapping.
     let first_file = first_file.unwrap();
@@ -57,10 +64,7 @@ fn main() {
     let mut pandoc = Pandoc::new();
     pandoc.set_input_format(InputFormat::Markdown)
       .set_output_format(OutputFormat::Html5)
-      .add_options(&[
-        PandocOption::Smart,
-        PandocOption::NoHighlight,
-      ])
+      .add_options(&[PandocOption::Smart, PandocOption::NoHighlight])
       .add_input(first_file)
       .set_output(OutputKind::Pipe);
 
@@ -80,13 +84,16 @@ fn main() {
       .with_extension("html");
 
     let mut fd = match OpenOptions::new()
-        .write(true)
-        .create(true)
-        .open(dest.clone()) {
+      .write(true)
+      .create(true)
+      .open(dest.clone()) {
 
       Ok(fd) => fd,
-      Err(why) =>
-        panic!("Could not open {} for write: {}", dest.to_string_lossy(), why),
+      Err(why) => {
+        panic!("Could not open {} for write: {}",
+               dest.to_string_lossy(),
+               why)
+      }
     };
 
     match write!(fd, "{}", output) {
@@ -95,3 +102,5 @@ fn main() {
     }
   }
 }
+
+
