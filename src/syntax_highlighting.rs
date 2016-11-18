@@ -21,13 +21,16 @@ enum Event {
 
 impl State {
   fn next(self, event: Event) -> State {
+    use State::*;
+    use Event::*;
+
     match (self, event) {
-      (State::NotInBlock, Event::StartPre) => State::MaybeStartBlock,
-      (State::MaybeStartBlock, Event::StartCode) =>
-        State::Block(String::with_capacity(1000)),
-      (State::Block(string), Event::Other(contents)) =>
-        State::Block(string + &contents),
-      (State::Block(string), Event::EndCode) => {
+      (NotInBlock, StartPre) => MaybeStartBlock,
+      (MaybeStartBlock, StartCode) =>
+        Block(String::with_capacity(1000)),
+      (Block(string), Other(contents)) =>
+        Block(string + &contents),
+      (Block(string), EndCode) => {
         // TODO: do something with the data here!
         State::NotInBlock
       },
