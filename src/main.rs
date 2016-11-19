@@ -2,9 +2,9 @@
 #[macro_use]
 extern crate clap;
 extern crate glob;
+extern crate quick_xml;
 extern crate pandoc;
 extern crate syntect;
-extern crate xml;
 
 mod cli;
 mod syntax_highlighting;
@@ -49,37 +49,35 @@ fn main() {
   // TODO: instead of unwrapping the directory and the glob result, we'll
   //   actually check both.
   let dir_str = format!("{}/**/*.md", directory.to_str().unwrap());
-  let mut markdown_files = glob(&dir_str).unwrap();
+  let markdown_files = glob(&dir_str).unwrap();
 
   // TODO: we'll repeat this process on *all* of them instead of just one.
   //   Eventually we'll do that iteration with `rayon::par_iter::for_each()`.
-  if let Some(first_file) = markdown_files.next()
-  // -> Option<Path>
-  {
+  for file in markdown_files {  // -> Option<Path>
     // TODO: extract this into a nice function to call in a for loop/foreach.
     // Need to make item live long enough after unwrapping.
-    let first_file = first_file.unwrap();
-    let first_file = first_file.to_str().unwrap();
+    let file = file.unwrap();
+    let file = file.to_str().unwrap();
 
     let mut pandoc = Pandoc::new();
     pandoc.set_input_format(InputFormat::Markdown)
       .set_output_format(OutputFormat::Html5)
       .add_options(&[PandocOption::Smart, PandocOption::NoHighlight])
-      .add_input(first_file)
+      .add_input(file)
       .set_output(OutputKind::Pipe);
 
-    // TODO: don't panic, return a Result. That can then be a `try!` and
-    //   eventually even a `?`.
+    // TODO: don't panic, return a Result. That can then be a `?`.
     let output = match pandoc.execute_with_output() {
       Ok(output) => output,
-      Err(err) => panic!("Failed pandoc-ing {}:\n{:?}", first_file, err),
+      Err(err) => panic!("Failed pandoc-ing {}:\n{:?}", file, err),
     };
 
     // TODO: syntect (#1)
+    let highlighted = syntax_highlight(output);
 
     // TODO: extract this as part of the writing it out process.
-    let ff_path = Path::new(first_file);
-    let dest = Path::new("/Users/chris/Desktop")
+    let ff_path = Path::new(file);
+    let dest = Path::new("./tests/output")
       .join(ff_path.file_name().unwrap())
       .with_extension("html");
 
@@ -96,11 +94,9 @@ fn main() {
       }
     };
 
-    match write!(fd, "{}", output) {
-      Ok(_) => println!("BOOM."),
-      Err(why) => panic!("... the other kind of BOOM. Alas.\n{}", why),
+    match write!(fd, "{}", highlighted) {
+      Ok(_) => println!("wrote {}", dest.to_string_lossy()),
+      Err(why) => panic!("failed to write: {}", why),
     }
   }
 }
-
-
