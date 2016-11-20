@@ -64,6 +64,13 @@ N.b. this is my overall set of goals, with no specific ties to a timeline or a p
 
     - [ ] optionally using [Syntect] for syntax highlighting
 
+    - [ ] support RSS
+
+    - [ ] support podcast elements for RSS
+
+    - [ ] render template not only into rendered content but also RSS/Atom
+
+
 - [ ] Extensibility
 
     - [ ] via new commands, which can be installed and run _a la_ Git or Cargo commands (`cargo clippy` just runs the `cargo-clippy` binary)
