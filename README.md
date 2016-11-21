@@ -57,12 +57,12 @@ N.b. this is my overall set of goals, with no specific ties to a timeline or a p
     - [ ] with [pulldown-cmark]
 
     - [ ] with [pandoc]
-        - [ ] via [subprocess][cmd-pandoc]
+        - [x] via [subprocess][cmd-pandoc]
         - [ ] as a library
 
     - [ ] via [Hoedown] bindings? (big maybe, but it has the upside of being very widely used b/c of Jekyll and such.)
 
-    - [ ] optionally using [Syntect] for syntax highlighting
+    - [x] optionally using [Syntect] for syntax highlighting
 
     - [ ] support RSS
 
