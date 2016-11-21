@@ -60,14 +60,19 @@ impl ParseState {
     match (self, event) {
       (&NotInBlock, &StartPre(Some(ref language))) =>
         MaybeStartBlock(language.clone()),
+
       (&MaybeStartBlock(ref language), &Whitespace) =>
         MaybeStartBlock(language.clone()),
+
       (&MaybeStartBlock(ref language), &StartCode) =>
         WillStartCodeBlock(language.clone()),
+
       (&WillStartCodeBlock(ref language), &Text) |
       (&WillStartCodeBlock(ref language), &Whitespace) =>
         InCodeBlock(language.clone()),
+
       (&InCodeBlock(_), &EndCode) => NotInBlock,
+
       (_, _) => NotInBlock,
     }
   }
