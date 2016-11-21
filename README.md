@@ -70,6 +70,9 @@ N.b. this is my overall set of goals, with no specific ties to a timeline or a p
 
     - [ ] render template not only into rendered content but also RSS/Atom
 
+- [ ] Embrace parallelism!
+    - [ ] Via threading?
+    - [ ] Via [futures-cpupool](https://docs.rs/futures-cpupool/0.1.2/futures_cpupool/) or similar? 
 
 - [ ] Extensibility
 
