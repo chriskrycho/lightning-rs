@@ -18,23 +18,24 @@ use glob::glob;
 use pandoc::{Pandoc, PandocOption, InputFormat, OutputFormat, OutputKind};
 
 // First party
-use cli::{cli, Commands};
+use cli::{cli, Command};
 use lightning::syntax_highlighting::syntax_highlight;
 
 
-fn main() {
+/// Define a `Result`-returning function to run the app.
+///
+/// (This is a standard Rust pattern to support the use of `try~`/`?`.)
+fn run() -> Result<(), String> {
     let extra_args: Vec<Arg> = vec![];
     let subcommands: Vec<App> = vec![];
-    let commands = cli(&extra_args, &subcommands);
+    let args = cli(&extra_args, &subcommands)?;
 
     // TODO: actually use those matches.
-    if let Some(command_name) = commands.subcommand_name() {
-        match Commands::from(command_name) {
-            Commands::Generate => {}
-            Commands::New => {}
-            Commands::Unspecified => {
-                panic!("Failed to parse command line.")
-            }
+    match args.sub_command {
+        Command::Generate => {}
+        Command::New => {}
+        Command::Unspecified => {
+            return Err(format!("Failed to parse command line."))
         }
     }
 
@@ -70,7 +71,6 @@ fn main() {
             Err(err) => panic!("Failed pandoc-ing {}:\n{:?}", file, err),
         };
 
-        // TODO: syntect (#1)
         let highlighted = syntax_highlight(output);
 
         // TODO: extract this as part of the writing it out process.
@@ -85,13 +85,23 @@ fn main() {
                                        .open(dest.clone()) {
             Ok(fd) => fd,
             Err(why) => {
-                panic!("Could not open {} for write: {}", dest.to_string_lossy(), why)
+                return Err(format!("Could not open {} for write: {}", dest.to_string_lossy(), why))
             }
         };
 
-        match write!(fd, "{}", highlighted) {
-            Ok(_) => println!("wrote {}", dest.to_string_lossy()),
-            Err(why) => panic!("failed to write: {}", why),
+        let result = write!(fd, "{}", highlighted);
+        if let Err(reason) = result {
+            return Err(format!("{:?}", reason.kind()));
         }
+    }
+
+    Ok(())
+}
+
+fn main() {
+    if let Err(reason) = run() {
+        // if this fails, we literally can't do a thing except panic.
+        write!(std::io::stderr(), "failure: {}", reason).unwrap();
+        std::process::exit(1);
     }
 }
