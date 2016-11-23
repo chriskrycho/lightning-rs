@@ -55,17 +55,18 @@ enum ParseEvent {
 
 
 impl ParseState {
-    fn next(&self, event: &ParseEvent) -> ParseState {
+    /// Get the next `ParseState` given current `ParseState` and a `ParseEvent`.
+    fn next(self, event: ParseEvent) -> ParseState {
         use self::ParseState::*;
         use self::ParseEvent::*;
 
         match (self, event) {
-            (&NotInBlock, &StartPre(Some(ref language))) => MaybeStartBlock(language.clone()),
-            (&MaybeStartBlock(ref language), &Whitespace) => MaybeStartBlock(language.clone()),
-            (&MaybeStartBlock(ref language), &StartCode) => WillStartCodeBlock(language.clone()),
-            (&WillStartCodeBlock(ref language), &Text) |
-            (&WillStartCodeBlock(ref language), &Whitespace) => InCodeBlock(language.clone()),
-            (&InCodeBlock(_), &EndCode) => NotInBlock,
+            (NotInBlock, StartPre(Some(language))) => MaybeStartBlock(language),
+            (MaybeStartBlock(language), Whitespace) => MaybeStartBlock(language),
+            (MaybeStartBlock(language), StartCode) => WillStartCodeBlock(language),
+            (WillStartCodeBlock(language), Text) |
+            (WillStartCodeBlock(language), Whitespace) => InCodeBlock(language),
+            (InCodeBlock(_), EndCode) => NotInBlock,
             (_, _) => NotInBlock,
         }
     }
@@ -79,15 +80,16 @@ impl Default for ParseState {
 }
 
 
-impl<'a> From<&'a Event> for ParseEvent {
-    fn from(event: &'a Event) -> ParseEvent {
+impl<'e> From<&'e Event> for ParseEvent {
+    fn from(event: &'e Event) -> ParseEvent {
+        // TODO @1.15: remove `'static`.
         const PRE: &'static [u8] = b"pre";
         const CODE: &'static [u8] = b"code";
         const CLASS: &'static [u8] = b"class";
         const WHITE_SPACE: &'static [u8] = b"";
 
-        match *event {
-            Event::Start(ref element) => {
+        match event {
+            &Event::Start(ref element) => {
                 match element.name() {
                     PRE => {
                         let maybe_class_attr = element.attributes()
@@ -98,7 +100,7 @@ impl<'a> From<&'a Event> for ParseEvent {
                         match maybe_class_attr {
                             Some(class_attr) => {
                                 match str::from_utf8(class_attr.1) {
-                                    Ok(lang) => ParseEvent::StartPre(Some(String::from(lang))),
+                                    Ok(lang) => ParseEvent::StartPre(Some(lang.to_string())),
                                     Err(_) => ParseEvent::StartPre(None),
                                 }
                             }
@@ -109,13 +111,13 @@ impl<'a> From<&'a Event> for ParseEvent {
                     _ => ParseEvent::Other,
                 }
             }
-            Event::End(ref element) => {
+            &Event::End(ref element) => {
                 match element.name() {
                     CODE => ParseEvent::EndCode,
                     _ => ParseEvent::Other,
                 }
             }
-            Event::Text(ref element) => {
+            &Event::Text(ref element) => {
                 match element.name() {
                     WHITE_SPACE => ParseEvent::Whitespace,
                     _ => ParseEvent::Text,
@@ -157,12 +159,12 @@ pub fn syntax_highlight(html_string: String) -> String {
     let original_string = html_string.clone();
     let reader = XmlReader::from(html_string.as_str());
 
-    let mut accumulator = Accumulator {
+    let accumulator = Accumulator {
         writer: XmlWriter::new(Vec::<u8>::new()),
         state: ParseState::default(),
     };
 
-    reader.fold(&mut accumulator, |acc, event| {
+    let final_state = reader.fold(accumulator, |mut acc, event| {
         let event = match event {
             Ok(event) => event,
             Err(_) => {
@@ -171,7 +173,7 @@ pub fn syntax_highlight(html_string: String) -> String {
         };
 
         let parse_event = ParseEvent::from(&event);
-        acc.state = acc.state.next(&parse_event);
+        acc.state = ParseState::next(acc.state, parse_event);
 
         let language = match acc.state.clone() {
             ParseState::InCodeBlock(language) => language,
@@ -219,7 +221,7 @@ pub fn syntax_highlight(html_string: String) -> String {
         acc
     });
 
-    String::from_utf8(accumulator.writer.into_inner()).unwrap_or(original_string)
+    String::from_utf8(final_state.writer.into_inner()).unwrap_or(original_string)
 }
 
 
@@ -231,37 +233,37 @@ mod tests {
         use super::ParseState;
         use super::ParseEvent;
 
-        let lang = String::from("rust");
+        let lang = "rust";
 
-        assert_eq!(ParseState::NotInBlock.next(&ParseEvent::StartPre(Some(lang.clone()))),
-                   ParseState::MaybeStartBlock(lang.clone()));
+        assert_eq!(ParseState::NotInBlock.next(ParseEvent::StartPre(Some(lang.to_string()))),
+                   ParseState::MaybeStartBlock(lang.to_string()));
 
-        assert_eq!(ParseState::NotInBlock.next(&ParseEvent::EndCode),
+        assert_eq!(ParseState::NotInBlock.next(ParseEvent::EndCode),
                    ParseState::NotInBlock);
 
-        assert_eq!(ParseState::NotInBlock.next(&ParseEvent::Other),
+        assert_eq!(ParseState::NotInBlock.next(ParseEvent::Other),
                    ParseState::NotInBlock);
 
-        assert_eq!(ParseState::NotInBlock.next(&ParseEvent::StartCode),
+        assert_eq!(ParseState::NotInBlock.next(ParseEvent::StartCode),
                    ParseState::NotInBlock);
 
-        assert_eq!(ParseState::MaybeStartBlock(lang.clone()).next(&ParseEvent::StartCode),
-                   ParseState::WillStartCodeBlock(lang.clone()));
+        assert_eq!(ParseState::MaybeStartBlock(lang.to_string()).next(ParseEvent::StartCode),
+                   ParseState::WillStartCodeBlock(lang.to_string()));
 
-        assert_eq!(ParseState::MaybeStartBlock(lang.clone()).next(&ParseEvent::Text),
+        assert_eq!(ParseState::MaybeStartBlock(lang.to_string()).next(ParseEvent::Text),
                    ParseState::NotInBlock);
 
-        assert_eq!(ParseState::MaybeStartBlock(lang.clone()).next(&ParseEvent::EndCode),
+        assert_eq!(ParseState::MaybeStartBlock(lang.to_string()).next(ParseEvent::EndCode),
                    ParseState::NotInBlock);
 
-        assert_eq!(ParseState::MaybeStartBlock(lang.clone())
-                       .next(&ParseEvent::StartPre(Some(lang.clone()))),
+        assert_eq!(ParseState::MaybeStartBlock(lang.to_string())
+                       .next(ParseEvent::StartPre(Some(lang.to_string()))),
                    ParseState::NotInBlock);
 
-        assert_eq!(ParseState::MaybeStartBlock(lang.clone()).next(&ParseEvent::Other),
+        assert_eq!(ParseState::MaybeStartBlock(lang.to_string()).next(ParseEvent::Other),
                    ParseState::NotInBlock);
 
-        assert_eq!(ParseState::WillStartCodeBlock(lang.clone()).next(&ParseEvent::Text),
-                   ParseState::InCodeBlock(lang.clone()));
+        assert_eq!(ParseState::WillStartCodeBlock(lang.to_string()).next(ParseEvent::Text),
+                   ParseState::InCodeBlock(lang.to_string()));
     }
 }
