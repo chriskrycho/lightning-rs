@@ -88,36 +88,35 @@ impl<'e> From<&'e Event> for ParseEvent {
         const CLASS: &'static [u8] = b"class";
         const WHITE_SPACE: &'static [u8] = b"";
 
-        match event {
-            &Event::Start(ref element) => {
+        match *event {
+            Event::Start(ref element) => {
                 match element.name() {
                     PRE => {
                         let maybe_class_attr = element.attributes()
-                            .map(|attr| attr.unwrap())
-                            .filter(|attr| attr.0 == CLASS)
-                            .next();
+                                                      .map(|attr| attr.unwrap())
+                                                      .filter(|&(attr, _value)| attr == CLASS)
+                                                      .next();
 
-                        match maybe_class_attr {
-                            Some(class_attr) => {
-                                match str::from_utf8(class_attr.1) {
-                                    Ok(lang) => ParseEvent::StartPre(Some(lang.to_string())),
-                                    Err(_) => ParseEvent::StartPre(None),
-                                }
+                        if let Some((_attr, value)) = maybe_class_attr {
+                            match str::from_utf8(value) {
+                                Ok(lang) => ParseEvent::StartPre(Some(lang.to_string())),
+                                Err(_) => ParseEvent::StartPre(None),
                             }
-                            None => ParseEvent::StartPre(None),
+                        } else {
+                            ParseEvent::StartPre(None)
                         }
                     }
                     CODE => ParseEvent::StartCode,
                     _ => ParseEvent::Other,
                 }
             }
-            &Event::End(ref element) => {
+            Event::End(ref element) => {
                 match element.name() {
                     CODE => ParseEvent::EndCode,
                     _ => ParseEvent::Other,
                 }
             }
-            &Event::Text(ref element) => {
+            Event::Text(ref element) => {
                 match element.name() {
                     WHITE_SPACE => ParseEvent::Whitespace,
                     _ => ParseEvent::Text,
