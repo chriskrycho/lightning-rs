@@ -140,6 +140,21 @@ struct Accumulator {
 }
 
 
+/// Use `syntect` to highlight all code blocks in a block of HTML.
+///
+/// Assumes that the blocks to be highlighted are in the following basic format:
+///
+/// ```html
+/// <pre class="rust">
+///   <code>
+///     pub fn syntax_highlight(html_string: String) -> String {
+///         // implementation details
+///     }
+///   </code>
+/// </pre>
+/// ```
+///
+/// The `class` attribute value from the `pre` tag defines the
 pub fn syntax_highlight(html_string: String) -> String {
   let original_string = html_string.clone();
   let reader = XmlReader::from(html_string.as_str());

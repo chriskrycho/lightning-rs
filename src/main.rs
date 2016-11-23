@@ -1,13 +1,12 @@
 /// Run the static site generator.
+
 #[macro_use]
 extern crate clap;
 extern crate glob;
-extern crate quick_xml;
-extern crate pandoc;
-extern crate syntect;
+extern crate pandoc;  // TODO: extract to `lib.rs`.
+extern crate lightning;
 
 mod cli;
-mod syntax_highlighting;
 
 // Standard library
 use std::fs::OpenOptions;
@@ -20,14 +19,14 @@ use glob::glob;
 use pandoc::{Pandoc, PandocOption, InputFormat, OutputFormat, OutputKind};
 
 // First party
-use cli::Commands;
-use syntax_highlighting::syntax_highlight;
+use cli::{cli, Commands};
+use lightning::syntax_highlighting::syntax_highlight;
 
 
 fn main() {
   let extra_args: Vec<Arg> = vec![];
   let subcommands: Vec<App> = vec![];
-  let commands = cli::cli(&extra_args, &subcommands);
+  let commands = cli(&extra_args, &subcommands);
 
   // TODO: actually use those matches.
   if let Some(command_name) = commands.subcommand_name() {
