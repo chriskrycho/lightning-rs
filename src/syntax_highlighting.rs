@@ -1,6 +1,6 @@
-/// Provide syntax highlighting via [Syntect].
-///
-/// [Syntect]: https://docs.rs/syntect/1.0.0/syntect/
+//! Provide syntax highlighting via [Syntect].
+//!
+//! [Syntect]: https://docs.rs/syntect/1.0.0/syntect/
 
 // Standard library
 use std::default::Default;

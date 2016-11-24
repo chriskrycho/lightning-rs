@@ -1,4 +1,4 @@
-/// Supply the command line.
+//! Supply the command line.
 
 use std::fmt;
 
