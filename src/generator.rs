@@ -8,6 +8,7 @@ use std::path::Path;
 // Third party
 use glob::glob;
 use pandoc::{Pandoc, PandocOption, InputFormat, OutputFormat, OutputKind};
+use rayon::prelude::*;
 
 // First party
 use syntax_highlighting::syntax_highlight;
@@ -26,19 +27,37 @@ pub fn generate() -> Result<(), String> {
     );
 
     let markdown_files = glob(&dir_str).map_err(|err| format!("{:?}", err))?;
+    let (paths, failures): (Vec<_>, Vec<_>) = markdown_files
+        .map(|path_result| { path_result.map_err(|e| format!("{:?}", e)) })
+        .partition(|result| result.is_ok());
 
-    // TODO: Iterate with `rayon::par_iter::for_each()`.
-    for path_result in markdown_files {
-        // TODO: extract this into a nice function to call in a for loop/foreach.
-        let path = path_result.map_err(|e| format!("{:?}", e))?;
-        let file_name = path.to_str()
-            .ok_or(format!("Could not convert path {:?} to str", path))?;
+    if failures.len() > 0 {
+        return failures.into_iter().next().unwrap().map(|_| ());
+    }
 
+    let (file_names, failures): (Vec<_>, Vec<_>) = paths.into_iter()
+        .map(|path| {
+            let err = format!("Could not convert path {:?} to str", &path);
+            path.unwrap()
+                .to_str()
+                .ok_or(err)
+                .map(|str| str.to_string())
+        })
+        .partition(|result| result.is_ok());
+
+    if failures.len() > 0 {
+        return failures.into_iter().next().unwrap().map(|_| ());
+    }
+
+    let file_names: Vec<_> = file_names.into_iter().map(|result| result.unwrap()).collect();
+    let mut results: Vec<Result<(), String>> = Vec::new();
+
+    file_names.par_iter().map(|file_name| {
         let mut pandoc = Pandoc::new();
         pandoc.set_input_format(InputFormat::Markdown)
             .set_output_format(OutputFormat::Html5)
             .add_options(&[PandocOption::Smart, PandocOption::NoHighlight])
-            .add_input(file_name)
+            .add_input(&file_name)
             .set_output(OutputKind::Pipe);
 
         let converted = pandoc.execute_with_output()
@@ -47,7 +66,7 @@ pub fn generate() -> Result<(), String> {
         let highlighted = syntax_highlight(converted);
 
         // TODO: extract this as part of the writing it out process.
-        let ff_path = Path::new(file_name);
+        let ff_path = Path::new(&file_name);
         let dest = Path::new("./tests/output")
             .join(ff_path.file_name().ok_or(format!("invalid file: {}", file_name))?)
             .with_extension("html");
@@ -64,6 +83,13 @@ pub fn generate() -> Result<(), String> {
         if let Err(reason) = result {
             return Err(format!("{:?}", reason.kind()));
         }
+
+        return Ok(())
+    }).collect_into(&mut results);
+
+    let (_, errors): (Vec<_>, Vec<_>) = results.into_iter().partition(|result| result.is_ok());
+    if errors.len() > 0 {
+        return errors.first().unwrap().clone();
     }
 
     Ok(())
