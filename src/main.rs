@@ -36,18 +36,20 @@ fn main() {
 /// (This is a standard Rust pattern to support the use of `try~`/`?`.)
 fn run() -> Result<(), String> {
     let extra_args: Vec<Arg> = vec![];
-    let subcommands: Vec<App> = vec![];
-    let args = cli(&extra_args, &subcommands)?;
+    let sub_commands: Vec<App> = vec![];
+    let args = cli(&extra_args, &sub_commands)?;
 
-    // TODO: actually use those matches.
     match args.sub_command {
-        Command::Generate => {}
-        Command::New => {}
+        Command::Generate => { generate() }
+        Command::New => { new() }
         Command::Unspecified => {
-            return Err(format!("Failed to parse command line."))
+            Err(format!("Failed to parse command line."))
         }
     }
+}
 
+
+fn generate() -> Result<(), String> {
     // In the vein of "MVP": let's start by just loading all the files. We'll
     // extract this all into standalone functions as necessary later.
 
@@ -65,37 +67,33 @@ fn run() -> Result<(), String> {
         // TODO: extract this into a nice function to call in a for loop/foreach.
         let path = path_result.map_err(|e| format!("{:?}", e))?;
         let file_name = path.to_str()
-                            .ok_or(format!("Could not convert path {:?} to str", path))?;
+            .ok_or(format!("Could not convert path {:?} to str", path))?;
 
         let mut pandoc = Pandoc::new();
         pandoc.set_input_format(InputFormat::Markdown)
-              .set_output_format(OutputFormat::Html5)
-              .add_options(&[PandocOption::Smart, PandocOption::NoHighlight])
-              .add_input(file_name)
-              .set_output(OutputKind::Pipe);
+            .set_output_format(OutputFormat::Html5)
+            .add_options(&[PandocOption::Smart, PandocOption::NoHighlight])
+            .add_input(file_name)
+            .set_output(OutputKind::Pipe);
 
         let converted = pandoc.execute_with_output()
-                              .map_err(|err| format!("pandoc failure: {}:\n{:?}", file_name, err))?;
+            .map_err(|err| format!("pandoc failure: {}:\n{:?}", file_name, err))?;
 
         let highlighted = syntax_highlight(converted);
 
         // TODO: extract this as part of the writing it out process.
         let ff_path = Path::new(file_name);
         let dest = Path::new("./tests/output")
-                        .join(ff_path.file_name().ok_or(format!("invalid file: {}", file_name))?)
-                        .with_extension("html");
+            .join(ff_path.file_name().ok_or(format!("invalid file: {}", file_name))?)
+            .with_extension("html");
 
         let mut fd = OpenOptions::new()
-                                 .write(true)
-                                 .create(true)
-                                 .open(dest.clone())
-                                 .map_err(|reason| {
-                                     format!(
-                                         "Could not open {} for write: {}",
-                                         dest.to_string_lossy(),
-                                         reason
-                                     )
-                                 })?;
+            .write(true)
+            .create(true)
+            .open(dest.clone())
+            .map_err(|reason| {
+                format!("Could not open {} for write: {}", dest.to_string_lossy(), reason)
+            })?;
 
         let result = write!(fd, "{}", highlighted);
         if let Err(reason) = result {
@@ -104,4 +102,9 @@ fn run() -> Result<(), String> {
     }
 
     Ok(())
+}
+
+
+fn new() -> Result<(), String> {
+    unimplemented!()
 }
