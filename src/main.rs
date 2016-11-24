@@ -34,7 +34,7 @@ fn run() -> Result<(), String> {
     let args = cli(&extra_args, &sub_commands)?;
 
     match args.sub_command {
-        Command::Generate => { lightning::generate() }
+        Command::Generate => { generate() }
         Command::New => { new() }
         Command::Unspecified => {
             Err(format!("Failed to parse command line."))

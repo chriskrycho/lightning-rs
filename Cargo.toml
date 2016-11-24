@@ -8,6 +8,7 @@ clap = "2.15.0"
 glob = "0.2.11"
 syntect = "1.0.1"
 pandoc = { git = "https://github.com/chriskrycho/rust-pandoc", branch = "builder" }
+rayon = "0.5.0"
 quick-xml = "0.4.1"
 
 [[bin]]

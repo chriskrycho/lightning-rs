@@ -3,6 +3,7 @@
 extern crate glob;
 extern crate pandoc;
 extern crate quick_xml;
+extern crate rayon;
 extern crate syntect;
 
 pub mod generator;
