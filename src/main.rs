@@ -22,6 +22,15 @@ use cli::{cli, Command};
 use lightning::syntax_highlighting::syntax_highlight;
 
 
+fn main() {
+    if let Err(reason) = run() {
+        // if this fails, we literally can't do a thing except panic.
+        write!(std::io::stderr(), "failure: {}", reason).unwrap();
+        std::process::exit(1);
+    }
+}
+
+
 /// Define a `Result`-returning function to run the app.
 ///
 /// (This is a standard Rust pattern to support the use of `try~`/`?`.)
@@ -44,50 +53,49 @@ fn run() -> Result<(), String> {
 
     // TODO: load this from the configuration file.
     let directory = Path::new("tests/data");
+    let dir_str = format!(
+        "{}/**/*.md",
+        directory.to_str().ok_or(String::from("bad directory"))?
+    );
 
-    // TODO: instead of unwrapping the directory and the glob result, we'll
-    //   actually check both.
-    let dir_str = format!("{}/**/*.md", directory.to_str().unwrap());
-    let markdown_files = glob(&dir_str).unwrap();
+    let markdown_files = glob(&dir_str).map_err(|err| format!("{:?}", err))?;
 
-    // TODO: we'll repeat this process on *all* of them instead of just one.
-    //   Eventually we'll do that iteration with `rayon::par_iter::for_each()`.
-    for file in markdown_files {
+    // TODO: Iterate with `rayon::par_iter::for_each()`.
+    for path_result in markdown_files {
         // TODO: extract this into a nice function to call in a for loop/foreach.
-        // Need to make item live long enough after unwrapping.
-        let file = file.unwrap();
-        let file = file.to_str().unwrap();
+        let path = path_result.map_err(|e| format!("{:?}", e))?;
+        let file_name = path.to_str()
+                            .ok_or(format!("Could not convert path {:?} to str", path))?;
 
         let mut pandoc = Pandoc::new();
         pandoc.set_input_format(InputFormat::Markdown)
               .set_output_format(OutputFormat::Html5)
               .add_options(&[PandocOption::Smart, PandocOption::NoHighlight])
-              .add_input(file)
+              .add_input(file_name)
               .set_output(OutputKind::Pipe);
 
-        // TODO: don't panic, return a Result. That can then be a `?`.
-        let output = match pandoc.execute_with_output() {
-            Ok(output) => output,
-            Err(err) => panic!("Failed pandoc-ing {}:\n{:?}", file, err),
-        };
+        let converted = pandoc.execute_with_output()
+                              .map_err(|err| format!("pandoc failure: {}:\n{:?}", file_name, err))?;
 
-        let highlighted = syntax_highlight(output);
+        let highlighted = syntax_highlight(converted);
 
         // TODO: extract this as part of the writing it out process.
-        let ff_path = Path::new(file);
+        let ff_path = Path::new(file_name);
         let dest = Path::new("./tests/output")
-                        .join(ff_path.file_name().unwrap())
+                        .join(ff_path.file_name().ok_or(format!("invalid file: {}", file_name))?)
                         .with_extension("html");
 
-        let mut fd = match OpenOptions::new()
-                                       .write(true)
-                                       .create(true)
-                                       .open(dest.clone()) {
-            Ok(fd) => fd,
-            Err(why) => {
-                return Err(format!("Could not open {} for write: {}", dest.to_string_lossy(), why))
-            }
-        };
+        let mut fd = OpenOptions::new()
+                                 .write(true)
+                                 .create(true)
+                                 .open(dest.clone())
+                                 .map_err(|reason| {
+                                     format!(
+                                         "Could not open {} for write: {}",
+                                         dest.to_string_lossy(),
+                                         reason
+                                     )
+                                 })?;
 
         let result = write!(fd, "{}", highlighted);
         if let Err(reason) = result {
@@ -96,12 +104,4 @@ fn run() -> Result<(), String> {
     }
 
     Ok(())
-}
-
-fn main() {
-    if let Err(reason) = run() {
-        // if this fails, we literally can't do a thing except panic.
-        write!(std::io::stderr(), "failure: {}", reason).unwrap();
-        std::process::exit(1);
-    }
 }
