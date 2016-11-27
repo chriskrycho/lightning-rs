@@ -158,6 +158,8 @@ pub fn syntax_highlight(html_string: String) -> String {
     let original_string = html_string.clone();
     let reader = XmlReader::from(html_string.as_str());
 
+    let ss = SyntaxSet::load_defaults_nonewlines();
+
     let accumulator = Accumulator {
         writer: XmlWriter::new(Vec::<u8>::new()),
         state: ParseState::default(),
@@ -198,7 +200,7 @@ pub fn syntax_highlight(html_string: String) -> String {
             },
         };
 
-        let ss = SyntaxSet::load_defaults_nonewlines();
+
         let syntax = ss.find_syntax_by_token(&language);
         let valid_syntax = match syntax {
             Some(valid_syntax) => valid_syntax,
