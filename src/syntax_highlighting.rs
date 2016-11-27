@@ -4,13 +4,14 @@
 
 // Standard library
 use std::default::Default;
+use std::collections::HashMap;
 use std::str;
 
 // Third party
 use quick_xml::{XmlReader, XmlWriter, Element, Event};
 use syntect::html::highlighted_snippet_for_string;
 use syntect::highlighting::ThemeSet;
-use syntect::parsing::SyntaxSet;
+use syntect::parsing::{SyntaxDefinition, SyntaxSet};
 
 
 /// A `Language` is a `String` representing a code highlighting language.
@@ -159,6 +160,7 @@ pub fn syntax_highlight(html_string: String) -> String {
     let reader = XmlReader::from(html_string.as_str());
 
     let ss = SyntaxSet::load_defaults_nonewlines();
+    let mut syntax_definitions = HashMap::<Language, SyntaxDefinition>::new();
 
     let accumulator = Accumulator {
         writer: XmlWriter::new(Vec::<u8>::new()),
@@ -200,19 +202,20 @@ pub fn syntax_highlight(html_string: String) -> String {
             },
         };
 
-
-        let syntax = ss.find_syntax_by_token(&language);
-        let valid_syntax = match syntax {
-            Some(valid_syntax) => valid_syntax,
-            None => {
-                assert!(acc.writer.write(event.clone()).is_ok());
-                return acc;
+        let syntax_key = language.clone();
+        let syntax_definition = syntax_definitions.entry(syntax_key).or_insert({
+            match ss.find_syntax_by_token(&language) {
+                Some(valid_syntax) => valid_syntax.clone(),
+                None => {
+                    assert!(acc.writer.write(event.clone()).is_ok());
+                    return acc;
+                },
             }
-        };
+        });
 
         let highlighted = highlighted_snippet_for_string(
             content_to_highlight,
-            valid_syntax,
+            syntax_definition,
             &ThemeSet::load_defaults().themes["base16-eighties.dark"]
         );
 
