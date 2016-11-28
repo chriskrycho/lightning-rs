@@ -64,15 +64,25 @@ N.b. this is my overall set of goals, with no specific ties to a timeline or a p
 
     - [x] optionally using [Syntect] for syntax highlighting
 
-    - [ ] support RSS
+- [ ] Templating 
+
+    - [ ] Taxonomy-specific views
+
+    - [ ] Standalone pages
+
+    - [ ] Fully customizable "formats" to enable e.g. link-blogging, podcasting, slide shows, etc.
+
+- [ ] support RSS
 
     - [ ] support podcast elements for RSS
 
     - [ ] render template not only into rendered content but also RSS/Atom
 
 - [ ] Embrace parallelism!
+
     - [ ] Via threading?
-    - [ ] Via [futures-cpupool](https://docs.rs/futures-cpupool/0.1.2/futures_cpupool/) or similar? 
+
+- [ ] Via [futures-cpupool](https://docs.rs/futures-cpupool/0.1.2/futures_cpupool/) or similar? 
 
 - [ ] Extensibility
 
