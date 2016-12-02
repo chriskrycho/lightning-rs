@@ -5,7 +5,11 @@ extern crate pandoc;
 extern crate quick_xml;
 extern crate syntect;
 
-pub mod generator;
-pub mod syntax_highlighting;
+mod creator;
+mod generator;
+mod server;
+mod syntax_highlighting;
 
-pub use generator::generate;
+pub use creator::create;
+pub use generator::{generate, Site};
+pub use server::serve;

@@ -3,7 +3,7 @@
 // Standard library
 use std::fs::OpenOptions;
 use std::io::prelude::*;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 // Third party
 use glob::glob;
@@ -13,8 +13,14 @@ use pandoc::{Pandoc, PandocOption, InputFormat, OutputFormat, OutputKind};
 use syntax_highlighting::syntax_highlight;
 
 
+pub struct Site {
+    pub source_directory: PathBuf,
+    pub template_directory: Option<PathBuf>,
+}
+
+
 /// Generate content from a configuration.
-pub fn generate() -> Result<(), String> {
+pub fn generate(site: Site) -> Result<(), String> {
     // In the vein of "MVP": let's start by just loading all the files. We'll
     // extract this all into standalone functions as necessary later.
 
@@ -42,7 +48,7 @@ pub fn generate() -> Result<(), String> {
             .set_output(OutputKind::Pipe);
 
         let converted = pandoc.execute_with_output()
-            .map_err(|err| format!("pandoc failure: {}:\n{:?}", file_name, err))?;
+            .map_err(|err| format!("pandoc failed on {}:\n{:?}", file_name, err))?;
 
         let highlighted = syntax_highlight(converted);
 

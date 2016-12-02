@@ -30,16 +30,12 @@ fn main() {
 fn run() -> Result<(), String> {
     let extra_args: Vec<Arg> = vec![];
     let sub_commands: Vec<App> = vec![];
-    let args = cli(&extra_args, &sub_commands)?;
+    let command = cli(&extra_args, &sub_commands);
 
-    match args.sub_command {
-        Command::Generate => lightning::generate(),
-        Command::New => new(),
+    match command {
+        Command::Generate(site) => lightning::generate(site),
+        Command::Create => lightning::create(),
+        Command::Serve => lightning::serve(),
         Command::Unspecified => Err(format!("Failed to parse command line."))
     }
-}
-
-
-fn new() -> Result<(), String> {
-    unimplemented!()
 }
