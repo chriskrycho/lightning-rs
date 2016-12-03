@@ -22,11 +22,9 @@ N.b. this is my overall set of goals, with no specific ties to a timeline or a p
 
         - [ ] tag-like: items may belong to multiple items
 
-        - [ ] hierarchical: items may belong to parents/children but not siblings, e.g. something can be at `Tech/Programming` and thus belong to both Tech and Programming, but not simultaneously to `Art`
+        - [ ] hierarchical: items may belong to parents and children e.g. something can be at `Tech/Programming` and thus belong to both Tech and Programming
 
-            I don't actually want or need this, but other users almost certainly will.
-
-        - [ ] tag-like *and* hierarchical???
+            - [ ] hierarchical *and exclusive*, i.e. if something is in the category `Tech` it *cannot* be in the category `Art`. I don't actually want or need this, but other users almost certainly will.
 
     - [ ] Support importing other generators.
         
