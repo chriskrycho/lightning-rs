@@ -1,4 +1,4 @@
-# Lightning
+# Lightning (`lx`)
 
 Yet another static site generator—but this one's written in Rust. (And therefore, not to be confused with the [*other* lightning] static site generator: that one is written in Python.)
 
@@ -8,7 +8,7 @@ Yet another static site generator—but this one's written in Rust. (And therefo
 
 This currently ***does not work***. If you need a site generator that does, I can point you to [Hugo], which is great, speedy, and pretty well-documented.
 
-Today, Lightning *builds* (and setting up Travis to both guarantee and show as much will happen soon), and it passes the single test I've written so far. But running `lng generate` will *not* do what you expect: it's currently hard-coded to use data in the test directory. That's coming... as I have time. Keep your expectations low on how fast this will develop, and you won't be disappointed.
+  Today, Lightning *builds* (and setting up Travis to both guarantee and show as much will happen soon), and it passes the single test I've written so far. But running `lx generate` will *not* do what you expect: it's currently hard-coded to use data in the test directory. That's coming... as I have time. Keep your expectations low on how fast this will develop, and you won't be disappointed.
 
 ### Roadmap
 
@@ -30,7 +30,7 @@ N.b. this is my overall set of goals, with no specific ties to a timeline or a p
 
     - [ ] Support importing other generators.
         
-        This really means, make sure the configuration can support the configuration patterns for popular generators. This is not so much a *formal support* issue (though being able to `lng create --from-jekyll` would be cool) as it is a *make sure this is well-covered by the implementation* issue. Other generators to cover, in order:
+        This really means, make sure the configuration can support the configuration patterns for popular generators. This is not so much a *formal support* issue (though being able to `lx create --from-jekyll` would be cool) as it is a *make sure this is well-covered by the implementation* issue. Other generators to cover, in order:
 
         - [ ] [Pelican][Pelican] – a must for the obvious reason that I want to be able to import my existing sites.
 

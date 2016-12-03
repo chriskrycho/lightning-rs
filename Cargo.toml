@@ -11,7 +11,7 @@ pandoc = { git = "https://github.com/chriskrycho/rust-pandoc", branch = "builder
 quick-xml = "0.4.1"
 
 [[bin]]
-name = "lng"  # TODO: maybe?
+name = "lx"
 
 [profile.release]
 # debug = true  # For profiling only.
