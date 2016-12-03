@@ -42,27 +42,13 @@ impl fmt::Display for Command {
 //       external tools are supplied---without requiring a rebuild. (Compare
 //       what Cargo does.)
 /// Get arguments from the command line.
-pub fn cli<'a, 'b>(additional_args: &[Arg<'a, 'b>],
-                   additional_subcommands: &[App<'a, 'b>])
-                   -> Command {
-
-    let mut args = vec![];
-    args.extend_from_slice(additional_args);
-
-    let mut subcommands = vec![
-        generate(),
-        new(),
-    ];
-
-    subcommands.extend_from_slice(additional_subcommands);
-
+pub fn cli() -> Command  {
     let matches = App::new("Lightning")
         .setting(AppSettings::ArgRequiredElseHelp)
         .version("0.1.0")
         .author(crate_authors!())
         .about("A fast, reliable, configurable static site generator.")
-        .subcommands(subcommands)
-        .args(&args)
+        .subcommands(vec![generate(), new()])
         .get_matches();
 
     // Since a subcommand is required, if this fails it's clap's fault.

@@ -8,9 +8,6 @@ mod cli;
 // Standard library
 use std::io::prelude::*;
 
-// Third party
-use clap::{Arg, App};
-
 // First party
 use cli::{cli, Command};
 
@@ -26,13 +23,10 @@ fn main() {
 
 /// Define a `Result`-returning function to run the app.
 ///
-/// (This is a standard Rust pattern to support the use of `try~`/`?`.)
+/// (This is a standard Rust pattern to support the use of `try~`/`?`. We're
+/// not doing that yet, but I expect we might eventually; this is convenient.)
 fn run() -> Result<(), String> {
-    let extra_args: Vec<Arg> = vec![];
-    let sub_commands: Vec<App> = vec![];
-    let command = cli(&extra_args, &sub_commands);
-
-    match command {
+    match cli() {
         Command::Generate(site) => lightning::generate(site),
         Command::Create => lightning::create(),
         Command::Serve => lightning::serve(),
