@@ -24,11 +24,14 @@ pub fn generate(site: Site) -> Result<(), String> {
     // In the vein of "MVP": let's start by just loading all the files. We'll
     // extract this all into standalone functions as necessary later.
 
-    // TODO: load this from the configuration file.
-    let directory = Path::new("tests/data");
+    // TODO: load config!
+    //
+    // Instead of just loading the files in the source directory as a glob of
+    // all Markdown files, load the *config* and let *it* specify the source of
+    // the files to convert.
     let dir_str = format!(
         "{}/**/*.md",
-        directory.to_str().ok_or(String::from("bad directory"))?
+        site.source_directory.to_str().ok_or(String::from("bad directory"))?
     );
 
     let markdown_files = glob(&dir_str).map_err(|err| format!("{:?}", err))?;
@@ -53,6 +56,7 @@ pub fn generate(site: Site) -> Result<(), String> {
         let highlighted = syntax_highlight(converted);
 
         // TODO: extract this as part of the writing it out process.
+        // TODO: set output location in config.
         let ff_path = Path::new(file_name);
         let dest = Path::new("./tests/output")
             .join(ff_path.file_name().ok_or(format!("invalid file: {}", file_name))?)
