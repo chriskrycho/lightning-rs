@@ -4,6 +4,99 @@ Yet another static site generator—but this one's written in Rust. (And therefo
 
 [*other* lightning]: https://github.com/borismus/lightning
 
+## Status
+
+This currently ***does not work***. If you need a site generator that does, I can point you to [Hugo], which is great, speedy, and pretty well-documented.
+
+Today, Lightning *builds* (and setting up Travis to both guarantee and show as much will happen soon), and it passes the single test I've written so far. But running `lng generate` will *not* do what you expect: it's currently hard-coded to use data in the test directory. That's coming... as I have time. Keep your expectations low on how fast this will develop, and you won't be disappointed.
+
+### Roadmap
+
+N.b. this is my overall set of goals, with no specific ties to a timeline or a planned 1.0. I'll hammer that out when I get a little futher along.
+
+- [ ] Define configuration scheme
+
+    - [ ] **Support custom taxonomies**: not being limited to just having categories and tags, and pages being off in their own corner
+
+        - [ ] binary (true/false)
+
+        - [ ] tag-like: items may belong to multiple items
+
+        - [ ] hierarchical: items may belong to parents/children but not siblings, e.g. something can be at `Tech/Programming` and thus belong to both Tech and Programming, but not simultaneously to `Art`
+
+            I don't actually want or need this, but other users almost certainly will.
+
+        - [ ] tag-like *and* hierarchical???
+
+    - [ ] Support importing other generators.
+        
+        This really means, make sure the configuration can support the configuration patterns for popular generators. This is not so much a *formal support* issue (though being able to `lng create --from-jekyll` would be cool) as it is a *make sure this is well-covered by the implementation* issue. Other generators to cover, in order:
+
+        - [ ] [Pelican][Pelican] – a must for the obvious reason that I want to be able to import my existing sites.
+
+        - [ ] [Jekyll][Jekyll] – a high priority given the sheer popularity of the generator
+
+        - [ ] [Hugo][Hugo] – because it's basically a direct competitor if I ever get this thing to where I want performance-wise
+
+- [ ] Render Markdown
+
+    - [ ] with [pulldown-cmark]
+
+    - [ ] with [pandoc]
+        - [x] via [subprocess][cmd-pandoc]
+        - [ ] as a library
+
+    - [ ] via [Hoedown] bindings? (big maybe, but it has the upside of being very widely used b/c of Jekyll and such.)
+
+    - [x] optionally using [Syntect] for syntax highlighting
+
+- [ ] Templating 
+
+    - [ ] Taxonomy-specific views
+
+    - [ ] Standalone pages
+
+    - [ ] Fully customizable "formats" to enable e.g. link-blogging, podcasting, slide shows, etc.
+
+- [ ] Server mode
+
+    It's nice to be able to generate everything statically, but depending on the site it may *also* be nice to have an actual server application, whether for generating content or simply for serving it in a non-static fashion if so desired. (There's a lot of thought that would need to go into figuring out what this flow would look like.)
+
+- [ ] Generate RSS
+
+    - [ ] support podcast elements for RSS
+
+    - [ ] render template not only into rendered content but also RSS/Atom
+
+- [ ] Embrace parallelism!
+
+    - [ ] Via threading?
+
+- [ ] Via [futures-cpupool] or similar? 
+
+- [ ] Extensibility
+
+    - [ ] via new commands, which can be installed and run _a la_ Git or Cargo commands (`cargo clippy` just runs the `cargo-clippy` binary)
+
+    - [ ] via some other system of plugin? (I'm inclined against plugin approach because it forces people to spend their time gluing things together.)
+
+- [ ] Supply (and make it easy to extend) a `create` command and interface.
+
+    It's hard to overstate how much utility I get out of the `ember generate` family of commands, or how much I use the hacked-together Python CLI I use to generate stubs for posts. And both Jekyll and Hugo have tools for this, and it's very handy.
+
+- [ ] Watchers – I want to be able to tweak content and regenerate it on the fly, or especially to be able to tweak a template and have it rebuild on the fly. (This may be a good thing to integrate with the **Server Mode** noted above.)
+
+What else should be on this list?
+
+[Pelican]: http://docs.getpelican.com/en/stable/
+[Jekyll]: http://jekyllrb.com
+[Hugo]: https://gohugo.io
+[pulldown-cmark]: https://crates.io/crates/pulldown-cmark
+[cmd-pandoc]: https://crates.io/crates/cmd-pandoc
+[Hoedown]: https://crates.io/crates/hoedown
+[Syntect]: https://crates.io/crates/syntect
+[futures-cpupool]: https://docs.rs/futures-cpupool/0.1.2/futures_cpupool/
+
 ## Why?
 
 1.  Because I've spent the last half decade fighting with different solutions, and ultimately found all of them wanting for my personal site needs—which are, in a word, *quirky*.
@@ -31,68 +124,3 @@ Yet another static site generator—but this one's written in Rust. (And therefo
 [Pandoc]: http://pandoc.org
 [Metalsmith]: http://www.metalsmith.io
 [Hugo]: https://github.com/spf13/hugo
-
-## Roadmap
-
-N.b. this is my overall set of goals, with no specific ties to a timeline or a planned 1.0. I'll hammer that out when I get a little futher along.
-
-- [ ] Define configuration scheme
-
-    - [ ] **Support custom taxonomies**: not being limited to just having categories and tags, and pages being off in their own corner
-
-        - [ ] binary (true/false)
-
-        - [ ] tag-like: items may belong to multiple items
-
-        - [ ] hierarchical: items may belong to parents/children but not siblings, e.g. something can be at `Tech/Programming` and thus belong to both Tech and Programming, but not simultaneously to `Art`
-
-            I don't actually want or need this, but other users almost certainly will.
-
-        - [ ] tag-like *and* hierarchical???
-
-    - [ ] Support importing Jekyll/etc.
-
-- [ ] Render Markdown
-
-    - [ ] with [pulldown-cmark]
-
-    - [ ] with [pandoc]
-        - [x] via [subprocess][cmd-pandoc]
-        - [ ] as a library
-
-    - [ ] via [Hoedown] bindings? (big maybe, but it has the upside of being very widely used b/c of Jekyll and such.)
-
-    - [x] optionally using [Syntect] for syntax highlighting
-
-- [ ] Templating 
-
-    - [ ] Taxonomy-specific views
-
-    - [ ] Standalone pages
-
-    - [ ] Fully customizable "formats" to enable e.g. link-blogging, podcasting, slide shows, etc.
-
-- [ ] support RSS
-
-    - [ ] support podcast elements for RSS
-
-    - [ ] render template not only into rendered content but also RSS/Atom
-
-- [ ] Embrace parallelism!
-
-    - [ ] Via threading?
-
-- [ ] Via [futures-cpupool](https://docs.rs/futures-cpupool/0.1.2/futures_cpupool/) or similar? 
-
-- [ ] Extensibility
-
-    - [ ] via new commands, which can be installed and run _a la_ Git or Cargo commands (`cargo clippy` just runs the `cargo-clippy` binary)
-
-    - [ ] via some other system of plugin? (I'm inclined against plugin approach because it forces people to spend their time gluing things together.)
-
-What else should be on this list?
-
-[pulldown-cmark]: https://crates.io/crates/pulldown-cmark
-[cmd-pandoc]: https://crates.io/crates/cmd-pandoc
-[Hoedown]: https://crates.io/crates/hoedown
-[Syntect]: https://crates.io/crates/syntect
