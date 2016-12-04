@@ -6,7 +6,7 @@ use std::fmt;
 use std::path::{PathBuf};
 
 // Third party
-use clap::App;
+use clap::{App, ArgMatches};
 
 // First party
 use lightning::Site;
@@ -49,22 +49,22 @@ pub fn cli() -> Command  {
     // Since a subcommand is required, if this fails it's clap's fault.
     // `unwrap()` at will, commander!
     match matches.subcommand_name().unwrap() {
-        GENERATE => {
-            let generate_args = matches.subcommand_matches(GENERATE).unwrap();
-            Command::Generate(Site {
-                source_directory: match generate_args.value_of("site_directory") {
-                    Some(path_str) => PathBuf::from(path_str),
-                    None => env::current_dir().unwrap(),
-                },
-                template_directory: match generate_args.value_of("template_directory") {
-                    Some(path_str) => Some(PathBuf::from(path_str)),
-                    None => None,
-                }
-            })
-        },
+        GENERATE => generate_from_matches(matches.subcommand_matches(GENERATE).unwrap()),
         CREATE => Command::Create,
         SERVE => Command::Serve,
         _ => Command::Unspecified,
-
     }
+}
+
+fn generate_from_matches<'m>(matches: &'m ArgMatches) -> Command {
+    Command::Generate(Site {
+        source_directory: match matches.value_of("site_directory") {
+            Some(path_str) => PathBuf::from(path_str),
+            None => env::current_dir().unwrap(),
+        },
+        template_directory: match matches.value_of("template_directory") {
+            Some(path_str) => Some(PathBuf::from(path_str)),
+            None => None,
+        }
+    })
 }
