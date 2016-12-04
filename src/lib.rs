@@ -4,6 +4,7 @@ extern crate glob;
 extern crate pandoc;
 extern crate quick_xml;
 extern crate syntect;
+extern crate toml;
 
 mod creator;
 mod generator;

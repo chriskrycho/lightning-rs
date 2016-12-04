@@ -1,0 +1,10 @@
+# A TOML file for configuring Lightning to support a Pelican site.
+
+# TODO: extract relevant bits from this into docs once I stabilize it a bit.
+# TODO: site configurations and templating are closely connected. Hmmmm.
+
+# You can specify multiple content directories if it's convenient.
+content_directories = ["content"]
+
+# Layout will live in a single directory. It should
+layout = "layout"
