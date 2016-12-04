@@ -28,9 +28,6 @@ subcommands:
             - site_directory:
                 help: The root of the site (if different from the current directory).
                 takes_value: true
-            - template_directory:
-                help: The template directory, if it is not `{site_directory}/layout`.
-                takes_value: true
             - local:
                 help: <TODO> Use local paths to resources.
                 short: l

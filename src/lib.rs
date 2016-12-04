@@ -4,7 +4,7 @@ extern crate glob;
 extern crate pandoc;
 extern crate quick_xml;
 extern crate syntect;
-extern crate toml;
+extern crate yaml_rust;
 
 mod init;
 mod creator;
