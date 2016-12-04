@@ -15,3 +15,6 @@ indent_size = 4
 [*.rs]
 indent_size = 4
 max_line_length = 100
+
+[*.yml, *.yaml]
+indent_size = 4

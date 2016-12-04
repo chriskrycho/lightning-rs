@@ -6,7 +6,7 @@ use std::fmt;
 use std::path::{PathBuf};
 
 // Third party
-use clap::{Arg, App, AppSettings, SubCommand};
+use clap::App;
 
 // First party
 use lightning::Site;
@@ -43,13 +43,8 @@ impl fmt::Display for Command {
 //       what Cargo does.)
 /// Get arguments from the command line.
 pub fn cli() -> Command  {
-    let matches = App::new("Lightning")
-        .setting(AppSettings::ArgRequiredElseHelp)
-        .version("0.1.0")
-        .author(crate_authors!())
-        .about("A fast, reliable, configurable static site generator.")
-        .subcommands(vec![generate(), new()])
-        .get_matches();
+    let yaml = load_yaml!("cli.yml");
+    let matches = App::from_yaml(yaml).get_matches();
 
     // Since a subcommand is required, if this fails it's clap's fault.
     // `unwrap()` at will, commander!
@@ -72,42 +67,4 @@ pub fn cli() -> Command  {
         _ => Command::Unspecified,
 
     }
-}
-
-
-/// Generate the site.
-fn generate<'a, 'b>() -> App<'a, 'b> {
-    SubCommand::with_name(GENERATE)
-        .about("Generate the site")
-        .arg(Arg::with_name("site_directory")
-            .help("the root of the site (if different from the current directory)")
-            .takes_value(true)
-            .visible_alias("site"))
-        .arg(Arg::with_name("template_directory")
-            .help("the template directory, if not `{site_directory}/layout`")
-            .takes_value(true)
-            .visible_alias("templates"))
-        .arg(Arg::with_name("local")
-            .help("Use local paths to resources")
-            .long("local"))
-        .arg(Arg::with_name("watch")
-            .short("w")
-            .long("watch"))
-}
-
-
-/// Generate a new item from a template.
-fn new<'a, 'b>() -> App<'a, 'b> {
-    SubCommand::with_name(CREATE)
-        .about("Create an item from a template")
-        .arg(Arg::with_name("template")
-            .help("The name of the template to generate, e.g. `post`")
-            .index(1)
-            .required(true)
-            .possible_values(&["post"]))
-        .arg(Arg::with_name("title")
-            .help("The title to use in the template")
-            .index(2)
-            .required(true)
-            .takes_value(true))
 }

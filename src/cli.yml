@@ -1,0 +1,44 @@
+name: Lightning
+version: "0.1"
+about: "A fast, reliable, configurable static site generator."
+author: Chris Krycho <chris@chriskrycho.com>
+
+settings:
+    - ArgRequiredElseHelp
+
+global_settings:
+    - ColoredHelp
+
+subcommands:
+    - create:
+        about: Create an item from a template.
+        args:
+            - template:
+                help: The name of the template to generate, e.g. 'post'.
+                index: 1
+                required: true
+                possible_values: ["post"]
+            - title:
+                help: The title to use in the template.
+                index: 2
+
+    - generate:
+        about: Generate the site.
+        args:
+            - site_directory:
+                help: The root of the site (if different from the current directory).
+                takes_value: true
+            - template_directory:
+                help: The template directory, if it is not `{site_directory}/layout`.
+                takes_value: true
+            - local:
+                help: <TODO> Use local paths to resources.
+                short: l
+                long: local
+            - watch:
+                help: <TODO> Rebuild the site on changes.
+                short: w
+                long: watch
+
+    - serve:
+        about: <TODO> Serve the site.
