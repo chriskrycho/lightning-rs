@@ -1,0 +1,203 @@
+# A YAML file for configuring Lightning to support a Pelican site.
+
+# TODO: rename to `lightning-pelican.yaml`. Define available generators in terms
+#       of files named `lightning-<generator>.yaml` located in an installation
+#       directory or some such.
+# TODO: make a generator that creates sites based on these.
+# TODO: generalize from the Pelican specifics here into a more general Lightning
+#       configuration set.
+
+# TODO: extract relevant bits from this into docs once I stabilize it a bit.
+
+site_info:
+  title: lx (lightning)
+
+  # Note that Lighting will check your URL; if it's badly formed, we'll warn you.
+  URL: ""
+
+  description: >
+    A crazy-fast site generator and engine.
+
+  # You may supply any other metadata you like, though only as key-value pairs.
+  # Those pairs will be supplied to your templates as maps.
+  metadata: ~
+
+
+# You can specify multiple content directories if it's convenient. In that
+# case, you can add more bullets below "content". Relative paths will be
+# resolved from the location of the lightning.yaml file.
+content_directories:
+  - "content"
+  # - "another/relative/directory"
+  # - "/an/absolute/directory"
+
+
+# Define the structure of the site, by supplying the location of a set of
+# templates to use in generating the site and a set of "taxonomies" which define
+# the *relationships* on the site. A taxonomy is a way of categorizing something
+# relative to other things---but "category" is an overloaded term, and one you
+# may well want to use to define one of those taxonomies! Common taxonomies you
+# see around the web are tags (and hashtags), categories, author, and date, each
+# of which provides a way of organizing content. You can define as many
+# taxonomies as you like, and they may overlap (or not) in whatever way you
+# choose.
+#
+# The `structure` may be configured in two ways:
+#
+# 1. By specifying the site structure configuration under the `structure` key
+#    directly, as in the configuraiton below.
+# 2. By specifying another configuration files, whose contents are identical to
+#    the contents of the `structure` below (i.e. there is no top-level
+#    `structure` key, only the fields which otherwise compose it).
+#
+# TODO/aspirational:
+# Lighting supplies default layouts to match the behavior of Jekyll, Pelican,
+# and Hugo. If you'd like to contribute a generator, please open a pull request
+# on the repository!
+structure:
+  # configuration: <path/to/lighting-structure.yaml>
+
+  # The `directory` may be specified as a relative or absolute path. By default,
+  # it is defined as a relative path from the root of the directory in which you
+  # ran `lx init`. If you want to develop your site structure separately
+  directory: "layout"
+
+  # Each taxonomy may be one of "multiple", "boolean", or "temporal".
+  # These options are mutually exclusive: a taxonomy may use time *or* it may
+  # define its own structure, but sad to say, we don't get to define the
+  # structure of time.
+  #
+  # "Multiple"-type taxonomies have as many variants as you define. You might
+  # have both "Tech" and "Art" as categories, for example. Boolean taxonomies do
+  # not have multiple variants; so e.g. in this setup an item is a "page" or it
+  # is not---unlike the category taxonomy, where an item does not belong to the
+  # "category" taxonomy so much as to one of the variants within the taxonomy.
+  #
+  # The "required" key may be set for any field which is required for all pieces
+  # of content (e.g. on many sites, "author" might be required).
+  #
+  # Use the "limit" field to specify whether a multiple-variant taxonomy may
+  # have more than one field applied. For example, "categories" are often
+  # treated as mutually exclusive, so that an item may only be in one category
+  # at a time, while "tags" are often allowed to overlap. For an unlimited
+  # number of items you can leave out the key, or explicitly set it to `~`.
+  #
+  # If you wish to enforce that all items have dates associated with them, you
+  # can you use the `temporal` type and set `required` to `true`. The `required`
+  # flag is ignored entirely on `boolean` types, where it would make no sense.
+  taxonomies:
+    - author:
+      type: multiple
+      limit: ~
+      required: false
+      hierarchical: false
+    - category:
+      type: multiple
+      limit: 1
+      required: false
+      hierarchical: false
+    - tag:
+      type: multiple  # TODO: not that name
+      limit: ~
+      required: false
+      hierarchical: false
+    - page:
+      type: binary
+
+    # The `date` taxonomy is implicit, and automatically associated with any
+    # piece of content stamped with a `date` field.
+    # - date:
+    #   type: temporal
+    #   required: false
+
+    # You can generate as many other taxonomies as you like. They may be
+    # multiple, binary, or
+    #
+    # - subject:  # to replace tags for my purposes
+    #   type: multiple
+    #   limit: ~
+    # - medium:  # audio, writing, etc.
+    #   type: multiple
+    #   limit: 1
+
+  # Define the templates which define the site layout. Templates are located
+  # relative to the directory specified
+  templates:
+
+    # The index is the root of the site; it is the only *required* element in
+    # the `templates` category. It can be named whatever you want, but the
+    # `index` key must be set.
+    index: index.html
+
+    # By default, a taxonomy will be linked to the corresponding taxonomy name.
+    # Taxonomies serve as *collections*, and so you can *list* all the variants
+    # for a given taxonomy. E.g. if you have the categories "Tech" and "Art",
+    # the `categories.html` view will receive a list of category names,
+    # the items associated with that category, and a link to the corresponding
+    # item template, `category.html`.
+    #
+    # To ignore a given list or item type, simply delete the line, or manually
+    # specify to ignore it with a `~` (which means "null" in a YAML document).
+    taxonomies:
+      - author:
+        list: authors.html  # All authors
+        item: author.html  # Everything authored by me
+      - category:
+        list: categories.html  # All categories
+        item: category.html  # Things categorized as "Tech"
+      - tag:
+        list: tags.html  # All tags
+        item: tag.html  # Things tagged "rust"
+      - date:  # TODO: these might be wrong re:Pelican, so confirm
+        list: period_archives.html
+        item: archives.html
+      # You can also override the default linkage by specifying it directly:
+      #
+      # - reused_taxonomy:
+      #   taxonomy: author
+      #   list: something_funky.html
+      #   item: getting_crazy.html
+      #
+      # These do not have to be `.html` files. In fact, you can use any
+      # extension you like, though for sanity's sake it's usually best to stick
+      # with `.html` or `.hbs`.
+
+  feeds:
+    # If engine is commented out or removed, no feeds will be generated. If it
+    # is included, a full RSS feed of every time-categorized item on the site
+    # will be generated. (NOTE: If there are no `temporal` taxonomies, feed
+    # items will will be generated.)
+    engine: 'RSS'  # or 'Atom'
+
+    # Generate additional feeds be
+    additional:
+
+      # The 'taxonomies' block allows you to specify taxonomies for which you
+      # wish to generate feeds for every variant. So in this setup, we will be
+      # generating feeds for each category and tag on the site.
+      taxonomies:
+        - category
+        - tag
+
+      # TODO: Something like this---
+      custom:
+        - Art and Tech:
+          taxonomies:
+            - category: art
+            - category: tech
+        - Family Poetry:
+          taxonomies:
+            - tag: family
+            - tag: poetry
+
+
+  # Define rules for other content to include or exclude.
+  other_content:
+    copy:
+      - static
+      - extra
+
+    exclude: ~
+
+  # TODO: how to handle "formats", e.g. link-blog posts, images, etc. And, in my
+  #       case, quotes, poetry, and so on.

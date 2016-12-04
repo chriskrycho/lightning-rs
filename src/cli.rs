@@ -66,10 +66,6 @@ fn generate_from_matches<'m>(matches: &'m ArgMatches) -> Command {
         source_directory: match matches.value_of("site_directory") {
             Some(path_str) => PathBuf::from(path_str),
             None => env::current_dir().unwrap(),
-        },
-        template_directory: match matches.value_of("template_directory") {
-            Some(path_str) => Some(PathBuf::from(path_str)),
-            None => None,
         }
     })
 }
