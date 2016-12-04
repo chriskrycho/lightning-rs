@@ -1,5 +1,7 @@
 # Lightning (`lx`)
 
+[![Build Status](https://travis-ci.org/chriskrycho/lightning-rs.svg?branch=master)](https://travis-ci.org/chriskrycho/lightning-rs)
+
 Yet another static site generator—but this one's written in Rust. (And therefore, not to be confused with the [*other* lightning] static site generator: that one is written in Python.)
 
 [*other* lightning]: https://github.com/borismus/lightning
@@ -8,7 +10,7 @@ Yet another static site generator—but this one's written in Rust. (And therefo
 
 This currently ***does not work***. If you need a site generator that does, I can point you to [Hugo], which is great, speedy, and pretty well-documented.
 
-  Today, Lightning *builds* (and setting up Travis to both guarantee and show as much will happen soon), and it passes the single test I've written so far. But running `lx generate` will *not* do what you expect: it's currently hard-coded to use data in the test directory. That's coming... as I have time. Keep your expectations low on how fast this will develop, and you won't be disappointed.
+Today, Lightning *builds*, and it passes the single test I've written so far. But running `lx generate` will *not* do what you expect: it's currently hard-coded to use data in the test directory. That's coming... as I have time. Keep your expectations low on how fast this will develop, and you won't be disappointed.
 
 ### Roadmap
 
