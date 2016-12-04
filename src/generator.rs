@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 // Third party
 use glob::glob;
-use pandoc::{Pandoc, PandocOption, InputFormat, OutputFormat, OutputKind};
+use pandoc::{Pandoc, PandocOption, PandocOutput, InputFormat, OutputFormat, OutputKind};
 
 // First party
 use syntax_highlighting::syntax_highlight;
@@ -50,8 +50,19 @@ pub fn generate(site: Site) -> Result<(), String> {
             .add_input(file_name)
             .set_output(OutputKind::Pipe);
 
-        let converted = pandoc.execute_with_output()
+        let pandoc_output = pandoc.execute()
             .map_err(|err| format!("pandoc failed on {}:\n{:?}", file_name, err))?;
+
+        let converted = match pandoc_output {
+            PandocOutput::ToFile(path_buf) => {
+                let msg = format!(
+                    "We wrote to a file ({}) instead of a pipe. That was weird.",
+                    path_buf.to_string_lossy()
+                );
+                return Err(msg);
+            },
+            PandocOutput::ToBuffer(string) => string,
+        };
 
         let highlighted = syntax_highlight(converted);
 
@@ -77,4 +88,10 @@ pub fn generate(site: Site) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+struct Config {}
+
+fn load_config(directory: &PathBuf) -> Config {
+    unimplemented!()
 }
