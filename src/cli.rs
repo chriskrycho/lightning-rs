@@ -3,13 +3,10 @@
 // Standard library
 use std::env;
 use std::fmt;
-use std::path::{PathBuf};
+use std::path::PathBuf;
 
 // Third party
 use clap::{App, ArgMatches};
-
-// First party
-use lightning::Site;
 
 
 const INIT: &'static str = "init";
@@ -20,10 +17,10 @@ const SERVE: &'static str = "serve";
 
 /// Commands which can be called, mapped from strings of the same name.
 pub enum Command {
-    /// Generate the site
-    Generate(Site),
     /// Create a new site.
     Init,
+    /// Generate the site at `site`.
+    Generate { site: PathBuf },
     Create,
     Serve,
     Unspecified,
@@ -32,8 +29,8 @@ pub enum Command {
 impl fmt::Display for Command {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Command::Generate(_) => write!(f, "{}", GENERATE),
             Command::Init => write!(f, "{}", INIT),
+            Command::Generate { ref site } => write!(f, "{} {}", GENERATE, site.to_string_lossy()),
             Command::Create => write!(f, "{}", CREATE),
             Command::Serve => write!(f, "{}", SERVE),
             _ => write!(f, "error!!!"),  // TODO: something else!
@@ -46,7 +43,7 @@ impl fmt::Display for Command {
 //       external tools are supplied---without requiring a rebuild. (Compare
 //       what Cargo does.)
 /// Get arguments from the command line.
-pub fn cli() -> Command  {
+pub fn cli() -> Command {
     let yaml = load_yaml!("cli.yml");
     let matches = App::from_yaml(yaml).get_matches();
 
@@ -62,10 +59,10 @@ pub fn cli() -> Command  {
 }
 
 fn generate_from_matches<'m>(matches: &'m ArgMatches) -> Command {
-    Command::Generate(Site {
-        source_directory: match matches.value_of("site_directory") {
+    Command::Generate {
+        site: match matches.value_of("site_directory") {
             Some(path_str) => PathBuf::from(path_str),
             None => env::current_dir().unwrap(),
-        }
-    })
+        },
+    }
 }
