@@ -20,7 +20,7 @@ pub enum Command {
     /// Create a new site.
     Init,
     /// Generate the site at `site`.
-    Generate { site: PathBuf },
+    Build { site: PathBuf },
     Create,
     Serve,
     Unspecified,
@@ -30,7 +30,7 @@ impl fmt::Display for Command {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Command::Init => write!(f, "{}", INIT),
-            Command::Generate { ref site } => write!(f, "{} {}", GENERATE, site.to_string_lossy()),
+            Command::Build { ref site } => write!(f, "{} {}", GENERATE, site.to_string_lossy()),
             Command::Create => write!(f, "{}", CREATE),
             Command::Serve => write!(f, "{}", SERVE),
             _ => write!(f, "error!!!"),  // TODO: something else!
@@ -59,7 +59,7 @@ pub fn cli() -> Command {
 }
 
 fn generate_from_matches<'m>(matches: &'m ArgMatches) -> Command {
-    Command::Generate {
+    Command::Build {
         site: match matches.value_of("site_directory") {
             Some(path_str) => PathBuf::from(path_str),
             None => env::current_dir().unwrap(),
