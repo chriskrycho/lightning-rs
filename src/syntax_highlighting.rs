@@ -167,63 +167,64 @@ pub fn syntax_highlight(html_string: String) -> String {
         state: ParseState::default(),
     };
 
-    let final_state = reader.fold(accumulator, |mut acc, event| {
-        let event = match event {
-            Ok(event) => event,
-            Err(_) => {
-                return acc;
-            }
-        };
+    let final_state =
+        reader.fold(accumulator, |mut acc, event| {
+            let event = match event {
+                Ok(event) => event,
+                Err(_) => {
+                    return acc;
+                }
+            };
 
-        let parse_event = ParseEvent::from(&event);
-        acc.state = ParseState::next(acc.state, parse_event);
+            let parse_event = ParseEvent::from(&event);
+            acc.state = ParseState::next(acc.state, parse_event);
 
-        let language = match acc.state.clone() {
-            ParseState::InCodeBlock(language) => language,
-            _ => {
-                assert!(acc.writer.write(event.clone()).is_ok());
-                return acc;
-            }
-        };
-
-        let unescaped_content = match event.element().unescaped_content() {
-            Ok(content) => content.into_owned(),
-            Err(_) => {
-                assert!(acc.writer.write(event.clone()).is_ok());
-                return acc;
-            }
-        };
-
-        let content_to_highlight = match str::from_utf8(&unescaped_content) {
-            Ok(utf8_str) => utf8_str,
-            Err(_) => {
-                assert!(acc.writer.write(event.clone()).is_ok());
-                return acc;
-            },
-        };
-
-        let syntax_key = language.clone();
-        let syntax_definition = syntax_definitions.entry(syntax_key).or_insert({
-            match ss.find_syntax_by_token(&language) {
-                Some(valid_syntax) => valid_syntax.clone(),
-                None => {
+            let language = match acc.state.clone() {
+                ParseState::InCodeBlock(language) => language,
+                _ => {
                     assert!(acc.writer.write(event.clone()).is_ok());
                     return acc;
-                },
-            }
+                }
+            };
+
+            let unescaped_content = match event.element().unescaped_content() {
+                Ok(content) => content.into_owned(),
+                Err(_) => {
+                    assert!(acc.writer.write(event.clone()).is_ok());
+                    return acc;
+                }
+            };
+
+            let content_to_highlight = match str::from_utf8(&unescaped_content) {
+                Ok(utf8_str) => utf8_str,
+                Err(_) => {
+                    assert!(acc.writer.write(event.clone()).is_ok());
+                    return acc;
+                }
+            };
+
+            let syntax_key = language.clone();
+            let syntax_definition = syntax_definitions.entry(syntax_key).or_insert({
+                match ss.find_syntax_by_token(&language) {
+                    Some(valid_syntax) => valid_syntax.clone(),
+                    None => {
+                        assert!(acc.writer.write(event.clone()).is_ok());
+                        return acc;
+                    }
+                }
+            });
+
+            let highlighted =
+                highlighted_snippet_for_string(content_to_highlight,
+                                               syntax_definition,
+                                               &ThemeSet::load_defaults().themes["base16-eighties.\
+                                                                                  dark"]);
+
+            let text = Element::new(highlighted);
+            assert!(acc.writer.write(Event::Text(text)).is_ok());
+
+            acc
         });
-
-        let highlighted = highlighted_snippet_for_string(
-            content_to_highlight,
-            syntax_definition,
-            &ThemeSet::load_defaults().themes["base16-eighties.dark"]
-        );
-
-        let text = Element::new(highlighted);
-        assert!(acc.writer.write(Event::Text(text)).is_ok());
-
-        acc
-    });
 
     String::from_utf8(final_state.writer.into_inner()).unwrap_or(original_string)
 }
@@ -239,55 +240,35 @@ mod tests {
 
         let lang = "rust";
 
-        assert_eq!(
-            ParseState::NotInBlock.next(ParseEvent::StartPre(Some(lang.to_string()))),
-            ParseState::MaybeStartBlock(lang.to_string())
-        );
+        assert_eq!(ParseState::NotInBlock.next(ParseEvent::StartPre(Some(lang.to_string()))),
+                   ParseState::MaybeStartBlock(lang.to_string()));
 
-        assert_eq!(
-            ParseState::NotInBlock.next(ParseEvent::EndCode),
-            ParseState::NotInBlock
-        );
+        assert_eq!(ParseState::NotInBlock.next(ParseEvent::EndCode),
+                   ParseState::NotInBlock);
 
-        assert_eq!(
-            ParseState::NotInBlock.next(ParseEvent::Other),
-            ParseState::NotInBlock
-        );
+        assert_eq!(ParseState::NotInBlock.next(ParseEvent::Other),
+                   ParseState::NotInBlock);
 
-        assert_eq!(
-            ParseState::NotInBlock.next(ParseEvent::StartCode),
-            ParseState::NotInBlock
-        );
+        assert_eq!(ParseState::NotInBlock.next(ParseEvent::StartCode),
+                   ParseState::NotInBlock);
 
-        assert_eq!(
-            ParseState::MaybeStartBlock(lang.to_string()).next(ParseEvent::StartCode),
-            ParseState::WillStartCodeBlock(lang.to_string())
-        );
+        assert_eq!(ParseState::MaybeStartBlock(lang.to_string()).next(ParseEvent::StartCode),
+                   ParseState::WillStartCodeBlock(lang.to_string()));
 
-        assert_eq!(
-            ParseState::MaybeStartBlock(lang.to_string()).next(ParseEvent::Text),
-            ParseState::NotInBlock
-        );
+        assert_eq!(ParseState::MaybeStartBlock(lang.to_string()).next(ParseEvent::Text),
+                   ParseState::NotInBlock);
 
-        assert_eq!(
-            ParseState::MaybeStartBlock(lang.to_string()).next(ParseEvent::EndCode),
-            ParseState::NotInBlock
-        );
+        assert_eq!(ParseState::MaybeStartBlock(lang.to_string()).next(ParseEvent::EndCode),
+                   ParseState::NotInBlock);
 
-        assert_eq!(
-            ParseState::MaybeStartBlock(lang.to_string())
-                .next(ParseEvent::StartPre(Some(lang.to_string()))),
-            ParseState::NotInBlock
-        );
+        assert_eq!(ParseState::MaybeStartBlock(lang.to_string())
+                       .next(ParseEvent::StartPre(Some(lang.to_string()))),
+                   ParseState::NotInBlock);
 
-        assert_eq!(
-            ParseState::MaybeStartBlock(lang.to_string()).next(ParseEvent::Other),
-            ParseState::NotInBlock
-        );
+        assert_eq!(ParseState::MaybeStartBlock(lang.to_string()).next(ParseEvent::Other),
+                   ParseState::NotInBlock);
 
-        assert_eq!(
-            ParseState::WillStartCodeBlock(lang.to_string()).next(ParseEvent::Text),
-            ParseState::InCodeBlock(lang.to_string())
-        );
+        assert_eq!(ParseState::WillStartCodeBlock(lang.to_string()).next(ParseEvent::Text),
+                   ParseState::InCodeBlock(lang.to_string()));
     }
 }
