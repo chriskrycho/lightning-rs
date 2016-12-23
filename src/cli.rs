@@ -12,6 +12,7 @@ use clap::{App, ArgMatches};
 use lightning::Site;
 
 
+const INIT: &'static str = "init";
 const GENERATE: &'static str = "generate";
 const CREATE: &'static str = "create";
 const SERVE: &'static str = "serve";
@@ -21,6 +22,8 @@ const SERVE: &'static str = "serve";
 pub enum Command {
     /// Generate the site
     Generate(Site),
+    /// Create a new site.
+    Init,
     Create,
     Serve,
     Unspecified,
@@ -30,6 +33,7 @@ impl fmt::Display for Command {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Command::Generate(_) => write!(f, "{}", GENERATE),
+            Command::Init => write!(f, "{}", INIT),
             Command::Create => write!(f, "{}", CREATE),
             Command::Serve => write!(f, "{}", SERVE),
             _ => write!(f, "error!!!"),  // TODO: something else!
@@ -49,6 +53,7 @@ pub fn cli() -> Command  {
     // Since a subcommand is required, if this fails it's clap's fault.
     // `unwrap()` at will, commander!
     match matches.subcommand_name().unwrap() {
+        INIT => Command::Init,
         GENERATE => generate_from_matches(matches.subcommand_matches(GENERATE).unwrap()),
         CREATE => Command::Create,
         SERVE => Command::Serve,
