@@ -23,7 +23,6 @@ pub enum Command {
     Build { site: PathBuf },
     Create,
     Serve,
-    Unspecified,
 }
 
 impl fmt::Display for Command {
@@ -33,7 +32,6 @@ impl fmt::Display for Command {
             Command::Build { ref site } => write!(f, "{} {}", GENERATE, site.to_string_lossy()),
             Command::Create => write!(f, "{}", CREATE),
             Command::Serve => write!(f, "{}", SERVE),
-            _ => write!(f, "error!!!"),  // TODO: something else!
         }
     }
 }
@@ -54,7 +52,7 @@ pub fn cli() -> Command {
         GENERATE => generate_from_matches(matches.subcommand_matches(GENERATE).unwrap()),
         CREATE => Command::Create,
         SERVE => Command::Serve,
-        _ => Command::Unspecified,
+        _ => panic!("ERROR: `clap.rs` is configured wrong somehow, kids."),
     }
 }
 

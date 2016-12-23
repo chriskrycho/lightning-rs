@@ -31,6 +31,5 @@ fn run() -> Result<(), String> {
         Command::Build { site } => lightning::build(site),
         Command::Create => lightning::create(),
         Command::Serve => lightning::serve(),
-        Command::Unspecified => Err(format!("Failed to parse command line.")),
     }
 }
