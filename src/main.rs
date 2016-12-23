@@ -27,7 +27,7 @@ fn main() {
 /// not doing that yet, but I expect we might eventually; this is convenient.)
 fn run() -> Result<(), String> {
     match cli() {
-        Command::Init => lightning::init(),
+        Command::Init { site } => lightning::init(site),
         Command::Build { site } => lightning::build(site),
         Command::Create => lightning::create(),
         Command::Serve => lightning::serve(),

@@ -3,10 +3,10 @@ version: "0.1"
 about: "A fast, reliable, configurable static site generator."
 author: Chris Krycho <chris@chriskrycho.com>
 
-settings:
-  - ArgRequiredElseHelp
+# settings:
 
 global_settings:
+  - ArgRequiredElseHelp
   - ColoredHelp
 
 subcommands:
