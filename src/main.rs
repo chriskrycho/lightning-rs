@@ -28,7 +28,7 @@ fn main() {
 fn run() -> Result<(), String> {
     match cli() {
         Command::Init => lightning::init(),
-        Command::Generate { site } => lightning::generate(site),
+        Command::Build { site } => lightning::build(site),
         Command::Create => lightning::create(),
         Command::Serve => lightning::serve(),
         Command::Unspecified => Err(format!("Failed to parse command line.")),

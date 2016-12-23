@@ -15,7 +15,7 @@ use syntax_highlighting::syntax_highlight;
 
 
 /// Generate content from a configuration.
-pub fn generate(site: PathBuf) -> Result<(), String> {
+pub fn build(site: PathBuf) -> Result<(), String> {
     // In the vein of "MVP": let's start by just loading all the files. We'll
     // extract this all into standalone functions as necessary later.
 

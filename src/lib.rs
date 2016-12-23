@@ -6,14 +6,14 @@ extern crate quick_xml;
 extern crate syntect;
 extern crate yaml_rust;
 
-mod init;
+mod initializer;
 mod config;
 mod creator;
-mod generator;
+mod builder;
 mod server;
 mod syntax_highlighting;
 
-pub use init::init;
+pub use initializer::init;
+pub use builder::build;
 pub use creator::create;
-pub use generator::generate;
 pub use server::serve;
