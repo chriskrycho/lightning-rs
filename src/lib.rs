@@ -7,6 +7,7 @@ extern crate syntect;
 extern crate yaml_rust;
 
 mod init;
+mod config;
 mod creator;
 mod generator;
 mod server;
