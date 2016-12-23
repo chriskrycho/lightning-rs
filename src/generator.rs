@@ -29,10 +29,8 @@ pub fn generate(site: Site) -> Result<(), String> {
     // Instead of just loading the files in the source directory as a glob of
     // all Markdown files, load the *config* and let *it* specify the source of
     // the files to convert.
-    let dir_str = format!(
-        "{}/**/*.md",
-        site.source_directory.to_str().ok_or(String::from("bad directory"))?
-    );
+    let dir_str = format!("{}/**/*.md",
+                          site.source_directory.to_str().ok_or(String::from("bad directory"))?);
 
     let markdown_files = glob(&dir_str).map_err(|err| format!("{:?}", err))?;
 
@@ -55,12 +53,10 @@ pub fn generate(site: Site) -> Result<(), String> {
 
         let converted = match pandoc_output {
             PandocOutput::ToFile(path_buf) => {
-                let msg = format!(
-                    "We wrote to a file ({}) instead of a pipe. That was weird.",
-                    path_buf.to_string_lossy()
-                );
+                let msg = format!("We wrote to a file ({}) instead of a pipe. That was weird.",
+                                  path_buf.to_string_lossy());
                 return Err(msg);
-            },
+            }
             PandocOutput::ToBuffer(string) => string,
         };
 
