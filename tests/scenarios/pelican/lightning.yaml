@@ -82,22 +82,22 @@ structure:
   # flag is ignored entirely on `boolean` types, where it would make no sense.
   taxonomies:
     - author:
-      type: multiple
-      limit: ~
-      required: false
-      hierarchical: false
+        type: multiple
+        limit: ~
+        required: false
+        hierarchical: false
     - category:
-      type: multiple
-      limit: 1
-      required: false
-      hierarchical: false
+        type: multiple
+        limit: 1
+        required: false
+        hierarchical: false
     - tag:
-      type: multiple  # TODO: not that name
-      limit: ~
-      required: false
-      hierarchical: false
+        type: multiple  # TODO: not that name
+        limit: ~
+        required: false
+        hierarchical: false
     - page:
-      type: binary
+        type: binary
 
     # The `date` taxonomy is implicit, and automatically associated with any
     # piece of content stamped with a `date` field.
@@ -135,23 +135,23 @@ structure:
     # specify to ignore it with a `~` (which means "null" in a YAML document).
     taxonomies:
       - author:
-        list: authors.html  # All authors
-        item: author.html  # Everything authored by me
+          list: authors.html  # All authors
+          item: author.html  # Everything authored by me
       - category:
-        list: categories.html  # All categories
-        item: category.html  # Things categorized as "Tech"
+          list: categories.html  # All categories
+          item: category.html  # Things categorized as "Tech"
       - tag:
-        list: tags.html  # All tags
-        item: tag.html  # Things tagged "rust"
+          list: tags.html  # All tags
+          item: tag.html  # Things tagged "rust"
       - date:  # TODO: these might be wrong re:Pelican, so confirm
-        list: period_archives.html
-        item: archives.html
+          list: period_archives.html
+          item: archives.html
       # You can also override the default linkage by specifying it directly:
       #
       # - reused_taxonomy:
-      #   taxonomy: author
-      #   list: something_funky.html
-      #   item: getting_crazy.html
+      #     taxonomy: author
+      #     list: something_funky.html
+      #     item: getting_crazy.html
       #
       # These do not have to be `.html` files. In fact, you can use any
       # extension you like, though for sanity's sake it's usually best to stick
@@ -177,13 +177,13 @@ structure:
       # TODO: Something like this---
       custom:
         - Art and Tech:
-          taxonomies:
-            - category: art
-            - category: tech
+            taxonomies:
+              - category: art
+              - category: tech
         - Family Poetry:
-          taxonomies:
-            - tag: family
-            - tag: poetry
+            taxonomies:
+              - tag: family
+              - tag: poetry
 
 
   # Define rules for other content to include or exclude.
