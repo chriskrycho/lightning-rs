@@ -14,5 +14,5 @@ mod syntax_highlighting;
 
 pub use init::init;
 pub use creator::create;
-pub use generator::{generate, Site};
+pub use generator::generate;
 pub use server::serve;

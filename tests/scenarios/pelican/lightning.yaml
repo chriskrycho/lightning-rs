@@ -23,14 +23,9 @@ site_info:
   metadata: ~
 
 
-# You can specify multiple content directories if it's convenient. In that
-# case, you can add more bullets below "content". Relative paths will be
-# resolved from the location of the lightning.yaml file.
-content_directories:
-  - "content"
-  # - "another/relative/directory"
-  # - "/an/absolute/directory"
-
+# Specify the source for the content. It can be any folder at all; relative
+# paths are resolved from the location of this configuration file.
+content_directory: "content"
 
 # Define the structure of the site, by supplying the location of a set of
 # templates to use in generating the site and a set of "taxonomies" which define
