@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 // Third party
 use glob::glob;
 use pandoc::{Pandoc, PandocOption, PandocOutput, InputFormat, OutputFormat, OutputKind};
+use syntect::highlighting::ThemeSet;
 
 // First party
 use config::load;
@@ -27,6 +28,10 @@ pub fn build(site: PathBuf) -> Result<(), String> {
                 config.content_directory.to_str().ok_or(String::from("bad content_directory"))?);
 
     let markdown_files = glob(&content_glob_str).map_err(|err| format!("{:?}", err))?;
+    // TODO: build from config. Also, extract and just do this once *not* at the
+    //       top level function.
+    let theme_file = PathBuf::from("data/base16-yesterdaynight.dark.tmTheme");
+    let theme = &ThemeSet::get_theme(theme_file).map_err(|err| format!("{:?}", err))?;
 
     // TODO: Iterate with `rayon::par_iter::for_each()`.
     for path_result in markdown_files {
@@ -54,7 +59,7 @@ pub fn build(site: PathBuf) -> Result<(), String> {
             PandocOutput::ToBuffer(string) => string,
         };
 
-        let highlighted = syntax_highlight(converted);
+        let highlighted = syntax_highlight(converted, theme);
 
         // TODO: extract this as part of the writing it out process.
         // TODO: set output location in config.

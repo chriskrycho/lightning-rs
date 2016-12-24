@@ -10,7 +10,7 @@ use std::str;
 // Third party
 use quick_xml::{XmlReader, XmlWriter, Element, Event};
 use syntect::html::highlighted_snippet_for_string;
-use syntect::highlighting::ThemeSet;
+use syntect::highlighting::Theme;
 use syntect::parsing::{SyntaxDefinition, SyntaxSet};
 
 
@@ -155,7 +155,7 @@ struct Accumulator {
 /// Note that any `html_string` will do; if it cannot be parsed as XML, it will
 /// simply be returned unchanged; and if there are no code blocks to highlight,
 /// it will also be returned unchanged.
-pub fn syntax_highlight(html_string: String) -> String {
+pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
     let original_string = html_string.clone();
     let reader = XmlReader::from(html_string.as_str());
 
@@ -167,64 +167,60 @@ pub fn syntax_highlight(html_string: String) -> String {
         state: ParseState::default(),
     };
 
-    let final_state =
-        reader.fold(accumulator, |mut acc, event| {
-            let event = match event {
-                Ok(event) => event,
-                Err(_) => {
-                    return acc;
-                }
-            };
+    let final_state = reader.fold(accumulator, |mut acc, event| {
+        let event = match event {
+            Ok(event) => event,
+            Err(_) => {
+                return acc;
+            }
+        };
 
-            let parse_event = ParseEvent::from(&event);
-            acc.state = ParseState::next(acc.state, parse_event);
+        let parse_event = ParseEvent::from(&event);
+        acc.state = ParseState::next(acc.state, parse_event);
 
-            let language = match acc.state.clone() {
-                ParseState::InCodeBlock(language) => language,
-                _ => {
+        let language = match acc.state.clone() {
+            ParseState::InCodeBlock(language) => language,
+            _ => {
+                assert!(acc.writer.write(event.clone()).is_ok());
+                return acc;
+            }
+        };
+
+        let unescaped_content = match event.element().unescaped_content() {
+            Ok(content) => content.into_owned(),
+            Err(_) => {
+                assert!(acc.writer.write(event.clone()).is_ok());
+                return acc;
+            }
+        };
+
+        let content_to_highlight = match str::from_utf8(&unescaped_content) {
+            Ok(utf8_str) => utf8_str,
+            Err(_) => {
+                assert!(acc.writer.write(event.clone()).is_ok());
+                return acc;
+            }
+        };
+
+        let syntax_key = language.clone();
+        let syntax_definition = syntax_definitions.entry(syntax_key).or_insert({
+            match ss.find_syntax_by_token(&language) {
+                Some(valid_syntax) => valid_syntax.clone(),
+                None => {
                     assert!(acc.writer.write(event.clone()).is_ok());
                     return acc;
                 }
-            };
-
-            let unescaped_content = match event.element().unescaped_content() {
-                Ok(content) => content.into_owned(),
-                Err(_) => {
-                    assert!(acc.writer.write(event.clone()).is_ok());
-                    return acc;
-                }
-            };
-
-            let content_to_highlight = match str::from_utf8(&unescaped_content) {
-                Ok(utf8_str) => utf8_str,
-                Err(_) => {
-                    assert!(acc.writer.write(event.clone()).is_ok());
-                    return acc;
-                }
-            };
-
-            let syntax_key = language.clone();
-            let syntax_definition = syntax_definitions.entry(syntax_key).or_insert({
-                match ss.find_syntax_by_token(&language) {
-                    Some(valid_syntax) => valid_syntax.clone(),
-                    None => {
-                        assert!(acc.writer.write(event.clone()).is_ok());
-                        return acc;
-                    }
-                }
-            });
-
-            let highlighted =
-                highlighted_snippet_for_string(content_to_highlight,
-                                               syntax_definition,
-                                               &ThemeSet::load_defaults().themes["base16-eighties.\
-                                                                                  dark"]);
-
-            let text = Element::new(highlighted);
-            assert!(acc.writer.write(Event::Text(text)).is_ok());
-
-            acc
+            }
         });
+
+        let highlighted =
+            highlighted_snippet_for_string(content_to_highlight, syntax_definition, &theme);
+
+        let text = Element::new(highlighted);
+        assert!(acc.writer.write(Event::Text(text)).is_ok());
+
+        acc
+    });
 
     String::from_utf8(final_state.writer.into_inner()).unwrap_or(original_string)
 }
