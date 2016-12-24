@@ -13,10 +13,10 @@ site_info:
   title: lx (lightning)
 
   # Note that Lighting will check your URL; if it's badly formed, we'll warn you.
-  URL: ""
+  URL: https://lightning.rs  # I can wish and hope, right? And save my pennies.
 
   description: >
-    A crazy-fast site generator and engine.
+    A ridiculously fast site generator and engine.
 
   # You may supply any other metadata you like, though only as key-value pairs.
   # Those pairs will be supplied to your templates as maps.
@@ -25,7 +25,16 @@ site_info:
 
 # Specify the source for the content. It can be any folder at all; relative
 # paths are resolved from the location of this configuration file.
-content_directory: "content"
+content_directory: content
+
+# Specify the destination for the generated site. As with the source directory,
+# it can be any folder, and relative paths are resolved from the location of
+# this configuration file.
+#
+# Tip: if you are using this with [GitHub Pages](https://pages.github.com), you
+# may find it convenient to set this to "docs" so that you don't have to bother
+# with `gh-pages` branch.
+output_directory: output
 
 # Define the structure of the site, by supplying the location of a set of
 # templates to use in generating the site and a set of "taxonomies" which define
@@ -55,12 +64,19 @@ structure:
   # The `directory` may be specified as a relative or absolute path. By default,
   # it is defined as a relative path from the root of the directory in which you
   # ran `lx init`. If you want to develop your site structure separately
-  directory: "layout"
+  directory: layout
 
-  # Each taxonomy may be one of "multiple", "boolean", or "temporal".
-  # These options are mutually exclusive: a taxonomy may use time *or* it may
-  # define its own structure, but sad to say, we don't get to define the
-  # structure of time.
+  # The index is the root of the site; it is the only *required* template. The
+  # file may be named whatever you want, but this `index` key must be set.
+  index: index.html
+
+  # Each taxonomy may be one of "boolean", "multiple", or "temporal". These
+  # options are mutually exclusive: a taxonomy may use time *or* it may define
+  # its own structure, but sad to say, we don't get to define the structure of
+  # time itself (unless you're a [Time Lord], in which case I have some
+  # questions for you).
+  #
+  # [Time Lord]: https://en.wikipedia.org/wiki/Time_Lord
   #
   # "Multiple"-type taxonomies have as many variants as you define. You might
   # have both "Tech" and "Art" as categories, for example. Boolean taxonomies do
@@ -68,108 +84,107 @@ structure:
   # is not---unlike the category taxonomy, where an item does not belong to the
   # "category" taxonomy so much as to one of the variants within the taxonomy.
   #
+  # The "default" key allows you to specify a default value for items.
+  #
   # The "required" key may be set for any field which is required for all pieces
   # of content (e.g. on many sites, "author" might be required).
   #
   # Use the "limit" field to specify whether a multiple-variant taxonomy may
-  # have more than one field applied. For example, "categories" are often
-  # treated as mutually exclusive, so that an item may only be in one category
-  # at a time, while "tags" are often allowed to overlap. For an unlimited
-  # number of items you can leave out the key, or explicitly set it to `~`.
+  # have more than one field applied. The field may be implicitly set to null
+  # by leaving it out, or explicitly set to null with `~`. If set, it must be a
+  # number greater than 0. (Other values will be treated as errors.) See
+  # examples below.
+  #
+  # Use the `hierarchical` field to specify (`true` or `false`) whether a
+  # taxonomy may be nested, e.g. "Parent Category -> Child Category".
   #
   # If you wish to enforce that all items have dates associated with them, you
   # can you use the `temporal` type and set `required` to `true`. The `required`
   # flag is ignored entirely on `boolean` types, where it would make no sense.
+  #
+  # Every taxonomy must have at least an `item` template key defined; it may
+  # also have a `list` template key defined. The `list` template will receive
+  # all variants of the taxonomy, with all items associated with that taxonomy.
+  # The `item` template will receive
   taxonomies:
+
+    # Note that simply by leaving off the `limit` key, this taxonomy is
+    # implicitly unlimited. In this case, that means you can have an arbitrary
+    # number of authors for each post. Since there is no default tag, items
+    # without tags set explicitly will not be associated with any tag. (You
+    # could also specify this explicitly by setting `default: ~`.)
     - author:
         type: multiple
-        limit: ~
         required: false
         hierarchical: false
+        templates:
+          list: authors.html  # All authors
+          item: author.html  # Everything authored by me
+
+    # If we set a `limit` explicitly, the taxonomy allow only that many
+    # variants per item. So in this case, an item may be in at most 1 category.
+    # Here, we also set a default category of "Blog", so any item which does not
+    # specify a category will automatically be included in the "Blog" category.
     - category:
         type: multiple
+        default: Blog
         limit: 1
         required: false
         hierarchical: false
+        templates:
+          list: categories.html  # All categories
+          item: category.html  # Things categorized as "Tech"
+
+    # You can also make an unlimited taxonomy explicitly, by setting the
+    # `limit` to `~`, which is "null" in YAML. So here, a post may have as many
+    # tags as you like.
     - tag:
-        type: multiple  # TODO: not that name
+        type: multiple
         limit: ~
         required: false
         hierarchical: false
-    - page:
-        type: binary
-
-    # The `date` taxonomy is implicit, and automatically associated with any
-    # piece of content stamped with a `date` field.
-    # - date:
-    #   type: temporal
-    #   required: false
-
-    # You can generate as many other taxonomies as you like. They may be
-    # multiple, binary, or
-    #
-    # - subject:  # to replace tags for my purposes
-    #   type: multiple
-    #   limit: ~
-    # - medium:  # audio, writing, etc.
-    #   type: multiple
-    #   limit: 1
-
-  # Define the templates which define the site layout. Templates are located
-  # relative to the directory specified
-  templates:
-
-    # The index is the root of the site; it is the only *required* element in
-    # the `templates` category. It can be named whatever you want, but the
-    # `index` key must be set.
-    index: index.html
-
-    # By default, a taxonomy will be linked to the corresponding taxonomy name.
-    # Taxonomies serve as *collections*, and so you can *list* all the variants
-    # for a given taxonomy. E.g. if you have the categories "Tech" and "Art",
-    # the `categories.html` view will receive a list of category names,
-    # the items associated with that category, and a link to the corresponding
-    # item template, `category.html`.
-    #
-    # To ignore a given list or item type, simply delete the line, or manually
-    # specify to ignore it with a `~` (which means "null" in a YAML document).
-    taxonomies:
-      - author:
-          list: authors.html  # All authors
-          item: author.html  # Everything authored by me
-      - category:
-          list: categories.html  # All categories
-          item: category.html  # Things categorized as "Tech"
-      - tag:
+        templates:
           list: tags.html  # All tags
           item: tag.html  # Things tagged "rust"
-      - date:  # TODO: these might be wrong re:Pelican, so confirm
+
+    # Note: the `date` taxonomy is normally implicit, and automatically
+    # associated with any piece of content stamped with a `date` field. You
+    # only need to define it explicitly if you want to customize the associated
+    # templates, or if you want to use something besides `date` to specify the
+    # time stamp for a given item. The `limit` field here is *always* ignored.
+    - date:  # TODO: these might be wrong re:Pelican, so confirm
+        type: temporal
+        required: false
+        template:
           list: period_archives.html
           item: archives.html
-      # You can also override the default linkage by specifying it directly:
-      #
-      # - reused_taxonomy:
-      #     taxonomy: author
-      #     list: something_funky.html
-      #     item: getting_crazy.html
-      #
-      # These do not have to be `.html` files. In fact, you can use any
-      # extension you like, though for sanity's sake it's usually best to stick
-      # with `.html` or `.hbs`.
+
+    # It is easy to define a page-style taxonomy: simply use `type: binary` and
+    # then on a piece of content set e.g. `page: true`. If you want all items
+    # to belong to a taxonomy by default and to opt, you may set `default: true`.
+    - page:
+        type: binary
+        hierarchical: true
+        templates:
+          # list: pages.html  # If I wanted a page where I listed all pages...
+          item: tag.html
 
   feeds:
     # If engine is commented out or removed, no feeds will be generated. If it
     # is included, a full RSS feed of every time-categorized item on the site
     # will be generated. (NOTE: If there are no `temporal` taxonomies, feed
     # items will will be generated.)
-    engine: 'RSS'  # or 'Atom'
+    engine: RSS  # `RSS` or `Atom`
 
     # Generate additional feeds be
     additional:
 
       # The 'taxonomies' block allows you to specify taxonomies for which you
       # wish to generate feeds for every variant. So in this setup, we will be
-      # generating feeds for each category and tag on the site.
+      # generating feeds for each category and tag on the site. The generated
+      # feeds will be <name of taxonomy item> - <site name>. For example, that
+      # might be 'Tech - Chris Krycho' if it were for the "Tech" category on
+      # my personal website.
       taxonomies:
         - category
         - tag

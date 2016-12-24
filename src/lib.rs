@@ -6,10 +6,10 @@ extern crate quick_xml;
 extern crate syntect;
 extern crate yaml_rust;
 
-mod initializer;
+mod builder;
 mod config;
 mod creator;
-mod builder;
+mod initializer;
 mod server;
 mod syntax_highlighting;
 

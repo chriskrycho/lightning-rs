@@ -1,5 +1,5 @@
 use std::path::PathBuf;
 
-pub fn init(site: PathBuf) -> Result<(), String> {
+pub fn init(site_directory: PathBuf) -> Result<(), String> {
     unimplemented!();
 }

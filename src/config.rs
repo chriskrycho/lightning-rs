@@ -2,6 +2,7 @@
 
 
 // First-party
+use std::collections::HashMap;
 use std::error::Error;
 use std::io::Read;
 use std::fs::File;
@@ -13,24 +14,73 @@ use yaml_rust::{Yaml, YamlLoader};
 
 const CONFIG_FILE_NAME: &'static str = "lightning.yaml";
 const CONTENT_DIRECTORY: &'static str = "content_directory";
+const OUTPUT_DIRECTORY: &'static str = "output_directory";
 const TEMPLATE_DIRECTORY: &'static str = "directory";
 
 
 pub struct Config {
-    pub content_directory: PathBuf,
-    pub template_directory: PathBuf,
+    pub site: Site,
+    pub directories: Directories,
+    pub taxonomies: Vec<Taxonomy>,
+}
+
+
+pub struct Directories {
+    pub content: PathBuf,
+    pub output: PathBuf,
+    pub template: PathBuf,
 }
 
 
 pub enum Taxonomy {
+    Binary { templates: Templates },
     Multiple {
         name: String,
         limit: Option<u8>,
         required: bool,
         hierarchical: bool,
+        templates: Templates,
     },
-    Binary,
-    Temporal { required: bool },
+    Temporal {
+        required: bool,
+        templates: Templates,
+    },
+}
+
+
+pub struct Site {
+    pub name: String,
+    pub description: String,
+    pub metadata: HashMap<Yaml, Yaml>,
+    pub url: ValidatedUrl,
+}
+
+
+pub struct Templates {
+    item: String,
+}
+
+
+pub struct ValidatedUrl(String);
+
+impl ValidatedUrl {
+    /// Get a URL. `Err` if the item passed in is not a spec-conformant URL.
+    pub fn new(unvalidated_url: String) -> Result<ValidatedUrl, String> {
+        // TODO: validate the URLs!
+        Ok(ValidatedUrl(unvalidated_url))
+    }
+
+    pub fn value(&self) -> String {
+        self.0.clone()
+    }
+}
+
+
+fn path_buf_from_yaml(yaml: &Yaml, key: &str, config_path: &PathBuf) -> Result<PathBuf, String> {
+    match yaml {
+        &Yaml::String(ref path_str) => Ok(PathBuf::from(path_str)),
+        value => Err(format!("invalid `{:}` value {:?} in {:?}", key, value, config_path)),
+    }
 }
 
 
@@ -60,18 +110,14 @@ pub fn load(directory: &PathBuf) -> Result<Config, String> {
     let content_directory_yaml = yaml_config.get(&Yaml::from_str(CONTENT_DIRECTORY))
         .ok_or(format!("No `{:}` key in {:?}", CONTENT_DIRECTORY, config_path))?;
 
-    fn path_buf_from_yaml(yaml: &Yaml,
-                          key: &str,
-                          config_path: &PathBuf)
-                          -> Result<PathBuf, String> {
-        match yaml {
-            &Yaml::String(ref path_str) => Ok(PathBuf::from(path_str)),
-            value => Err(format!("invalid `{:}` value {:?} in {:?}", key, value, config_path)),
-        }
-    }
-
     let content_directory =
         path_buf_from_yaml(&content_directory_yaml, CONTENT_DIRECTORY, &config_path)?;
+
+    let output_directory_yaml = yaml_config.get(&Yaml::from_str(OUTPUT_DIRECTORY))
+        .ok_or(format!("No `{:} key in `{:?}", OUTPUT_DIRECTORY, config_path))?;
+
+    let output_directory =
+        path_buf_from_yaml(output_directory_yaml, OUTPUT_DIRECTORY, &config_path)?;
 
     let structure = yaml_config.get(&Yaml::from_str("structure"))
         .ok_or(format!("No `structure` key in {:?}", config_path))?
@@ -85,7 +131,17 @@ pub fn load(directory: &PathBuf) -> Result<Config, String> {
         path_buf_from_yaml(&template_directory_yaml, TEMPLATE_DIRECTORY, &config_path)?;
 
     Ok(Config {
-        content_directory: content_directory,
-        template_directory: template_directory,
+        site: Site {  // TODO
+            name: String::new(),
+            description: String::new(),
+            metadata: HashMap::new(),
+            url: ValidatedUrl(String::new()),
+        },
+        directories: Directories {
+            content: content_directory,
+            output: output_directory,
+            template: template_directory,
+        },
+        taxonomies: Vec::new(),
     })
 }
