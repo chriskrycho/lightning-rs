@@ -16,10 +16,10 @@ use syntax_highlighting::syntax_highlight;
 
 
 /// Load the `Paths` for all markdown files in the specified content directory.
-fn glob_md_paths(site: &PathBuf, config: &Config) -> Result<Paths, String> {
+fn glob_md_paths(site_directory: &PathBuf, config: &Config) -> Result<Paths, String> {
     let content_glob_str =
         format!("{}/{}/**/*.md",
-                site.to_str().ok_or(String::from("bad `site`"))?,
+                site_directory.to_str().ok_or(String::from("bad `site`"))?,
                 config.directories.content.to_str().ok_or(String::from("bad content directory"))?);
 
     glob(&content_glob_str).map_err(|err| format!("{:?}", err))
@@ -27,7 +27,7 @@ fn glob_md_paths(site: &PathBuf, config: &Config) -> Result<Paths, String> {
 
 
 /// Load the templates associated with each taxonomy.
-fn load_templates(config: &Config) -> Result<Paths, String> {
+fn load_templates(site_directory: &PathBuf, config: &Config) -> Result<Paths, String> {
     unimplemented!()
 }
 
@@ -39,7 +39,7 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
 
     let config = load(&PathBuf::from(&site_directory))?;
     let markdown_paths = glob_md_paths(&site_directory, &config)?;
-    // let templates = load_template(&config)?;
+    let templates = load_templates(&site_directory, &config)?;
 
     // TODO: build from config. Also, extract and just do this once *not* at the
     //       top level function.
