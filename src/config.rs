@@ -161,14 +161,14 @@ pub fn load(directory: &PathBuf) -> Result<Config, String> {
 
     // We need all these intermediate bindings because the temporaries created
     // along the way don't live long enough otherwise.
-    let yaml_config = YamlLoader::load_from_str(&contents)
+    let load_result = YamlLoader::load_from_str(&contents)
         .map_err(|err| format!("{} ({:?})", err, &config_path))?;
-    let yaml_config = yaml_config.into_iter().next().ok_or("Empty configuration file")?;
-    let yaml_config = yaml_config.as_hash().ok_or("Configuration is not a map")?;
+    let yaml_config = load_result.into_iter().next().ok_or("Empty configuration file")?;
+    let config_map = yaml_config.as_hash().ok_or("Configuration is not a map")?;
 
     Ok(Config {
-        site: site(yaml_config)?,
-        directories: directories(yaml_config, &config_path)?,
-        taxonomies: taxonomies(yaml_config)?,
+        site: site(config_map)?,
+        directories: directories(config_map, &config_path)?,
+        taxonomies: taxonomies(config_map)?,
     })
 }
