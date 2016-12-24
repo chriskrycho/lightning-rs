@@ -2,7 +2,7 @@
 
 
 // First-party
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::error::Error;
 use std::io::Read;
 use std::fs::File;
@@ -61,19 +61,23 @@ pub struct Templates {
 }
 
 
-pub struct ValidatedUrl(String);
+mod validated {
+    pub struct Url(String);
 
-impl ValidatedUrl {
-    /// Get a URL. `Err` if the item passed in is not a spec-conformant URL.
-    pub fn new(unvalidated_url: String) -> Result<ValidatedUrl, String> {
-        // TODO: validate the URLs!
-        Ok(ValidatedUrl(unvalidated_url))
-    }
+    impl Url {
+        /// Get a URL. `Err` if the item passed in is not a spec-conformant URL.
+        pub fn new(unvalidated_url: String) -> Result<Url, String> {
+            // TODO: validate the URLs!
+            Ok(Url(unvalidated_url))
+        }
 
-    pub fn value(&self) -> String {
-        self.0.clone()
+        pub fn value(&self) -> String {
+            self.0.clone()
+        }
     }
 }
+
+pub use self::validated::Url as ValidatedUrl;
 
 
 fn path_buf_from_yaml(yaml: &Yaml, key: &str, config_path: &PathBuf) -> Result<PathBuf, String> {
@@ -81,6 +85,61 @@ fn path_buf_from_yaml(yaml: &Yaml, key: &str, config_path: &PathBuf) -> Result<P
         &Yaml::String(ref path_str) => Ok(PathBuf::from(path_str)),
         value => Err(format!("invalid `{:}` value {:?} in {:?}", key, value, config_path)),
     }
+}
+
+
+fn directories(config_map: &BTreeMap<Yaml, Yaml>, config_path: &PathBuf) -> Result<Directories, String> {
+    let content_directory_yaml = config_map.get(&Yaml::from_str(CONTENT_DIRECTORY))
+        .ok_or(format!("No `{:}` key in {:?}", CONTENT_DIRECTORY, config_path))?;
+
+    let content_directory =
+    path_buf_from_yaml(&content_directory_yaml, CONTENT_DIRECTORY, &config_path)?;
+
+    let output_directory_yaml = config_map.get(&Yaml::from_str(OUTPUT_DIRECTORY))
+        .ok_or(format!("No `{:} key in `{:?}", OUTPUT_DIRECTORY, config_path))?;
+
+    let output_directory =
+    path_buf_from_yaml(output_directory_yaml, OUTPUT_DIRECTORY, &config_path)?;
+
+    let structure = config_map.get(&Yaml::from_str("structure"))
+        .ok_or(format!("No `structure` key in {:?}", config_path))?
+        .as_hash()
+        .ok_or(format!("`structure` is not a map in {:?}", config_path))?;
+
+    let template_directory_yaml = structure.get(&Yaml::from_str(TEMPLATE_DIRECTORY))
+        .ok_or(format!("No `directory` key in `structure` in {:?}", config_path))?;
+
+    let template_directory =
+    path_buf_from_yaml(&template_directory_yaml, TEMPLATE_DIRECTORY, &config_path)?;
+
+    Ok(Directories {
+        content: content_directory,
+        output: output_directory,
+        template: template_directory,
+    })
+}
+
+
+/// Load the site data from the configuration file.
+fn site(config_map: &BTreeMap<Yaml, Yaml>) -> Result<Site, String> {
+    // TODO: build these.
+    let name = String::new();
+    let description = String::new();
+    let metadata = HashMap::new();
+    let url = ValidatedUrl::new(String::new())?;
+
+    Ok(Site {
+        name: name,
+        description: description,
+        metadata: metadata,
+        url: url,
+    })
+}
+
+
+fn taxonomies(config_map: &BTreeMap<Yaml, Yaml>) -> Result<Vec<Taxonomy>, String> {
+    // TODO: actually load these.
+    Ok(Vec::new())
 }
 
 
@@ -107,41 +166,9 @@ pub fn load(directory: &PathBuf) -> Result<Config, String> {
     let yaml_config = yaml_config.into_iter().next().ok_or("Empty configuration file")?;
     let yaml_config = yaml_config.as_hash().ok_or("Configuration is not a map")?;
 
-    let content_directory_yaml = yaml_config.get(&Yaml::from_str(CONTENT_DIRECTORY))
-        .ok_or(format!("No `{:}` key in {:?}", CONTENT_DIRECTORY, config_path))?;
-
-    let content_directory =
-        path_buf_from_yaml(&content_directory_yaml, CONTENT_DIRECTORY, &config_path)?;
-
-    let output_directory_yaml = yaml_config.get(&Yaml::from_str(OUTPUT_DIRECTORY))
-        .ok_or(format!("No `{:} key in `{:?}", OUTPUT_DIRECTORY, config_path))?;
-
-    let output_directory =
-        path_buf_from_yaml(output_directory_yaml, OUTPUT_DIRECTORY, &config_path)?;
-
-    let structure = yaml_config.get(&Yaml::from_str("structure"))
-        .ok_or(format!("No `structure` key in {:?}", config_path))?
-        .as_hash()
-        .ok_or(format!("`structure` is not a map in {:?}", config_path))?;
-
-    let template_directory_yaml = structure.get(&Yaml::from_str(TEMPLATE_DIRECTORY))
-        .ok_or(format!("No `directory` key in `structure` in {:?}", config_path))?;
-
-    let template_directory =
-        path_buf_from_yaml(&template_directory_yaml, TEMPLATE_DIRECTORY, &config_path)?;
-
     Ok(Config {
-        site: Site {  // TODO
-            name: String::new(),
-            description: String::new(),
-            metadata: HashMap::new(),
-            url: ValidatedUrl(String::new()),
-        },
-        directories: Directories {
-            content: content_directory,
-            output: output_directory,
-            template: template_directory,
-        },
-        taxonomies: Vec::new(),
+        site: site(yaml_config)?,
+        directories: directories(yaml_config, &config_path)?,
+        taxonomies: taxonomies(yaml_config)?,
     })
 }
