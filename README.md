@@ -32,11 +32,11 @@ N.b. this is my overall set of goals, with no specific ties to a timeline or a p
         
         This really means, make sure the configuration can support the configuration patterns for popular generators. This is not so much a *formal support* issue (though being able to `lx create --from-jekyll` would be cool) as it is a *make sure this is well-covered by the implementation* issue. Other generators to cover, in order:
 
-        - [ ] [Pelican][Pelican] – a must for the obvious reason that I want to be able to import my existing sites.
+        - [ ] from [Pelican][Pelican] – a must for the obvious reason that I want to be able to import my existing sites.
 
-        - [ ] [Jekyll][Jekyll] – a high priority given the sheer popularity of the generator
+        - [ ] from [Jekyll][Jekyll] – a high priority given the sheer popularity of the generator
 
-        - [ ] [Hugo][Hugo] – because it's basically a direct competitor if I ever get this thing to where I want performance-wise
+        - [ ] from [Hugo][Hugo] – because it's basically a direct competitor if I ever get this thing to where I want performance-wise
 
 - [ ] Render Markdown
 
