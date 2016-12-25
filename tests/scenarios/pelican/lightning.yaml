@@ -12,7 +12,7 @@
 site_info:
   title: lx (lightning)
 
-  # Note that Lighting will check your URL; if it's badly formed, we'll warn you.
+  # Note that Lightning will check your URL; if it's badly formed, we'll warn you.
   URL: https://lightning.rs  # I can wish and hope, right? And save my pennies.
 
   description: >
@@ -55,11 +55,11 @@ output_directory: output
 #    `structure` key, only the fields which otherwise compose it).
 #
 # TODO/aspirational:
-# Lighting supplies default layouts to match the behavior of Jekyll, Pelican,
+# Lightning supplies default layouts to match the behavior of Jekyll, Pelican,
 # and Hugo. If you'd like to contribute a generator, please open a pull request
 # on the repository!
 structure:
-  # configuration: <path/to/lighting-structure.yaml>
+  # configuration: <path/to/lightning-structure.yaml>
 
   # The `directory` may be specified as a relative or absolute path. By default,
   # it is defined as a relative path from the root of the directory in which you
@@ -97,6 +97,8 @@ structure:
   #
   # Use the `hierarchical` field to specify (`true` or `false`) whether a
   # taxonomy may be nested, e.g. "Parent Category -> Child Category".
+  # Taxonomies are implicitly defined with `hierarchical: false` if the field
+  # is not included explicitly.
   #
   # If you wish to enforce that all items have dates associated with them, you
   # can you use the `temporal` type and set `required` to `true`. The `required`
