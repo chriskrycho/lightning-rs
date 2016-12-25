@@ -1,4 +1,4 @@
-//! Generate web sites from Markdown content and TOML configuration.
+//! Generate web sites from Markdown content and YAML configuration.
 
 extern crate glob;
 extern crate pandoc;
