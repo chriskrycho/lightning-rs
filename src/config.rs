@@ -76,6 +76,7 @@ pub enum Taxonomy {
     Multiple {
         name: String,
         templates: Templates,
+        default: Option<String>,
         limit: Option<u8>,
         required: bool,
         hierarchical: bool,
@@ -119,6 +120,7 @@ impl Taxonomy {
                 Ok(Taxonomy::Multiple {
                     name: name,
                     templates: templates,
+                    default: Self::default_value(hash)?,
                     hierarchical: Self::is_hierarchical(hash)?,
                     required: Self::is_required(hash)?,
                     limit: Self::limit(hash)?,
@@ -132,6 +134,17 @@ impl Taxonomy {
                 })
             }
             _ => Err(format!("Invalid taxonomy type `{:?}` in {:?}", taxonomy_type, hash)),
+        }
+    }
+
+    fn default_value(hash: &yaml::Hash) -> Result<Option<String>, String> {
+        const DEFAULT: &'static str = "default";
+
+        match hash.get(&Yaml::from_str(DEFAULT)) {
+            None |
+            Some(&Yaml::Null) => Ok(None),
+            Some(&Yaml::String(ref string)) => Ok(Some(string.clone())),
+            _ => Err(key_of_type(DEFAULT, Required::No, hash, "string")),
         }
     }
 
