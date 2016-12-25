@@ -2,6 +2,8 @@
 
 // Standard library
 use std::fmt;
+use std::ops;
+use std::u8;
 
 // Third party
 use yaml_rust::yaml;
@@ -35,4 +37,22 @@ pub fn key_of_type(key: &str,
             key,
             yaml,
             required_type)
+}
+
+pub fn bad_value<V: fmt::Display>(value: V, key: &str, context: &yaml::Hash) -> String {
+    format!("Invalid value {} for key `{}` in hash {:?}",
+            value,
+            key,
+            context)
+}
+
+pub fn ridiculous_number<V: fmt::Display + ops::Add>(value: V,
+                                                     key: &str,
+                                                     context: &yaml::Hash)
+                                                     -> String {
+    format!("Seriously? You set the value of `{}` to {}? (The max is {}.)\nContext: {:?}",
+            key,
+            value,
+            u8::MAX,
+            context)
 }
