@@ -11,7 +11,7 @@ use pandoc::{Pandoc, PandocOption, PandocOutput, InputFormat, OutputFormat, Outp
 use syntect::highlighting::ThemeSet;
 
 // First party
-use config::{Config, load};
+use config::Config;
 use syntax_highlighting::syntax_highlight;
 
 
@@ -37,7 +37,7 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
     // In the vein of "MVP": let's start by just loading all the files. We'll
     // extract this all into standalone functions as necessary later.
 
-    let config = load(&PathBuf::from(&site_directory))?;
+    let config = Config::load(&PathBuf::from(&site_directory))?;
     let markdown_paths = glob_md_paths(&site_directory, &config)?;
 //    let templates = load_templates(&site_directory, &config)?;
 

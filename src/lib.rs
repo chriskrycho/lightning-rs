@@ -12,6 +12,7 @@ mod creator;
 mod initializer;
 mod server;
 mod syntax_highlighting;
+mod validated_types;
 mod yaml_util;
 
 pub use initializer::init;

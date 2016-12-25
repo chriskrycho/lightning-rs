@@ -14,6 +14,7 @@ use std::u8;
 use yaml_rust::{yaml, Yaml, YamlLoader};
 
 // First-party
+pub use validated_types::Url as ValidatedUrl;
 use yaml_util::*;
 
 
@@ -22,9 +23,106 @@ const CONFIG_FILE_NAME: &'static str = "lightning.yaml";
 
 #[derive(Debug, PartialEq)]
 pub struct Config {
-    pub site: Site,
+    pub site: SiteMeta,
     pub directories: Directories,
     pub taxonomies: Vec<Taxonomy>,
+}
+
+
+impl Config {
+    pub fn load(directory: &PathBuf) -> Result<Config, String> {
+        let config_path = directory.join(CONFIG_FILE_NAME);
+        if !config_path.exists() {
+            return Err(format!("The specified configuration path {:?} does not exist.",
+                               config_path.to_string_lossy()));
+        }
+
+        let mut file = File::open(&config_path)
+            .map_err(|reason| format!("Error reading {:?}: {:?}", config_path, reason))?;
+
+        let mut contents = String::new();
+        match file.read_to_string(&mut contents) {
+            Ok(_) => (),
+            Err(err) => return Err(String::from(err.description())),
+        };
+
+        // We need all these intermediate bindings because the temporaries created
+        // along the way don't live long enough otherwise.
+        let load_result = YamlLoader::load_from_str(&contents)
+            .map_err(|err| format!("{} ({:?})", err, &config_path))?;
+        let yaml_config = load_result.into_iter().next().ok_or("Empty configuration file")?;
+        let config_map = yaml_config.as_hash().ok_or("Configuration is not a map")?;
+
+        let structure = Self::get_structure(config_map, &config_path)?;
+
+        Ok(Config {
+            site: Self::parse_site_meta(config_map)?,
+            directories: Directories::from_yaml(config_map, &config_path, &structure)?,
+            taxonomies: Self::parse_taxonomies(&structure, &config_path)?,
+        })
+    }
+
+    fn get_structure<'map>(config_map: &'map BTreeMap<Yaml, Yaml>,
+                           config_path: &PathBuf)
+                           -> Result<&'map BTreeMap<Yaml, Yaml>, String> {
+        config_map.get(&Yaml::from_str("structure"))
+            .ok_or(format!("No `structure` key in {:?}", config_path))?
+            .as_hash()
+            .ok_or(format!("`structure` is not a map in {:?}", config_path))
+    }
+
+
+    /// Load the site data from the configuration file.
+    fn parse_site_meta(config_map: &BTreeMap<Yaml, Yaml>) -> Result<SiteMeta, String> {
+        // TODO: build these:
+        let name = String::new();
+        let description = String::new();
+        let metadata = HashMap::new();
+        let url = ValidatedUrl::new(String::new())?;
+
+        Ok(SiteMeta {
+            name: name,
+            description: description,
+            metadata: metadata,
+            url: url,
+        })
+    }
+
+
+    /// Load the taxonomies from the configuration file.
+    fn parse_taxonomies(structure: &BTreeMap<Yaml, Yaml>,
+                        config_path: &PathBuf)
+                        -> Result<Vec<Taxonomy>, String> {
+        const KEY: &'static str = "taxonomies";
+
+        let taxonomies_yaml = structure.get(&Yaml::from_str(KEY))
+            .ok_or(format!("No `{}` key in {:?}", KEY, config_path))?
+            .as_vec()
+            .ok_or(format!("`{}` is not an array in {:?}", KEY, config_path))?;
+
+        let mut taxonomies = Vec::new();
+        if taxonomies_yaml.len() == 0 {
+            return Ok(taxonomies);
+        }
+
+        for taxonomy_yaml in taxonomies_yaml {
+            let wrapper = taxonomy_yaml.as_hash()
+                .ok_or(key_of_type(KEY, Required::Yes, taxonomy_yaml, "hash"))?;
+            let key = wrapper.keys()
+                .next()
+                .ok_or(key_of_type("first key", Required::Yes, wrapper, "hash"))?;
+            let key_string = key.as_str()
+                .ok_or(key_of_type("first key name", Required::Yes, wrapper, "string"))?;
+            let content = wrapper.get(key)
+                .ok_or(required_key(key_string, wrapper))?
+                .as_hash()
+                .ok_or(key_of_type(key_string, Required::Yes, wrapper, "hash"))?;
+            let taxonomy = Taxonomy::from_yaml(content, key_string)?;
+            taxonomies.push(taxonomy);
+        }
+
+        Ok(taxonomies)
+    }
 }
 
 
@@ -38,37 +136,48 @@ pub struct Directories {
 
 impl Directories {
     fn from_yaml(config_map: &BTreeMap<Yaml, Yaml>,
-                 config_path: &PathBuf)
+                 config_path: &PathBuf,
+                 structure: &BTreeMap<Yaml, Yaml>)
                  -> Result<Directories, String> {
         const CONTENT_DIRECTORY: &'static str = "content_directory";
         const OUTPUT_DIRECTORY: &'static str = "output_directory";
         const TEMPLATE_DIRECTORY: &'static str = "directory";
 
         let content_directory_yaml = config_map.get(&Yaml::from_str(CONTENT_DIRECTORY))
-            .ok_or(format!("No `{:}` key in {:?}", CONTENT_DIRECTORY, config_path))?;
+            .ok_or(required_key(CONTENT_DIRECTORY, config_map))?;
 
         let content_directory =
-            path_buf_from_yaml(&content_directory_yaml, CONTENT_DIRECTORY, &config_path)?;
+            Self::path_buf_from_yaml(&content_directory_yaml, CONTENT_DIRECTORY, &config_path)?;
 
         let output_directory_yaml = config_map.get(&Yaml::from_str(OUTPUT_DIRECTORY))
-            .ok_or(format!("No `{:} key in `{:?}", OUTPUT_DIRECTORY, config_path))?;
+            .ok_or(required_key(OUTPUT_DIRECTORY, config_map))?;
 
         let output_directory =
-            path_buf_from_yaml(output_directory_yaml, OUTPUT_DIRECTORY, &config_path)?;
+            Self::path_buf_from_yaml(output_directory_yaml, OUTPUT_DIRECTORY, &config_path)?;
 
-        let structure = get_structure(&config_map, &config_path)?;
-
-        let template_directory_yaml = structure.get(&Yaml::from_str(TEMPLATE_DIRECTORY))
-            .ok_or(format!("No `directory` key in `structure` in {:?}", config_path))?;
+        let template_directory_yaml =
+            structure.get(&Yaml::from_str(TEMPLATE_DIRECTORY))
+                .ok_or(required_key(TEMPLATE_DIRECTORY, structure) +
+                       &format!(" in {:?}", config_path))?;
 
         let template_directory =
-            path_buf_from_yaml(&template_directory_yaml, TEMPLATE_DIRECTORY, &config_path)?;
+            Self::path_buf_from_yaml(&template_directory_yaml, TEMPLATE_DIRECTORY, &config_path)?;
 
         Ok(Directories {
             content: content_directory,
             output: output_directory,
             template: template_directory,
         })
+    }
+
+    fn path_buf_from_yaml(yaml: &Yaml,
+                          key: &str,
+                          config_path: &PathBuf)
+                          -> Result<PathBuf, String> {
+        match yaml {
+            &Yaml::String(ref path_str) => Ok(PathBuf::from(path_str)),
+            value => Err(bad_value(value, key, yaml) + &format!(" in {:?}", config_path)),
+        }
     }
 }
 
@@ -97,10 +206,7 @@ pub enum Taxonomy {
 
 
 impl Taxonomy {
-    // TODO: make Result<Taxonomy, Vec<String>> instead? Collect errors to
-    //       supply *all* validation errors to the user? And generalize that to
-    //       all types?
-    fn from_yaml_hash(hash: &yaml::Hash, name: &str) -> Result<Taxonomy, String> {
+    fn from_yaml(hash: &yaml::Hash, name: &str) -> Result<Taxonomy, String> {
         const TYPE: &'static str = "type";
         const BINARY: &'static str = "binary";
         const MULTIPLE: &'static str = "multiple";
@@ -196,7 +302,7 @@ impl Taxonomy {
 
 
 #[derive(Debug, PartialEq)]
-pub struct Site {
+pub struct SiteMeta {
     pub name: String,
     pub description: String,
     pub metadata: HashMap<Yaml, Yaml>,
@@ -259,136 +365,9 @@ impl Templates {
 }
 
 
-mod validated {
-    #[derive(Debug, PartialEq)]
-    pub struct Url(String);
-
-    impl Url {
-        /// Get a URL. `Err` if the item passed in is not a spec-conformant URL.
-        pub fn new(unvalidated_url: String) -> Result<Url, String> {
-            // TODO: validate the URLs!
-            Ok(Url(unvalidated_url))
-        }
-
-        pub fn value(&self) -> String {
-            self.0.clone()
-        }
-    }
-}
-
-pub use self::validated::Url as ValidatedUrl;
-
-
-fn path_buf_from_yaml(yaml: &Yaml, key: &str, config_path: &PathBuf) -> Result<PathBuf, String> {
-    match yaml {
-        &Yaml::String(ref path_str) => Ok(PathBuf::from(path_str)),
-        value => Err(format!("invalid `{:}` value {:?} in {:?}", key, value, config_path)),
-    }
-}
-
-
-fn get_structure<'map>(config_map: &'map BTreeMap<Yaml, Yaml>,
-                       config_path: &PathBuf)
-                       -> Result<&'map BTreeMap<Yaml, Yaml>, String> {
-    config_map.get(&Yaml::from_str("structure"))
-        .ok_or(format!("No `structure` key in {:?}", config_path))?
-        .as_hash()
-        .ok_or(format!("`structure` is not a map in {:?}", config_path))
-}
-
-
-/// Load the site data from the configuration file.
-fn site(config_map: &BTreeMap<Yaml, Yaml>) -> Result<Site, String> {
-    // TODO: build these:
-    let name = String::new();
-    let description = String::new();
-    let metadata = HashMap::new();
-    let url = ValidatedUrl::new(String::new())?;
-
-    Ok(Site {
-        name: name,
-        description: description,
-        metadata: metadata,
-        url: url,
-    })
-}
-
-
-pub fn taxonomies(config_map: &BTreeMap<Yaml, Yaml>,
-                  config_path: &PathBuf)
-                  -> Result<Vec<Taxonomy>, String> {
-    const KEY: &'static str = "taxonomies";
-
-    let structure = get_structure(config_map, config_path)?;
-    let taxonomies_yaml = structure.get(&Yaml::from_str(KEY))
-        .ok_or(format!("No `{}` key in {:?}", KEY, config_path))?
-        .as_vec()
-        .ok_or(format!("`{}` is not an array in {:?}", KEY, config_path))?;
-
-    let mut taxonomies = Vec::new();
-    if taxonomies_yaml.len() == 0 {
-        return Ok(taxonomies);
-    }
-
-    for taxonomy_yaml in taxonomies_yaml {
-        let wrapper = taxonomy_yaml.as_hash()
-            .ok_or(key_of_type(KEY, Required::Yes, taxonomy_yaml, "hash"))?;
-        let key =
-            wrapper.keys().next().ok_or(key_of_type("first key", Required::Yes, wrapper, "hash"))?;
-        let key_string = key.as_str()
-            .ok_or(key_of_type("first key name", Required::Yes, wrapper, "string"))?;
-        let content = wrapper.get(key)
-            .ok_or(required_key(key_string, wrapper))?
-            .as_hash()
-            .ok_or(key_of_type(key_string, Required::Yes, wrapper, "hash"))?;
-        let taxonomy = Taxonomy::from_yaml_hash(content, key_string)?;
-        taxonomies.push(taxonomy);
-    }
-
-    Ok(taxonomies)
-}
-
-
-pub fn load(directory: &PathBuf) -> Result<Config, String> {
-    let config_path = directory.join(CONFIG_FILE_NAME);
-    if !config_path.exists() {
-        return Err(format!("The specified configuration path {:?} does not exist.",
-                           config_path.to_string_lossy()));
-    }
-
-    let mut file = File::open(&config_path)
-        .map_err(|reason| format!("Error reading {:?}: {:?}", config_path, reason))?;
-
-    let mut contents = String::new();
-    match file.read_to_string(&mut contents) {
-        Ok(_) => (),
-        Err(err) => return Err(String::from(err.description())),
-    };
-
-    // We need all these intermediate bindings because the temporaries created
-    // along the way don't live long enough otherwise.
-    let load_result = YamlLoader::load_from_str(&contents)
-        .map_err(|err| format!("{} ({:?})", err, &config_path))?;
-    let yaml_config = load_result.into_iter().next().ok_or("Empty configuration file")?;
-    let config_map = yaml_config.as_hash().ok_or("Configuration is not a map")?;
-
-    Ok(Config {
-        site: site(config_map)?,
-        directories: Directories::from_yaml(config_map, &config_path)?,
-        taxonomies: taxonomies(config_map, &config_path)?,
-    })
-}
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::path::PathBuf;
-    use yaml_rust::YamlLoader;
-
-    #[test]
-    fn parses_valid_taxonomies() {
-        const TAXONOMIES: &'static str = "
+#[test]
+fn parses_valid_taxonomies() {
+    const TAXONOMIES: &'static str = "
 structure:
   taxonomies:
     - author:
@@ -428,73 +407,61 @@ structure:
           item: page.html
         ";
 
-        let expected = vec![Taxonomy::Multiple {
-                                name: "author".into(),
-                                default: None,
-                                limit: None,
-                                required: true,
-                                hierarchical: false,
-                                templates: Templates {
-                                    item: "author.html".into(),
-                                    list: Some("authors.html".into()),
-                                },
+    let expected = vec![Taxonomy::Multiple {
+                            name: "author".into(),
+                            default: None,
+                            limit: None,
+                            required: true,
+                            hierarchical: false,
+                            templates: Templates {
+                                item: "author.html".into(),
+                                list: Some("authors.html".into()),
                             },
-                            Taxonomy::Multiple {
-                                name: "category".into(),
-                                default: Some("Blog".into()),
-                                limit: Some(1),
-                                required: false,
-                                hierarchical: false,
-                                templates: Templates {
-                                    item: "category.html".into(),
-                                    list: Some("categories.html".into()),
-                                },
+                        },
+                        Taxonomy::Multiple {
+                            name: "category".into(),
+                            default: Some("Blog".into()),
+                            limit: Some(1),
+                            required: false,
+                            hierarchical: false,
+                            templates: Templates {
+                                item: "category.html".into(),
+                                list: Some("categories.html".into()),
                             },
-                            Taxonomy::Multiple {
-                                name: "tag".into(),
-                                default: None,
-                                limit: None,
-                                required: false,
-                                hierarchical: false,
-                                templates: Templates {
-                                    item: "tag.html".into(),
-                                    list: Some("tags.html".into()),
-                                },
+                        },
+                        Taxonomy::Multiple {
+                            name: "tag".into(),
+                            default: None,
+                            limit: None,
+                            required: false,
+                            hierarchical: false,
+                            templates: Templates {
+                                item: "tag.html".into(),
+                                list: Some("tags.html".into()),
                             },
-                            Taxonomy::Temporal {
-                                name: "date".into(),
-                                required: false,
-                                templates: Templates {
-                                    item: "archives.html".into(),
-                                    list: Some("period_archives.html".into()),
-                                },
+                        },
+                        Taxonomy::Temporal {
+                            name: "date".into(),
+                            required: false,
+                            templates: Templates {
+                                item: "archives.html".into(),
+                                list: Some("period_archives.html".into()),
                             },
-                            Taxonomy::Binary {
-                                name: "page".into(),
-                                hierarchical: true,
-                                templates: Templates {
-                                    item: "page.html".into(),
-                                    list: None,
-                                },
-                            }];
+                        },
+                        Taxonomy::Binary {
+                            name: "page".into(),
+                            hierarchical: true,
+                            templates: Templates {
+                                item: "page.html".into(),
+                                list: None,
+                            },
+                        }];
 
-        let loaded = YamlLoader::load_from_str(TAXONOMIES);
-        if loaded.is_err() {
-            assert!(false, format!("{:?}", loaded.unwrap_err()));
-        }
+    let mut loaded = YamlLoader::load_from_str(TAXONOMIES).unwrap();
+    let first = loaded.pop().unwrap();
+    let structure =
+        first.as_hash().unwrap().get(&Yaml::from_str("structure")).unwrap().as_hash().unwrap();
 
-        let mut yaml_entries = loaded.unwrap();
-        if yaml_entries.len() == 0 {
-            assert!(false, "No entries in test YAML!");
-        }
-
-        let first = yaml_entries.pop().unwrap();
-        let structure = first.as_hash();
-        if structure.is_none() {
-            assert!(false, format!("{:?}", "Test YAML is not a hash!"));
-        }
-
-        assert_eq!(Ok(expected),
-                   taxonomies(structure.unwrap(), &"expected".into()));
-    }
+    assert_eq!(Ok(expected),
+               Config::parse_taxonomies(&structure, &"expected".into()));
 }
