@@ -12,11 +12,11 @@ use std::path::PathBuf;
 // Third-party
 use yaml_rust::{yaml, Yaml, YamlLoader};
 
+// First-party
+use yaml_util::*;
+
 
 const CONFIG_FILE_NAME: &'static str = "lightning.yaml";
-const CONTENT_DIRECTORY: &'static str = "content_directory";
-const OUTPUT_DIRECTORY: &'static str = "output_directory";
-const TEMPLATE_DIRECTORY: &'static str = "directory";
 
 
 pub struct Config {
@@ -30,6 +30,43 @@ pub struct Directories {
     pub content: PathBuf,
     pub output: PathBuf,
     pub template: PathBuf,
+}
+
+
+impl Directories {
+    fn from_yaml(config_map: &BTreeMap<Yaml, Yaml>,
+                 config_path: &PathBuf)
+                 -> Result<Directories, String> {
+        const CONTENT_DIRECTORY: &'static str = "content_directory";
+        const OUTPUT_DIRECTORY: &'static str = "output_directory";
+        const TEMPLATE_DIRECTORY: &'static str = "directory";
+
+        let content_directory_yaml = config_map.get(&Yaml::from_str(CONTENT_DIRECTORY))
+            .ok_or(format!("No `{:}` key in {:?}", CONTENT_DIRECTORY, config_path))?;
+
+        let content_directory =
+            path_buf_from_yaml(&content_directory_yaml, CONTENT_DIRECTORY, &config_path)?;
+
+        let output_directory_yaml = config_map.get(&Yaml::from_str(OUTPUT_DIRECTORY))
+            .ok_or(format!("No `{:} key in `{:?}", OUTPUT_DIRECTORY, config_path))?;
+
+        let output_directory =
+            path_buf_from_yaml(output_directory_yaml, OUTPUT_DIRECTORY, &config_path)?;
+
+        let structure = get_structure(&config_map, &config_path)?;
+
+        let template_directory_yaml = structure.get(&Yaml::from_str(TEMPLATE_DIRECTORY))
+            .ok_or(format!("No `directory` key in `structure` in {:?}", config_path))?;
+
+        let template_directory =
+            path_buf_from_yaml(&template_directory_yaml, TEMPLATE_DIRECTORY, &config_path)?;
+
+        Ok(Directories {
+            content: content_directory,
+            output: output_directory,
+            template: template_directory,
+        })
+    }
 }
 
 
@@ -49,27 +86,6 @@ pub enum Taxonomy {
     },
 }
 
-fn required_yaml_key(key: &str, yaml: &yaml::Hash) -> String {
-    format!("Required key `{}` missing from {:?}", key, yaml)
-}
-
-#[derive(Debug)]
-enum YamlRequired {
-    Required,
-    Optional,
-}
-
-fn key_in_yaml(key: &str,
-               required: YamlRequired,
-               yaml: &yaml::Hash,
-               required_type: &str)
-               -> String {
-    format!("{:?} key `{}` in {:?} must be a {}",
-            required,
-            key,
-            yaml,
-            required_type)
-}
 
 impl Taxonomy {
     // TODO: make Result<Taxonomy, Vec<String>> instead? Collect errors to
@@ -83,37 +99,11 @@ impl Taxonomy {
 
         // Name can't collide with keyword `type`.
         let type_ = hash.get(&Yaml::from_str(TYPE))
-            .ok_or(required_yaml_key(TYPE, hash))?
+            .ok_or(required_key(TYPE, hash))?
             .as_str()
-            .ok_or(key_in_yaml(TYPE, YamlRequired::Required, hash, "string"))?;
+            .ok_or(key_of_type(TYPE, Required::Yes, hash, "string"))?;
 
-        const TEMPLATES: &'static str = "templates";
-        let template_yaml = hash.get(&Yaml::from_str(TEMPLATES))
-            .ok_or(required_yaml_key(TEMPLATES, hash))?
-            .as_hash()
-            .ok_or(key_in_yaml(TEMPLATES, YamlRequired::Required, hash, "hash"))?;
-
-        const ITEM: &'static str = "item";
-        let item: String = template_yaml.get(&Yaml::from_str(ITEM))
-            .ok_or(required_yaml_key(ITEM, template_yaml))?
-            .as_str()
-            .ok_or(key_in_yaml(ITEM, YamlRequired::Required, template_yaml, "string"))?
-            .into();
-
-        const LIST: &'static str = "list";
-        let maybe_list = template_yaml.get(&Yaml::from_str(LIST));
-        let list = if let Some(list_yaml) = maybe_list {
-            let list_str = list_yaml.as_str()
-                .ok_or(key_in_yaml(LIST, YamlRequired::Optional, template_yaml, "string"))?;
-            Some(String::from(list_str))
-        } else {
-            None
-        };
-
-        let templates = Templates {
-            item: item,
-            list: list,
-        };
+        let templates = Templates::from_yaml(hash)?;
 
         match type_ {
             BINARY => {
@@ -126,12 +116,14 @@ impl Taxonomy {
                 panic!("Taxonomy {} is of type {}, which is not yet implemented.",
                        name,
                        type_);
-            } // Ok(Taxonomy::Multiple {}),
+                // Ok(Taxonomy::Multiple {}),
+            }
             TEMPORAL => {
                 panic!("Taxonomy {} is of type {}, which is not yet implemented.",
                        name,
                        type_);
-            } // Ok(Taxonomy::Temporal {}),
+                // Ok(Taxonomy::Temporal {}),
+            }
             _ => Err(format!("Invalid type `{:?}` in {:?}", type_, hash)),
         }
     }
@@ -149,6 +141,46 @@ pub struct Site {
 pub struct Templates {
     pub item: String,
     pub list: Option<String>,
+}
+
+
+impl Templates {
+    fn from_yaml(yaml: &yaml::Hash) -> Result<Templates, String> {
+        const TEMPLATES: &'static str = "templates";
+        let template_yaml = yaml.get(&Yaml::from_str(TEMPLATES))
+            .ok_or(required_key(TEMPLATES, yaml))?
+            .as_hash()
+            .ok_or(key_of_type(TEMPLATES, Required::Yes, yaml, "hash"))?;
+
+        Ok(Templates {
+            item: Self::item_from_yaml(template_yaml)?,
+            list: Self::list_from_yaml(template_yaml)?,
+        })
+    }
+
+    fn item_from_yaml(yaml: &yaml::Hash) -> Result<String, String> {
+        const ITEM: &'static str = "item";
+
+        let item_str = yaml.get(&Yaml::from_str(ITEM))
+            .ok_or(required_key(ITEM, yaml))?
+            .as_str()
+            .ok_or(key_of_type(ITEM, Required::Yes, yaml, "string"))?;
+
+        Ok(item_str.into())
+    }
+
+    /// This return type isn't as crazy as it looks. It's perfectly reasonable
+    /// in this scenario for an item to be *null*
+    fn list_from_yaml(yaml: &yaml::Hash) -> Result<Option<String>, String> {
+        const LIST: &'static str = "list";
+
+        match yaml.get(&Yaml::from_str(LIST)) {
+            None |
+            Some(&Yaml::Null) => Ok(None),
+            Some(&Yaml::String(ref string)) => Ok(Some(string.clone())),
+            _ => Err(key_of_type(LIST, Required::No, yaml, "string")),
+        }
+    }
 }
 
 
@@ -189,37 +221,6 @@ fn get_structure<'map>(config_map: &'map BTreeMap<Yaml, Yaml>,
 }
 
 
-fn directories(config_map: &BTreeMap<Yaml, Yaml>,
-               config_path: &PathBuf)
-               -> Result<Directories, String> {
-    let content_directory_yaml = config_map.get(&Yaml::from_str(CONTENT_DIRECTORY))
-        .ok_or(format!("No `{:}` key in {:?}", CONTENT_DIRECTORY, config_path))?;
-
-    let content_directory =
-        path_buf_from_yaml(&content_directory_yaml, CONTENT_DIRECTORY, &config_path)?;
-
-    let output_directory_yaml = config_map.get(&Yaml::from_str(OUTPUT_DIRECTORY))
-        .ok_or(format!("No `{:} key in `{:?}", OUTPUT_DIRECTORY, config_path))?;
-
-    let output_directory =
-        path_buf_from_yaml(output_directory_yaml, OUTPUT_DIRECTORY, &config_path)?;
-
-    let structure = get_structure(&config_map, &config_path)?;
-
-    let template_directory_yaml = structure.get(&Yaml::from_str(TEMPLATE_DIRECTORY))
-        .ok_or(format!("No `directory` key in `structure` in {:?}", config_path))?;
-
-    let template_directory =
-        path_buf_from_yaml(&template_directory_yaml, TEMPLATE_DIRECTORY, &config_path)?;
-
-    Ok(Directories {
-        content: content_directory,
-        output: output_directory,
-        template: template_directory,
-    })
-}
-
-
 /// Load the site data from the configuration file.
 fn site(config_map: &BTreeMap<Yaml, Yaml>) -> Result<Site, String> {
     // TODO: build these.
@@ -254,19 +255,19 @@ fn taxonomies(config_map: &BTreeMap<Yaml, Yaml>,
 
     // This is safe because we have at least one; also it's temporary. We'll
     // extract all of this to be a function which can be used as an argument to
-    // part of a fold.
+    // part of a map: Vec<Yaml> -> Vec<Taxonomy>
     let first = taxonomies_yaml.first()
         .unwrap()
         .as_hash()
         .ok_or(format!("Cannot expand `{}` item as a hash", KEY))?;
 
     let first_key =
-        first.keys().next().ok_or(key_in_yaml("first key", YamlRequired::Required, first, "hash"))?;
+        first.keys().next().ok_or(key_of_type("first key", Required::Yes, first, "hash"))?;
     let first_key_string = first_key.as_str().expect(":wat:");  // FIXME: this is dumb.
     let first_yaml_hash = first.get(first_key)
-        .ok_or(required_yaml_key(first_key_string, first))?
+        .ok_or(required_key(first_key_string, first))?
         .as_hash()
-        .ok_or(key_in_yaml(first_key_string, YamlRequired::Required, first, "hash"))?;
+        .ok_or(key_of_type(first_key_string, Required::Yes, first, "hash"))?;
     let first_taxonomy = Taxonomy::from_yaml_hash(first_yaml_hash, first_key_string)?;
     let taxonomy_data: Vec<Taxonomy> = vec![first_taxonomy];
 
@@ -299,7 +300,7 @@ pub fn load(directory: &PathBuf) -> Result<Config, String> {
 
     Ok(Config {
         site: site(config_map)?,
-        directories: directories(config_map, &config_path)?,
+        directories: Directories::from_yaml(config_map, &config_path)?,
         taxonomies: taxonomies(config_map, &config_path)?,
     })
 }
