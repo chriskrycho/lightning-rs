@@ -223,18 +223,19 @@ fn get_structure<'map>(config_map: &'map BTreeMap<Yaml, Yaml>,
 
 /// Load the site data from the configuration file.
 fn site(config_map: &BTreeMap<Yaml, Yaml>) -> Result<Site, String> {
-    // TODO: build these.
-    let name = String::new();
-    let description = String::new();
-    let metadata = HashMap::new();
-    let url = ValidatedUrl::new(String::new())?;
+    Err("Not yet implemented!".into())
+    // TODO: build these:
+    // let name = String::new();
+    // let description = String::new();
+    // let metadata = HashMap::new();
+    // let url = ValidatedUrl::new(String::new())?;
 
-    Ok(Site {
-        name: name,
-        description: description,
-        metadata: metadata,
-        url: url,
-    })
+    // Ok(Site {
+    //     name: name,
+    //     description: description,
+    //     metadata: metadata,
+    //     url: url,
+    // })
 }
 
 

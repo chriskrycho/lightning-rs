@@ -39,7 +39,7 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
 
     let config = load(&PathBuf::from(&site_directory))?;
     let markdown_paths = glob_md_paths(&site_directory, &config)?;
-    let templates = load_templates(&site_directory, &config)?;
+//    let templates = load_templates(&site_directory, &config)?;
 
     // TODO: build from config. Also, extract and just do this once *not* at the
     //       top level function.
