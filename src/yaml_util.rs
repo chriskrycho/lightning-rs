@@ -39,8 +39,8 @@ pub fn key_of_type<Y: fmt::Debug>(key: &str,
             required_type)
 }
 
-pub fn bad_value<V: fmt::Display>(value: V, key: &str, context: &yaml::Hash) -> String {
-    format!("Invalid value {} for key `{}` in hash {:?}",
+pub fn bad_value<V: fmt::Debug, Y: fmt::Debug>(value: V, key: &str, context: &Y) -> String {
+    format!("Invalid value {:?} for key `{}` in hash {:?}",
             value,
             key,
             context)
