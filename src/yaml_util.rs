@@ -27,11 +27,11 @@ pub fn required_key(key: &str, yaml: &yaml::Hash) -> String {
     format!("Required key `{}` missing from {:?}", key, yaml)
 }
 
-pub fn key_of_type(key: &str,
-                   required: Required,
-                   yaml: &yaml::Hash,
-                   required_type: &str)
-                   -> String {
+pub fn key_of_type<Y: fmt::Debug>(key: &str,
+                                  required: Required,
+                                  yaml: Y,
+                                  required_type: &str)
+                                  -> String {
     format!("{} key `{}` in {:?} must be a {}",
             required,
             key,

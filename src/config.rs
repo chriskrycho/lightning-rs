@@ -20,6 +20,7 @@ use yaml_util::*;
 const CONFIG_FILE_NAME: &'static str = "lightning.yaml";
 
 
+#[derive(Debug, PartialEq)]
 pub struct Config {
     pub site: Site,
     pub directories: Directories,
@@ -27,6 +28,7 @@ pub struct Config {
 }
 
 
+#[derive(Debug, PartialEq)]
 pub struct Directories {
     pub content: PathBuf,
     pub output: PathBuf,
@@ -71,8 +73,13 @@ impl Directories {
 }
 
 
+#[derive(Debug, PartialEq)]
 pub enum Taxonomy {
-    Binary { name: String, templates: Templates },
+    Binary {
+        name: String,
+        templates: Templates,
+        hierarchical: bool,
+    },
     Multiple {
         name: String,
         templates: Templates,
@@ -114,6 +121,7 @@ impl Taxonomy {
                 Ok(Taxonomy::Binary {
                     name: name,
                     templates: templates,
+                    hierarchical: Self::is_hierarchical(hash)?,
                 })
             }
             MULTIPLE => {
@@ -130,7 +138,7 @@ impl Taxonomy {
                 Ok(Taxonomy::Temporal {
                     name: name,
                     templates: templates,
-                    required: Self::is_required(hash)?
+                    required: Self::is_required(hash)?,
                 })
             }
             _ => Err(format!("Invalid taxonomy type `{:?}` in {:?}", taxonomy_type, hash)),
@@ -175,7 +183,8 @@ impl Taxonomy {
         let max = u8::MAX as i64;
 
         match hash.get(&Yaml::from_str(LIMIT)) {
-            None  => Ok(None),
+            None |
+            Some(&Yaml::Null) => Ok(None),
             Some(&Yaml::Integer(i)) if i < 0 => Err(bad_value(i, LIMIT, hash)),
             Some(&Yaml::Integer(i)) if i == 0 => Ok(None),
             Some(&Yaml::Integer(i)) if i > 0 && i < max => Ok(Some(i as u8)),
@@ -186,6 +195,7 @@ impl Taxonomy {
 }
 
 
+#[derive(Debug, PartialEq)]
 pub struct Site {
     pub name: String,
     pub description: String,
@@ -194,6 +204,7 @@ pub struct Site {
 }
 
 
+#[derive(Debug, PartialEq)]
 pub struct Templates {
     pub item: PathBuf,
     pub list: Option<PathBuf>,
@@ -249,6 +260,7 @@ impl Templates {
 
 
 mod validated {
+    #[derive(Debug, PartialEq)]
     pub struct Url(String);
 
     impl Url {
@@ -302,9 +314,9 @@ fn site(config_map: &BTreeMap<Yaml, Yaml>) -> Result<Site, String> {
 }
 
 
-fn taxonomies(config_map: &BTreeMap<Yaml, Yaml>,
-              config_path: &PathBuf)
-              -> Result<Vec<Taxonomy>, String> {
+pub fn taxonomies(config_map: &BTreeMap<Yaml, Yaml>,
+                  config_path: &PathBuf)
+                  -> Result<Vec<Taxonomy>, String> {
     const KEY: &'static str = "taxonomies";
 
     let structure = get_structure(config_map, config_path)?;
@@ -313,30 +325,27 @@ fn taxonomies(config_map: &BTreeMap<Yaml, Yaml>,
         .as_vec()
         .ok_or(format!("`{}` is not an array in {:?}", KEY, config_path))?;
 
+    let mut taxonomies = Vec::new();
     if taxonomies_yaml.len() == 0 {
-        return Ok(Vec::new());
+        return Ok(taxonomies);
     }
 
-    // TODO: actually get all the keys instead of just doing it with the first one.
-    // This is safe because we have at least one; also it's temporary. We'll
-    // extract all of this to be a function which can be used as an argument to
-    // part of a map: Vec<Yaml> -> Vec<Taxonomy>
-    let first = taxonomies_yaml.first()
-        .unwrap()
-        .as_hash()
-        .ok_or(format!("Cannot expand `{}` item as a hash", KEY))?;
+    for taxonomy_yaml in taxonomies_yaml {
+        let wrapper = taxonomy_yaml.as_hash()
+            .ok_or(key_of_type(KEY, Required::Yes, taxonomy_yaml, "hash"))?;
+        let key =
+            wrapper.keys().next().ok_or(key_of_type("first key", Required::Yes, wrapper, "hash"))?;
+        let key_string = key.as_str()
+            .ok_or(key_of_type("first key name", Required::Yes, wrapper, "string"))?;
+        let content = wrapper.get(key)
+            .ok_or(required_key(key_string, wrapper))?
+            .as_hash()
+            .ok_or(key_of_type(key_string, Required::Yes, wrapper, "hash"))?;
+        let taxonomy = Taxonomy::from_yaml_hash(content, key_string)?;
+        taxonomies.push(taxonomy);
+    }
 
-    let first_key =
-        first.keys().next().ok_or(key_of_type("first key", Required::Yes, first, "hash"))?;
-    let first_key_string = first_key.as_str().expect(":wat:");  // FIXME: this is dumb.
-    let first_yaml_hash = first.get(first_key)
-        .ok_or(required_key(first_key_string, first))?
-        .as_hash()
-        .ok_or(key_of_type(first_key_string, Required::Yes, first, "hash"))?;
-    let first_taxonomy = Taxonomy::from_yaml_hash(first_yaml_hash, first_key_string)?;
-    let taxonomy_data: Vec<Taxonomy> = vec![first_taxonomy];
-
-    Ok(taxonomy_data)
+    Ok(taxonomies)
 }
 
 
@@ -368,4 +377,124 @@ pub fn load(directory: &PathBuf) -> Result<Config, String> {
         directories: Directories::from_yaml(config_map, &config_path)?,
         taxonomies: taxonomies(config_map, &config_path)?,
     })
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+    use yaml_rust::YamlLoader;
+
+    #[test]
+    fn parses_valid_taxonomies() {
+        const TAXONOMIES: &'static str = "
+structure:
+  taxonomies:
+    - author:
+        type: multiple
+        required: true
+        hierarchical: false
+        templates:
+          list: authors.html
+          item: author.html
+    - category:
+        type: multiple
+        default: Blog
+        limit: 1
+        required: false
+        hierarchical: false
+        templates:
+          list: categories.html
+          item: category.html
+    - tag:
+        type: multiple
+        limit: ~
+        required: false
+        hierarchical: false
+        templates:
+          list: tags.html
+          item: tag.html
+    - date:
+        type: temporal
+        required: false
+        templates:
+          list: period_archives.html
+          item: archives.html
+    - page:
+        type: binary
+        hierarchical: true
+        templates:
+          item: page.html
+        ";
+
+        let expected = vec![Taxonomy::Multiple {
+                                name: "author".into(),
+                                default: None,
+                                limit: None,
+                                required: true,
+                                hierarchical: false,
+                                templates: Templates {
+                                    item: "author.html".into(),
+                                    list: Some("authors.html".into()),
+                                },
+                            },
+                            Taxonomy::Multiple {
+                                name: "category".into(),
+                                default: Some("Blog".into()),
+                                limit: Some(1),
+                                required: false,
+                                hierarchical: false,
+                                templates: Templates {
+                                    item: "category.html".into(),
+                                    list: Some("categories.html".into()),
+                                },
+                            },
+                            Taxonomy::Multiple {
+                                name: "tag".into(),
+                                default: None,
+                                limit: None,
+                                required: false,
+                                hierarchical: false,
+                                templates: Templates {
+                                    item: "tag.html".into(),
+                                    list: Some("tags.html".into()),
+                                },
+                            },
+                            Taxonomy::Temporal {
+                                name: "date".into(),
+                                required: false,
+                                templates: Templates {
+                                    item: "archives.html".into(),
+                                    list: Some("period_archives.html".into()),
+                                },
+                            },
+                            Taxonomy::Binary {
+                                name: "page".into(),
+                                hierarchical: true,
+                                templates: Templates {
+                                    item: "page.html".into(),
+                                    list: None,
+                                },
+                            }];
+
+        let loaded = YamlLoader::load_from_str(TAXONOMIES);
+        if loaded.is_err() {
+            assert!(false, format!("{:?}", loaded.unwrap_err()));
+        }
+
+        let mut yaml_entries = loaded.unwrap();
+        if yaml_entries.len() == 0 {
+            assert!(false, "No entries in test YAML!");
+        }
+
+        let first = yaml_entries.pop().unwrap();
+        let structure = first.as_hash();
+        if structure.is_none() {
+            assert!(false, format!("{:?}", "Test YAML is not a hash!"));
+        }
+
+        assert_eq!(Ok(expected),
+                   taxonomies(structure.unwrap(), &"expected".into()));
+    }
 }

@@ -117,7 +117,7 @@ structure:
     # could also specify this explicitly by setting `default: ~`.)
     - author:
         type: multiple
-        required: false
+        required: true
         hierarchical: false
         templates:
           list: authors.html  # All authors
@@ -157,7 +157,7 @@ structure:
     - date:  # TODO: these might be wrong re:Pelican, so confirm
         type: temporal
         required: false
-        template:
+        templates:
           list: period_archives.html
           item: archives.html
 
@@ -169,7 +169,7 @@ structure:
         hierarchical: true
         templates:
           # list: pages.html  # If I wanted a page where I listed all pages...
-          item: tag.html
+          item: page.html
 
   feeds:
     # If engine is commented out or removed, no feeds will be generated. If it
