@@ -75,15 +75,15 @@ pub enum Taxonomy {
     Binary { name: String, templates: Templates },
     Multiple {
         name: String,
+        templates: Templates,
         limit: Option<u8>,
         required: bool,
         hierarchical: bool,
-        templates: Templates,
     },
     Temporal {
         name: String,
-        required: bool,
         templates: Templates,
+        required: bool,
     },
 }
 
@@ -101,14 +101,14 @@ impl Taxonomy {
         let name = String::from(name);
 
         // Name can't collide with keyword `type`.
-        let type_ = hash.get(&Yaml::from_str(TYPE))
+        let taxonomy_type = hash.get(&Yaml::from_str(TYPE))
             .ok_or(required_key(TYPE, hash))?
             .as_str()
             .ok_or(key_of_type(TYPE, Required::Yes, hash, "string"))?;
 
         let templates = Templates::from_yaml(hash)?;
 
-        match type_ {
+        match taxonomy_type {
             BINARY => {
                 Ok(Taxonomy::Binary {
                     name: name,
@@ -125,12 +125,13 @@ impl Taxonomy {
                 })
             }
             TEMPORAL => {
-                panic!("Taxonomy {} is of type {}, which is not yet implemented.",
-                       name,
-                       type_);
-                // Ok(Taxonomy::Temporal {}),
+                Ok(Taxonomy::Temporal {
+                    name: name,
+                    templates: templates,
+                    required: Self::is_required(hash)?
+                })
             }
-            _ => Err(format!("Invalid type `{:?}` in {:?}", type_, hash)),
+            _ => Err(format!("Invalid taxonomy type `{:?}` in {:?}", taxonomy_type, hash)),
         }
     }
 
