@@ -8,6 +8,7 @@ use std::error::Error;
 use std::io::Read;
 use std::fs::File;
 use std::path::PathBuf;
+use std::u8;
 
 // Third-party
 use yaml_rust::{yaml, Yaml, YamlLoader};
@@ -97,6 +98,8 @@ impl Taxonomy {
         const MULTIPLE: &'static str = "multiple";
         const TEMPORAL: &'static str = "temporal";
 
+        let name = String::from(name);
+
         // Name can't collide with keyword `type`.
         let type_ = hash.get(&Yaml::from_str(TYPE))
             .ok_or(required_key(TYPE, hash))?
@@ -108,15 +111,18 @@ impl Taxonomy {
         match type_ {
             BINARY => {
                 Ok(Taxonomy::Binary {
-                    name: String::from(name),
+                    name: name,
                     templates: templates,
                 })
             }
             MULTIPLE => {
-                panic!("Taxonomy {} is of type {}, which is not yet implemented.",
-                       name,
-                       type_);
-                // Ok(Taxonomy::Multiple {}),
+                Ok(Taxonomy::Multiple {
+                    name: name,
+                    templates: templates,
+                    hierarchical: Self::is_hierarchical(hash)?,
+                    required: Self::is_required(hash)?,
+                    limit: Self::limit(hash)?,
+                })
             }
             TEMPORAL => {
                 panic!("Taxonomy {} is of type {}, which is not yet implemented.",
@@ -125,6 +131,42 @@ impl Taxonomy {
                 // Ok(Taxonomy::Temporal {}),
             }
             _ => Err(format!("Invalid type `{:?}` in {:?}", type_, hash)),
+        }
+    }
+
+    fn is_hierarchical(hash: &yaml::Hash) -> Result<bool, String> {
+        const HIERARCHICAL: &'static str = "hierarchical";
+
+        match hash.get(&Yaml::from_str(HIERARCHICAL)) {
+            None |
+            Some(&Yaml::Boolean(false)) => Ok(false),
+            Some(&Yaml::Boolean(true)) => Ok(true),
+            _ => Err(key_of_type(HIERARCHICAL, Required::Yes, hash, "bool")),
+        }
+    }
+
+    fn is_required(hash: &yaml::Hash) -> Result<bool, String> {
+        const REQUIRED: &'static str = "required";
+
+        match hash.get(&Yaml::from_str(REQUIRED)) {
+            None |
+            Some(&Yaml::Boolean(false)) => Ok(false),
+            Some(&Yaml::Boolean(true)) => Ok(true),
+            _ => Err(key_of_type(REQUIRED, Required::No, hash, "bool")),
+        }
+    }
+
+    fn limit(hash: &yaml::Hash) -> Result<Option<u8>, String> {
+        const LIMIT: &'static str = "limit";
+        let max = u8::MAX as i64;
+
+        match hash.get(&Yaml::from_str(LIMIT)) {
+            None  => Ok(None),
+            Some(&Yaml::Integer(i)) if i < 0 => Err(bad_value(i, LIMIT, hash)),
+            Some(&Yaml::Integer(i)) if i == 0 => Ok(None),
+            Some(&Yaml::Integer(i)) if i > 0 && i < max => Ok(Some(i as u8)),
+            Some(&Yaml::Integer(i)) if i > max as i64 => Err(ridiculous_number(i, LIMIT, hash)),
+            _ => Err(key_of_type(LIMIT, Required::No, hash, "integer")),
         }
     }
 }
@@ -139,8 +181,8 @@ pub struct Site {
 
 
 pub struct Templates {
-    pub item: String,
-    pub list: Option<String>,
+    pub item: PathBuf,
+    pub list: Option<PathBuf>,
 }
 
 
@@ -152,13 +194,17 @@ impl Templates {
             .as_hash()
             .ok_or(key_of_type(TEMPLATES, Required::Yes, yaml, "hash"))?;
 
+        let item = Self::item_from_yaml(template_yaml)?;
+        let list = Self::list_from_yaml(template_yaml)?;
+
         Ok(Templates {
-            item: Self::item_from_yaml(template_yaml)?,
-            list: Self::list_from_yaml(template_yaml)?,
+            item: item,
+            list: list,
         })
     }
 
-    fn item_from_yaml(yaml: &yaml::Hash) -> Result<String, String> {
+    /// Get the `item` value for a taxonomy's templates.
+    fn item_from_yaml(yaml: &yaml::Hash) -> Result<PathBuf, String> {
         const ITEM: &'static str = "item";
 
         let item_str = yaml.get(&Yaml::from_str(ITEM))
@@ -169,15 +215,19 @@ impl Templates {
         Ok(item_str.into())
     }
 
-    /// This return type isn't as crazy as it looks. It's perfectly reasonable
-    /// in this scenario for an item to be *null*
-    fn list_from_yaml(yaml: &yaml::Hash) -> Result<Option<String>, String> {
+    /// Get the `list` value for a taxonomy's templates.
+    ///
+    /// This return type isn't as crazy as it looks. A `list` entry is allowed
+    /// to be explicitly `null`/`~` or simply unset, but if the key is
+    /// included, it is not allowed to be anything other than a `string` or
+    /// explicitly set to null.
+    fn list_from_yaml(yaml: &yaml::Hash) -> Result<Option<PathBuf>, String> {
         const LIST: &'static str = "list";
 
         match yaml.get(&Yaml::from_str(LIST)) {
             None |
             Some(&Yaml::Null) => Ok(None),
-            Some(&Yaml::String(ref string)) => Ok(Some(string.clone())),
+            Some(&Yaml::String(ref string)) => Ok(Some(string.into())),
             _ => Err(key_of_type(LIST, Required::No, yaml, "string")),
         }
     }
@@ -223,19 +273,18 @@ fn get_structure<'map>(config_map: &'map BTreeMap<Yaml, Yaml>,
 
 /// Load the site data from the configuration file.
 fn site(config_map: &BTreeMap<Yaml, Yaml>) -> Result<Site, String> {
-    Err("Not yet implemented!".into())
     // TODO: build these:
-    // let name = String::new();
-    // let description = String::new();
-    // let metadata = HashMap::new();
-    // let url = ValidatedUrl::new(String::new())?;
+    let name = String::new();
+    let description = String::new();
+    let metadata = HashMap::new();
+    let url = ValidatedUrl::new(String::new())?;
 
-    // Ok(Site {
-    //     name: name,
-    //     description: description,
-    //     metadata: metadata,
-    //     url: url,
-    // })
+    Ok(Site {
+        name: name,
+        description: description,
+        metadata: metadata,
+        url: url,
+    })
 }
 
 
@@ -254,6 +303,7 @@ fn taxonomies(config_map: &BTreeMap<Yaml, Yaml>,
         return Ok(Vec::new());
     }
 
+    // TODO: actually get all the keys instead of just doing it with the first one.
     // This is safe because we have at least one; also it's temporary. We'll
     // extract all of this to be a function which can be used as an argument to
     // part of a map: Vec<Yaml> -> Vec<Taxonomy>
