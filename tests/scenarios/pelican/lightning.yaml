@@ -10,18 +10,28 @@
 # TODO: extract relevant bits from this into docs once I stabilize it a bit.
 
 site_info:
+  # The `title` field is required, since you can't create well-formed HTML
+  # without a `<title>`.
   title: lx (lightning)
 
-  # Note that Lightning will check your URL; if it's badly formed, we'll warn you.
-  URL: https://lightning.rs  # I can wish and hope, right? And save my pennies.
+  # Note that Lightning will check your URL; if it's badly formed, we'll warn
+  # you... and refuse to generate the site!
+  url: https://lightning.rs  # I can wish and hope, right? And save my pennies.
 
+  # A description for the site. This is optional, but strongly recommended. You
+  # may leave the field out, or explicitly set it to null (`~`), if you do not
+  # want to use it.
   description: >
     A ridiculously fast site generator and engine.
 
   # You may supply any other metadata you like, though only as key-value pairs.
-  # Those pairs will be supplied to your templates as maps.
-  metadata: ~
-
+  # Those pairs will be supplied to your templates as hashmaps. The default
+  # value is null/`~` since no other metadata are assumed.
+#  metadata: ~
+  metadata:
+    foo: bar
+    quux: 42
+    baz: 13.3
 
 # Specify the source for the content. It can be any folder at all; relative
 # paths are resolved from the location of this configuration file.
