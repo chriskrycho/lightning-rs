@@ -8,9 +8,24 @@ Yet another static site generator—but this one's written in Rust. (And therefo
 
 ## Status
 
-This currently ***does not work***. If you need a site generator that does, I can point you to [Hugo], which is great, speedy, and pretty well-documented.
+This currently ***does not work***. If you need a site generator that does, I can point you to [Hugo], which is great, speedy, and pretty well-documented. If you want one specifically in Rust, check out [Cobalt], which is young but already works, and looks to be fairly compatible with Jekyll sites right out of the box. ([Why am I building something else if Cobalt already exists?](#why))
 
 Today, Lightning *builds*, passes the tests I've written, and even correctly loads the configuration file. But running `lx build` will *not* do what you expect: it'll convert all the Markdown in a config-specified directory, but it won't render it into templates in any way. Keep your expectations low on how fast this will develop, and you won't be disappointed.
+
+[Hugo]: https://gohugo.io
+[Cobalt]: http://cobalt-org.github.io
+
+### Goals
+
+This project's main goals are:
+
+- speed
+- ease of use, even for more complex ways of structuring a site
+- good out-of-the-box defaults, but with human-readable and -writable configurability
+- straightforward *import* from other systems (though see comment below)
+- extended Markdown functionality like processing citations
+
+It is an explicit non-goals to be an exact drop-in replacement for any other generator. Supporting the patterns other generators use for ease of import is good; requiring that everyone conform to e.g. Jekyll's, Hugo's, or any other generator's patterns as a result is *not* good. It should be easy to migrate in Jekyll/Hugo/etc. content; but you will never have to format the titles of your posts in any particular way.
 
 ### Roadmap
 
@@ -32,11 +47,11 @@ N.b. the below is my overall set of goals. For the 1.0 roadmap, see the [milesto
         
         This really means, make sure the configuration can support the configuration patterns for popular generators. This is not so much a *formal support* issue (though being able to `lx create --from-jekyll` would be cool) as it is a *make sure this is well-covered by the implementation* issue. Other generators to cover, in order:
 
-        - [x] from [Pelican][Pelican] – a must for the obvious reason that I want to be able to import my existing sites.
+        - [x] from [Pelican] – a must for the obvious reason that I want to be able to import my existing sites.
 
-        - [ ] from [Jekyll][Jekyll] – a high priority given the sheer popularity of the generator
+        - [ ] from [Jekyll] – a high priority given the sheer popularity of the generator
 
-        - [ ] from [Hugo][Hugo] – because it's basically a direct competitor if I ever get this thing to where I want performance-wise
+        - [ ] from [Hugo] – because it's basically a direct competitor if I ever get this thing to where I want performance-wise
 
 - [ ] Render Markdown
 
@@ -90,7 +105,6 @@ What else should be on this list?
 
 [Pelican]: http://docs.getpelican.com/en/stable/
 [Jekyll]: http://jekyllrb.com
-[Hugo]: https://gohugo.io
 [pulldown-cmark]: https://crates.io/crates/pulldown-cmark
 [cmd-pandoc]: https://crates.io/crates/cmd-pandoc
 [Hoedown]: https://crates.io/crates/hoedown
