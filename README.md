@@ -10,29 +10,29 @@ Yet another static site generator—but this one's written in Rust. (And therefo
 
 This currently ***does not work***. If you need a site generator that does, I can point you to [Hugo], which is great, speedy, and pretty well-documented.
 
-Today, Lightning *builds*, and it passes the single test I've written so far. But running `lx generate` will *not* do what you expect: it's currently hard-coded to use data in the test directory. That's coming... as I have time. Keep your expectations low on how fast this will develop, and you won't be disappointed.
+Today, Lightning *builds*, passes the tests I've written, and even correctly loads the configuration file. But running `lx build` will *not* do what you expect: it'll convert all the Markdown in a config-specified directory, but it won't render it into templates in any way. Keep your expectations low on how fast this will develop, and you won't be disappointed.
 
 ### Roadmap
 
-N.b. this is my overall set of goals, with no specific ties to a timeline or a planned 1.0. I'll hammer that out when I get a little futher along.
+N.b. the below is my overall set of goals. For the 1.0 roadmap, see the [milestone](https://github.com/chriskrycho/lightning-rs/milestone/1) and the [tracking issue](https://github.com/chriskrycho/lightning-rs/issues/3).
 
 - [ ] Define configuration scheme
 
-    - [ ] **Support custom taxonomies**: not being limited to just having categories and tags, and pages being off in their own corner
+    - [x] **Support custom taxonomies**: not being limited to just having categories and tags, and pages being off in their own corner
 
-        - [ ] binary (true/false)
+        - [x] binary (true/false)
 
-        - [ ] tag-like: items may belong to multiple items
+        - [x] tag-like: items may belong to multiple items
 
-        - [ ] hierarchical: items may belong to parents and children e.g. something can be at `Tech/Programming` and thus belong to both Tech and Programming
+        - [x] hierarchical: items may belong to parents and children e.g. something can be at `Tech/Programming` and thus belong to both Tech and Programming
 
-            - [ ] hierarchical *and exclusive*, i.e. if something is in the category `Tech` it *cannot* be in the category `Art`. I don't actually want or need this, but other users almost certainly will.
+            - [x] hierarchical *and exclusive*, i.e. if something is in the category `Tech` it *cannot* be in the category `Art`. I don't actually want or need this, but other users almost certainly will.
 
-    - [ ] Support importing other generators.
+    - [ ] Support importing content from other generators' basic setups.
         
         This really means, make sure the configuration can support the configuration patterns for popular generators. This is not so much a *formal support* issue (though being able to `lx create --from-jekyll` would be cool) as it is a *make sure this is well-covered by the implementation* issue. Other generators to cover, in order:
 
-        - [ ] from [Pelican][Pelican] – a must for the obvious reason that I want to be able to import my existing sites.
+        - [x] from [Pelican][Pelican] – a must for the obvious reason that I want to be able to import my existing sites.
 
         - [ ] from [Jekyll][Jekyll] – a high priority given the sheer popularity of the generator
 
@@ -72,7 +72,7 @@ N.b. this is my overall set of goals, with no specific ties to a timeline or a p
 
     - [ ] Via threading?
 
-- [ ] Via [futures-cpupool] or similar? 
+    - [ ] Via [futures-cpupool] or similar? 
 
 - [ ] Extensibility
 
