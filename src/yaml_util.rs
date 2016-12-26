@@ -23,7 +23,7 @@ impl fmt::Display for Required {
     }
 }
 
-pub fn required_key(key: &str, yaml: &yaml::Hash) -> String {
+pub fn required_key<Y: fmt::Debug>(key: &str, yaml: &Y) -> String {
     format!("Required key `{}` missing from {:?}", key, yaml)
 }
 

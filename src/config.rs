@@ -23,7 +23,7 @@ const CONFIG_FILE_NAME: &'static str = "lightning.yaml";
 
 #[derive(Debug, PartialEq)]
 pub struct Config {
-    pub site: SiteMeta,
+    pub site: SiteInfo,
     pub directories: Directories,
     pub taxonomies: Vec<Taxonomy>,
 }
@@ -53,7 +53,7 @@ impl Config {
         let yaml_config = load_result.into_iter().next().ok_or("Empty configuration file")?;
         let config_map = yaml_config.as_hash().ok_or("Configuration is not a map")?;
 
-        let structure = Self::get_structure(config_map, &config_path)?;
+        let structure = Self::get_structure(config_map)?;
 
         Ok(Config {
             site: Self::parse_site_meta(config_map)?,
@@ -62,30 +62,25 @@ impl Config {
         })
     }
 
-    fn get_structure<'map>(config_map: &'map BTreeMap<Yaml, Yaml>,
-                           config_path: &PathBuf)
+    fn get_structure<'map>(config_map: &'map BTreeMap<Yaml, Yaml>)
                            -> Result<&'map BTreeMap<Yaml, Yaml>, String> {
-        config_map.get(&Yaml::from_str("structure"))
-            .ok_or(format!("No `structure` key in {:?}", config_path))?
+        const STRUCTURE: &'static str = "structure";
+        config_map.get(&Yaml::from_str(STRUCTURE))
+            .ok_or(required_key(STRUCTURE, config_map))?
             .as_hash()
-            .ok_or(format!("`structure` is not a map in {:?}", config_path))
+            .ok_or(key_of_type(STRUCTURE, Required::Yes, config_map, "hash"))
     }
 
 
     /// Load the site data from the configuration file.
-    fn parse_site_meta(config_map: &BTreeMap<Yaml, Yaml>) -> Result<SiteMeta, String> {
-        // TODO: build these:
-        let name = String::new();
-        let description = String::new();
-        let metadata = HashMap::new();
-        let url = ValidatedUrl::new(String::new())?;
+    fn parse_site_meta(config_map: &BTreeMap<Yaml, Yaml>) -> Result<SiteInfo, String> {
+        const SITE_INFO: &'static str = "site_info";
+        let site_info_yaml = config_map.get(&Yaml::from_str(SITE_INFO))
+            .ok_or(required_key(SITE_INFO, config_map))?
+            .as_hash()
+            .ok_or(key_of_type(SITE_INFO, Required::Yes, config_map, "hash"))?;
 
-        Ok(SiteMeta {
-            name: name,
-            description: description,
-            metadata: metadata,
-            url: url,
-        })
+        SiteInfo::from_yaml(&site_info_yaml)
     }
 
 
@@ -302,11 +297,103 @@ impl Taxonomy {
 
 
 #[derive(Debug, PartialEq)]
-pub struct SiteMeta {
-    pub name: String,
-    pub description: String,
-    pub metadata: HashMap<Yaml, Yaml>,
+pub struct SiteInfo {
+    /// The name of the site. Required.
+    pub title: String,
+
+    /// The canonical URL for the root of the site. Required.
     pub url: ValidatedUrl,
+
+    /// The description of the site. Optional.
+    pub description: Option<String>,
+
+    /// Arbitrary metadata associated with the site. Optional.
+    pub metadata: HashMap<String, Yaml>,
+}
+
+
+impl SiteInfo {
+    fn from_yaml(yaml: &yaml::Hash) -> Result<SiteInfo, String> {
+        let title = Self::parse_title(yaml)?;
+        let url = Self::parse_url(yaml)?;
+        let description = Self::parse_description(yaml)?;
+        let metadata = Self::parse_metadata(yaml)?;
+        Ok(SiteInfo {
+            title: title,
+            url: url,
+            description: description,
+            metadata: metadata,
+        })
+    }
+
+    fn parse_title(yaml: &yaml::Hash) -> Result<String, String> {
+        const TITLE: &'static str = "title";
+        match yaml[&Yaml::from_str(TITLE)] {
+            Yaml::Null | Yaml::BadValue => Err(required_key(TITLE, yaml)),
+            Yaml::String(ref string) => Ok(string.clone()),
+            _ => Err(key_of_type(TITLE, Required::Yes, yaml, "string")),
+        }
+    }
+
+    fn parse_url(yaml: &yaml::Hash) -> Result<ValidatedUrl, String> {
+        const URL: &'static str = "url";
+        match yaml[&Yaml::from_str(URL)] {
+            Yaml::Null | Yaml::BadValue => Err(required_key(URL, yaml)),
+            Yaml::String(ref string) => ValidatedUrl::new(&string),
+            _ => Err(key_of_type(URL, Required::Yes, yaml, "string")),
+        }
+    }
+
+    fn parse_description(yaml: &yaml::Hash) -> Result<Option<String>, String> {
+        const DESCRIPTION: &'static str = "description";
+        match yaml[&Yaml::from_str(DESCRIPTION)] {
+            Yaml::Null | Yaml::BadValue => Ok(None),
+            Yaml::String(ref string) => Ok(Some(string.clone())),
+            _ => Err(key_of_type(DESCRIPTION, Required::No, yaml, "string")),
+        }
+    }
+
+    fn parse_metadata(yaml: &yaml::Hash) -> Result<HashMap<String, Yaml>, String> {
+        const METADATA: &'static str = "metadata";
+        let mut metadata = HashMap::new();
+        match yaml[&Yaml::from_str(METADATA)] {
+            Yaml::Null | Yaml::BadValue => Ok(metadata),
+            Yaml::Hash(ref hash) => {
+                for key in hash.keys() {
+                    println!("Key: {:?}\n", key);
+                    let key_str = key.as_str()
+                        .ok_or(key_of_type("key of hash map", Required::No, hash, "string"))?;
+
+                    match hash[key] {
+                        Yaml::Null | Yaml::BadValue => {
+                            return Err(key_of_type(key_str, Required::No, hash, "hash"));
+                        }
+                        ref valid_item @ Yaml::String(..) |
+                        ref valid_item @ Yaml::Boolean(..) |
+                        ref valid_item @ Yaml::Integer(..) |
+                        ref valid_item @ Yaml::Real(..) => {
+                            let result = metadata.insert(String::from(key_str), valid_item.clone());
+                            if result.is_some() {
+                                let main = format!("Double insertion of key {}.\n", key_str);
+                                let detail = format!("First: {:?}\nSecond: {:?}",
+                                                     result.unwrap(),
+                                                     valid_item);
+                                return Err(main + &detail);
+                            }
+                        }
+                        _ => {
+                            return Err(key_of_type(key_str,
+                                                   Required::No,
+                                                   hash,
+                                                   "string, boolean, or integer"))
+                        }
+                    }
+                }
+                Ok(metadata)
+            }
+            _ => Err(key_of_type(METADATA, Required::No, yaml, "hash")),
+        }
+    }
 }
 
 
@@ -464,4 +551,58 @@ structure:
 
     assert_eq!(Ok(expected),
                Config::parse_taxonomies(&structure, &"expected".into()));
+}
+
+
+#[test]
+fn parses_site_info() {
+    const SITE_INFO: &'static str = "\
+site_info:
+  title: lx (lightning)
+  url: https://lightning.rs
+  description: >
+    A ridiculously fast site generator and engine.
+  metadata:
+    foo: bar
+    quux: 2
+    ";
+
+    let mut metadata = HashMap::new();
+    metadata.insert("foo".into(), Yaml::from_str("bar"));
+    metadata.insert("quux".into(), Yaml::from_str("2"));
+    let expected = SiteInfo {
+        title: "lx (lightning)".into(),
+        url: ValidatedUrl::new("https://lightning.rs").unwrap(),
+        description: Some("A ridiculously fast site generator and engine.\n".into()),
+        metadata: metadata,
+    };
+
+    let mut loaded = YamlLoader::load_from_str(SITE_INFO).unwrap();
+    let first = loaded.pop().unwrap();
+    let site_info = first.as_hash().unwrap()[&Yaml::from_str("site_info")].as_hash().unwrap();
+    assert_eq!(Ok(expected), SiteInfo::from_yaml(&site_info));
+}
+
+#[test]
+fn parses_site_info_with_empty_metadata() {
+    const SITE_INFO_EMPTY_METADATA: &'static str = "
+site_info:
+  title: lx (lightning)
+  url: https://lightning.rs
+  description: >
+    A ridiculously fast site generator and engine.
+  metadata: ~
+    ";
+
+    let expected = SiteInfo {
+        title: "lx (lightning)".into(),
+        url: ValidatedUrl::new("https://lightning.rs").unwrap(),
+        description: Some("A ridiculously fast site generator and engine.\n".into()),
+        metadata: HashMap::new(),
+    };
+
+    let mut loaded = YamlLoader::load_from_str(SITE_INFO_EMPTY_METADATA).unwrap();
+    let first = loaded.pop().unwrap();
+    let site_info = first.as_hash().unwrap()[&Yaml::from_str("site_info")].as_hash().unwrap();
+    assert_eq!(Ok(expected), SiteInfo::from_yaml(&site_info));
 }
