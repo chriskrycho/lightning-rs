@@ -88,12 +88,12 @@ impl Config {
     fn parse_taxonomies(structure: &BTreeMap<Yaml, Yaml>,
                         config_path: &PathBuf)
                         -> Result<Vec<Taxonomy>, String> {
-        const KEY: &'static str = "taxonomies";
+        const TAXONOMIES: &'static str = "taxonomies";
 
-        let taxonomies_yaml = structure.get(&Yaml::from_str(KEY))
-            .ok_or(format!("No `{}` key in {:?}", KEY, config_path))?
+        let taxonomies_yaml = structure.get(&Yaml::from_str(TAXONOMIES))
+            .ok_or(format!("No `{}` key in {:?}", TAXONOMIES, config_path))?
             .as_vec()
-            .ok_or(format!("`{}` is not an array in {:?}", KEY, config_path))?;
+            .ok_or(format!("`{}` is not an array in {:?}", TAXONOMIES, config_path))?;
 
         let mut taxonomies = Vec::new();
         if taxonomies_yaml.len() == 0 {
@@ -102,7 +102,7 @@ impl Config {
 
         for taxonomy_yaml in taxonomies_yaml {
             let wrapper = taxonomy_yaml.as_hash()
-                .ok_or(key_of_type(KEY, Required::Yes, taxonomy_yaml, "hash"))?;
+                .ok_or(key_of_type(TAXONOMIES, Required::Yes, taxonomy_yaml, "hash"))?;
             let key = wrapper.keys()
                 .next()
                 .ok_or(key_of_type("first key", Required::Yes, wrapper, "hash"))?;
@@ -208,14 +208,13 @@ impl Taxonomy {
         const TEMPORAL: &'static str = "temporal";
 
         let name = String::from(name);
+        let templates = Templates::from_yaml(hash)?;
 
         // Name can't collide with keyword `type`.
         let taxonomy_type = hash.get(&Yaml::from_str(TYPE))
             .ok_or(required_key(TYPE, hash))?
             .as_str()
             .ok_or(key_of_type(TYPE, Required::Yes, hash, "string"))?;
-
-        let templates = Templates::from_yaml(hash)?;
 
         match taxonomy_type {
             BINARY => {
@@ -328,27 +327,28 @@ impl SiteInfo {
 
     fn parse_title(yaml: &yaml::Hash) -> Result<String, String> {
         const TITLE: &'static str = "title";
-        match yaml[&Yaml::from_str(TITLE)] {
-            Yaml::Null | Yaml::BadValue => Err(required_key(TITLE, yaml)),
-            Yaml::String(ref string) => Ok(string.clone()),
+
+        match yaml.get(&Yaml::from_str(TITLE)) {
+            None | Some(&Yaml::Null) => Err(required_key(TITLE, yaml)),
+            Some(&Yaml::String(ref string)) => Ok(string.clone()),
             _ => Err(key_of_type(TITLE, Required::Yes, yaml, "string")),
         }
     }
 
     fn parse_url(yaml: &yaml::Hash) -> Result<ValidatedUrl, String> {
         const URL: &'static str = "url";
-        match yaml[&Yaml::from_str(URL)] {
-            Yaml::Null | Yaml::BadValue => Err(required_key(URL, yaml)),
-            Yaml::String(ref string) => ValidatedUrl::new(&string),
+        match yaml.get(&Yaml::from_str(URL)) {
+            None | Some(&Yaml::Null) => Err(required_key(URL, yaml)),
+            Some(&Yaml::String(ref string)) => ValidatedUrl::new(&string),
             _ => Err(key_of_type(URL, Required::Yes, yaml, "string")),
         }
     }
 
     fn parse_description(yaml: &yaml::Hash) -> Result<Option<String>, String> {
         const DESCRIPTION: &'static str = "description";
-        match yaml[&Yaml::from_str(DESCRIPTION)] {
-            Yaml::Null | Yaml::BadValue => Ok(None),
-            Yaml::String(ref string) => Ok(Some(string.clone())),
+        match yaml.get(&Yaml::from_str(DESCRIPTION)) {
+            None | Some(&Yaml::Null) => Ok(None),
+            Some(&Yaml::String(ref string)) => Ok(Some(string.clone())),
             _ => Err(key_of_type(DESCRIPTION, Required::No, yaml, "string")),
         }
     }
@@ -356,28 +356,28 @@ impl SiteInfo {
     fn parse_metadata(yaml: &yaml::Hash) -> Result<HashMap<String, Yaml>, String> {
         const METADATA: &'static str = "metadata";
         let mut metadata = HashMap::new();
-        match yaml[&Yaml::from_str(METADATA)] {
-            Yaml::Null | Yaml::BadValue => Ok(metadata),
-            Yaml::Hash(ref hash) => {
+        match yaml.get(&Yaml::from_str(METADATA)) {
+            None | Some(&Yaml::Null) => Ok(metadata),
+            Some(&Yaml::Hash(ref hash)) => {
                 for key in hash.keys() {
                     println!("Key: {:?}\n", key);
                     let key_str = key.as_str()
                         .ok_or(key_of_type("key of hash map", Required::No, hash, "string"))?;
 
-                    match hash[key] {
-                        Yaml::Null | Yaml::BadValue => {
+                    match hash.get(key) {
+                        None | Some(&Yaml::Null) => {
                             return Err(key_of_type(key_str, Required::No, hash, "hash"));
                         }
-                        ref valid_item @ Yaml::String(..) |
-                        ref valid_item @ Yaml::Boolean(..) |
-                        ref valid_item @ Yaml::Integer(..) |
-                        ref valid_item @ Yaml::Real(..) => {
-                            let result = metadata.insert(String::from(key_str), valid_item.clone());
+                        Some(inner_yaml @ &Yaml::String(..)) |
+                        Some(inner_yaml @ &Yaml::Boolean(..)) |
+                        Some(inner_yaml @ &Yaml::Integer(..)) |
+                        Some(inner_yaml @ &Yaml::Real(..)) => {
+                            let result = metadata.insert(String::from(key_str), inner_yaml.clone());
                             if result.is_some() {
                                 let main = format!("Double insertion of key {}.\n", key_str);
                                 let detail = format!("First: {:?}\nSecond: {:?}",
                                                      result.unwrap(),
-                                                     valid_item);
+                                                     inner_yaml);
                                 return Err(main + &detail);
                             }
                         }
