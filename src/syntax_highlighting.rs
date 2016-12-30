@@ -3,7 +3,6 @@
 //! [Syntect]: https://docs.rs/syntect/1.0.0/syntect/
 
 // Standard library
-use std::borrow::Cow;
 use std::default::Default;
 use std::collections::HashMap;
 use std::str;
@@ -166,46 +165,27 @@ pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
         let parse_event = ParseEvent::from(&event);
         state = ParseState::next(state, parse_event);
 
-        let language = match state {
-            ParseState::InCodeBlock(ref language) => language.clone(),
-            _ => {
-                assert!(writer.write(event).is_ok());
-                continue;
-            }
-        };
+        if let ParseState::InCodeBlock(ref language) = state {
+            if let Ok(unescaped_content) = event.element().unescaped_content() {
+                if let Ok(content_to_highlight) = str::from_utf8(&unescaped_content) {
+                    if let Some(valid_syntax) = ss.find_syntax_by_token(&language) {
+                        let syntax_definition =
+                            syntax_definitions.entry(language.clone())
+                                              .or_insert_with(|| valid_syntax.clone());
 
-        let unescaped_content = match event.element().unescaped_content().map(Cow::into_owned) {
-            Ok(content) => content,
-            Err(_) => {
-                assert!(writer.write(event).is_ok());
-                continue;
-            }
-        };
-
-        let content_to_highlight = match str::from_utf8(&unescaped_content) {
-            Ok(utf8_str) => utf8_str,
-            Err(_) => {
-                assert!(writer.write(event).is_ok());
-                continue;
-            }
-        };
-
-        let syntax_key = language.clone();
-        let syntax_definition = syntax_definitions.entry(syntax_key).or_insert({
-            match ss.find_syntax_by_token(&language) {
-                Some(valid_syntax) => valid_syntax.clone(),
-                None => {
-                    assert!(writer.write(event).is_ok());
-                    continue;
+                        let highlighted = highlighted_snippet_for_string(content_to_highlight,
+                                                                         syntax_definition,
+                                                                         &theme);
+                        let text = Element::new(highlighted);
+                        assert!(writer.write(Event::Text(text)).is_ok());
+                        continue;
+                    }
                 }
             }
-        });
+        }
 
-        let highlighted =
-            highlighted_snippet_for_string(content_to_highlight, syntax_definition, &theme);
-
-        let text = Element::new(highlighted);
-        assert!(writer.write(Event::Text(text)).is_ok());
+        // Syntax highlighting did not succeed, so just write the original event.
+        assert!(writer.write(event).is_ok());
     }
 
     String::from_utf8(writer.into_inner()).unwrap_or(html_string)
