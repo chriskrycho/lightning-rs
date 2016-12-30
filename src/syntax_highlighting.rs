@@ -129,12 +129,6 @@ impl<'e> From<&'e Event> for ParseEvent {
 }
 
 
-struct Accumulator {
-    writer: XmlWriter<Vec<u8>>,
-    state: ParseState,
-}
-
-
 /// Highlight all code blocks in a block of HTML.
 ///
 /// Assumes that the blocks to be highlighted are in the following basic format:
@@ -159,43 +153,39 @@ pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
     let ss = SyntaxSet::load_defaults_nonewlines();
     let mut syntax_definitions = HashMap::<Language, SyntaxDefinition>::new();
 
-    let accumulator = Accumulator {
-        writer: XmlWriter::new(Vec::<u8>::new()),
-        state: ParseState::default(),
-    };
+    let mut writer = XmlWriter::new(Vec::<u8>::new());
+    let mut state = ParseState::default();
 
-    let final_state = XmlReader::from(html_string.as_str()).fold(accumulator, |mut acc, event| {
+    for event in XmlReader::from(html_string.as_str()) {
         let event = match event {
             Ok(event) => event,
-            Err(_) => {
-                return acc;
-            }
+            Err(_) => continue
         };
 
         let parse_event = ParseEvent::from(&event);
-        acc.state = ParseState::next(acc.state, parse_event);
+        state = ParseState::next(state, parse_event);
 
-        let language = match acc.state.clone() {
+        let language = match state.clone() {
             ParseState::InCodeBlock(language) => language,
             _ => {
-                assert!(acc.writer.write(event.clone()).is_ok());
-                return acc;
+                assert!(writer.write(event).is_ok());
+                continue;
             }
         };
 
         let unescaped_content = match event.element().unescaped_content() {
             Ok(content) => content.into_owned(),
             Err(_) => {
-                assert!(acc.writer.write(event.clone()).is_ok());
-                return acc;
+                assert!(writer.write(event.clone()).is_ok());
+                continue;
             }
         };
 
         let content_to_highlight = match str::from_utf8(&unescaped_content) {
             Ok(utf8_str) => utf8_str,
             Err(_) => {
-                assert!(acc.writer.write(event.clone()).is_ok());
-                return acc;
+                assert!(writer.write(event.clone()).is_ok());
+                continue;
             }
         };
 
@@ -204,8 +194,8 @@ pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
             match ss.find_syntax_by_token(&language) {
                 Some(valid_syntax) => valid_syntax.clone(),
                 None => {
-                    assert!(acc.writer.write(event.clone()).is_ok());
-                    return acc;
+                    assert!(writer.write(event.clone()).is_ok());
+                    continue;
                 }
             }
         });
@@ -214,12 +204,10 @@ pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
             highlighted_snippet_for_string(content_to_highlight, syntax_definition, &theme);
 
         let text = Element::new(highlighted);
-        assert!(acc.writer.write(Event::Text(text)).is_ok());
+        assert!(writer.write(Event::Text(text)).is_ok());
+    }
 
-        acc
-    });
-
-    String::from_utf8(final_state.writer.into_inner()).unwrap_or(html_string)
+    String::from_utf8(writer.into_inner()).unwrap_or(html_string)
 }
 
 
