@@ -156,9 +156,6 @@ struct Accumulator {
 /// simply be returned unchanged; and if there are no code blocks to highlight,
 /// it will also be returned unchanged.
 pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
-    let original_string = html_string.clone();
-    let reader = XmlReader::from(html_string.as_str());
-
     let ss = SyntaxSet::load_defaults_nonewlines();
     let mut syntax_definitions = HashMap::<Language, SyntaxDefinition>::new();
 
@@ -167,7 +164,7 @@ pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
         state: ParseState::default(),
     };
 
-    let final_state = reader.fold(accumulator, |mut acc, event| {
+    let final_state = XmlReader::from(html_string.as_str()).fold(accumulator, |mut acc, event| {
         let event = match event {
             Ok(event) => event,
             Err(_) => {
@@ -222,7 +219,7 @@ pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
         acc
     });
 
-    String::from_utf8(final_state.writer.into_inner()).unwrap_or(original_string)
+    String::from_utf8(final_state.writer.into_inner()).unwrap_or(html_string)
 }
 
 
