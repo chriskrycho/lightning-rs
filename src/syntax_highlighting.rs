@@ -165,8 +165,8 @@ pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
         let parse_event = ParseEvent::from(&event);
         state = ParseState::next(state, parse_event);
 
-        let language = match state.clone() {
-            ParseState::InCodeBlock(language) => language,
+        let language = match state {
+            ParseState::InCodeBlock(ref language) => language.clone(),
             _ => {
                 assert!(writer.write(event).is_ok());
                 continue;
