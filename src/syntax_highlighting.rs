@@ -3,6 +3,7 @@
 //! [Syntect]: https://docs.rs/syntect/1.0.0/syntect/
 
 // Standard library
+use std::borrow::Cow;
 use std::default::Default;
 use std::collections::HashMap;
 use std::str;
@@ -173,10 +174,10 @@ pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
             }
         };
 
-        let unescaped_content = match event.element().unescaped_content() {
-            Ok(content) => content.into_owned(),
+        let unescaped_content = match event.element().unescaped_content().map(Cow::into_owned) {
+            Ok(content) => content,
             Err(_) => {
-                assert!(writer.write(event.clone()).is_ok());
+                assert!(writer.write(event).is_ok());
                 continue;
             }
         };
@@ -184,7 +185,7 @@ pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
         let content_to_highlight = match str::from_utf8(&unescaped_content) {
             Ok(utf8_str) => utf8_str,
             Err(_) => {
-                assert!(writer.write(event.clone()).is_ok());
+                assert!(writer.write(event).is_ok());
                 continue;
             }
         };
@@ -194,7 +195,7 @@ pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
             match ss.find_syntax_by_token(&language) {
                 Some(valid_syntax) => valid_syntax.clone(),
                 None => {
-                    assert!(writer.write(event.clone()).is_ok());
+                    assert!(writer.write(event).is_ok());
                     continue;
                 }
             }
