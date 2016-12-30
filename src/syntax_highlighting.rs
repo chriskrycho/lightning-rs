@@ -151,7 +151,7 @@ impl<'e> From<&'e Event> for ParseEvent {
 /// it will also be returned unchanged.
 pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
     let ss = SyntaxSet::load_defaults_nonewlines();
-    let mut syntax_definitions = HashMap::<Language, SyntaxDefinition>::new();
+    let mut syntax_definitions = HashMap::<Language, &SyntaxDefinition>::new();
 
     let mut writer = XmlWriter::new(Vec::<u8>::new());
     let mut state = ParseState::default();
@@ -170,8 +170,7 @@ pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
                 if let Ok(content_to_highlight) = str::from_utf8(&unescaped_content) {
                     if let Some(valid_syntax) = ss.find_syntax_by_token(&language) {
                         let syntax_definition =
-                            syntax_definitions.entry(language.clone())
-                                              .or_insert_with(|| valid_syntax.clone());
+                            syntax_definitions.entry(language.clone()).or_insert(valid_syntax);
 
                         let highlighted = highlighted_snippet_for_string(content_to_highlight,
                                                                          syntax_definition,
