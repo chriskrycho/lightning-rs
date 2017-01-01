@@ -100,7 +100,7 @@ impl<'e> From<&'e Event> for ParseEvent {
 
                         if let Some((_attr, value)) = maybe_class_attr {
                             match str::from_utf8(value) {
-                                Ok(lang) => ParseEvent::StartPre(Some(lang.to_string())),
+                                Ok(lang) => ParseEvent::StartPre(Some(lang.into())),
                                 Err(_) => ParseEvent::StartPre(None),
                             }
                         } else {
@@ -159,7 +159,7 @@ pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
     for event in XmlReader::from(html_string.as_str()) {
         let event = match event {
             Ok(event) => event,
-            Err(_) => continue
+            Err(_) => continue,
         };
 
         let parse_event = ParseEvent::from(&event);
@@ -169,8 +169,8 @@ pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
             if let Ok(unescaped_content) = event.element().unescaped_content() {
                 if let Ok(content_to_highlight) = str::from_utf8(&unescaped_content) {
                     if let Some(valid_syntax) = ss.find_syntax_by_token(&language) {
-                        let syntax_definition =
-                            syntax_definitions.entry(language.clone()).or_insert(valid_syntax);
+                        let syntax_definition = syntax_definitions.entry(language.clone())
+                            .or_insert(valid_syntax);
 
                         let highlighted = highlighted_snippet_for_string(content_to_highlight,
                                                                          syntax_definition,
@@ -195,14 +195,14 @@ pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
 mod tests {
 
     #[test]
-    fn test_parse_state() {
+    fn parse_state() {
         use super::ParseState;
         use super::ParseEvent;
 
         let lang = "rust";
 
-        assert_eq!(ParseState::NotInBlock.next(ParseEvent::StartPre(Some(lang.to_string()))),
-                   ParseState::MaybeStartBlock(lang.to_string()));
+        assert_eq!(ParseState::NotInBlock.next(ParseEvent::StartPre(Some(lang.into()))),
+                   ParseState::MaybeStartBlock(lang.into()));
 
         assert_eq!(ParseState::NotInBlock.next(ParseEvent::EndCode),
                    ParseState::NotInBlock);
@@ -213,23 +213,23 @@ mod tests {
         assert_eq!(ParseState::NotInBlock.next(ParseEvent::StartCode),
                    ParseState::NotInBlock);
 
-        assert_eq!(ParseState::MaybeStartBlock(lang.to_string()).next(ParseEvent::StartCode),
-                   ParseState::WillStartCodeBlock(lang.to_string()));
+        assert_eq!(ParseState::MaybeStartBlock(lang.into()).next(ParseEvent::StartCode),
+                   ParseState::WillStartCodeBlock(lang.into()));
 
-        assert_eq!(ParseState::MaybeStartBlock(lang.to_string()).next(ParseEvent::Text),
+        assert_eq!(ParseState::MaybeStartBlock(lang.into()).next(ParseEvent::Text),
                    ParseState::NotInBlock);
 
-        assert_eq!(ParseState::MaybeStartBlock(lang.to_string()).next(ParseEvent::EndCode),
+        assert_eq!(ParseState::MaybeStartBlock(lang.into()).next(ParseEvent::EndCode),
                    ParseState::NotInBlock);
 
-        assert_eq!(ParseState::MaybeStartBlock(lang.to_string())
-                       .next(ParseEvent::StartPre(Some(lang.to_string()))),
+        assert_eq!(ParseState::MaybeStartBlock(lang.into())
+                       .next(ParseEvent::StartPre(Some(lang.into()))),
                    ParseState::NotInBlock);
 
-        assert_eq!(ParseState::MaybeStartBlock(lang.to_string()).next(ParseEvent::Other),
+        assert_eq!(ParseState::MaybeStartBlock(lang.into()).next(ParseEvent::Other),
                    ParseState::NotInBlock);
 
-        assert_eq!(ParseState::WillStartCodeBlock(lang.to_string()).next(ParseEvent::Text),
-                   ParseState::InCodeBlock(lang.to_string()));
+        assert_eq!(ParseState::WillStartCodeBlock(lang.into()).next(ParseEvent::Text),
+                   ParseState::InCodeBlock(lang.into()));
     }
 }
