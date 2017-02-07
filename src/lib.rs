@@ -10,6 +10,7 @@ mod builder;
 mod config;
 mod creator;
 mod initializer;
+mod item;
 mod server;
 mod syntax_highlighting;
 mod validated_types;
