@@ -16,7 +16,6 @@ pub struct Metadata {
     pub extra: HashMap<String, ExtraMetadata>,
 }
 
-
 pub enum ExtraMetadata {
     SingleLineString(String),
     MultiLineString(String),
@@ -24,24 +23,37 @@ pub enum ExtraMetadata {
     Slug(String),
 }
 
+const TRIPLE_DASH: &'static str = "---";
+const TRIPLE_DOT: &'static str = "...";
 
-fn is_delimiter(line: &str) -> bool {
+fn is_initial_delimiter(line: &str) -> bool {
+    line == TRIPLE_DASH
+}
+
+fn is_terminal_delimiter(line: &str) -> bool {
     match line {
-        "---" | "..." => true,
+        TRIPLE_DASH | TRIPLE_DOT => true,
         _ => false,
     }
 }
 
+fn extract_metadata<'c>(content: &'c str) -> Option<String> {
+    let lines_of_interest = |c: &'c str| c.lines().skip_while(|line| *line =="");
 
-fn extract_metadata(content: &str) -> Option<String> {
-    let mut lines = content.lines();
-    let has_initial = lines.nth(0).map(is_delimiter).unwrap_or(false);
-    let has_terminal = lines.any(is_delimiter);
+    let mut lines = lines_of_interest(content);
+    let has_initial = lines.nth(0).map(is_initial_delimiter).unwrap_or(false);
+    let has_terminal = lines.any(is_terminal_delimiter);
     if !(has_initial && has_terminal) {
         return None;
     }
 
-    Some(content.lines().skip(1).take_while(|line| !is_delimiter(&line)).collect())
+    let metadata = lines_of_interest(content)
+        .skip(1)  // "---"
+        .take_while(|line| !is_terminal_delimiter(&line))  // until "---" or "..."
+        .fold(Vec::new(), |mut vec, line| { vec.push(line); vec })
+        .join("\n");
+
+    Some(metadata)
 }
 
 
@@ -77,8 +89,7 @@ mod tests {
 
     #[test]
     fn test_extract_metadata() {
-        let has_metadata = "
----
+        let has_metadata = "---
 Title: With Terminal Dashes
 ---
 
@@ -89,9 +100,8 @@ Some other text!e
             extract_metadata(&has_metadata),
             Some("Title: With Terminal Dashes".into()));
 
-        let has_metadata_terminal_dots = "
----
-Title: With Terminal Dots;
+        let has_metadata_terminal_dots = "---
+Title: With Terminal Dots
 ...
 
 Some other text!
@@ -107,11 +117,48 @@ Some text, no metadata though.
 
         assert_eq!(extract_metadata(&no_metadata), None);
 
-        let has_opening_but_no_terminal = "
----
+        let has_opening_but_no_terminal = "---
 This is *not* metadata; it has an opening `<hr/>`, which is weird.
         ";
 
         assert_eq!(extract_metadata(&has_opening_but_no_terminal), None);
+
+        let has_closing_but_no_opening = "
+Whatever this says is irrelevant.
+...
+        ";
+
+        assert_eq!(extract_metadata(&has_closing_but_no_opening), None);
+
+        let has_space_before_opening = "
+
+---
+Title: Who cares how many *initial* empty lines there are?
+---
+        ";
+
+        assert_eq!(
+            extract_metadata(&has_space_before_opening),
+            Some("Title: Who cares how many *initial* empty lines there are?".into()));
+
+        let multiline_metadata = "---
+Jedi: Luke Skywalker
+Rogue: Han Solo
+Badass: Princess Leia
+...
+
+Whatever other content...
+        ";
+
+        assert_eq!(
+            extract_metadata(&multiline_metadata),
+            Some("Jedi: Luke Skywalker\nRogue: Han Solo\nBadass: Princess Leia".into()));
+
+        let whole_lines_only_please = "---This: Is Not Valid
+Even: Thought it *almost* looks valid.
+...
+        ";
+
+        assert_eq!(extract_metadata(&whole_lines_only_please), None);
     }
 }
