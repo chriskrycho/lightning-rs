@@ -3,17 +3,21 @@
 
 // First-party
 use std::collections::HashMap;
+use std::error::Error;
 use std::path::Path;
 use std::str::FromStr;
 
 // Third-party
 use yaml_rust::{yaml, Yaml, YamlLoader};
 
+// First-party
+use yaml_util::*;
+
 
 pub struct Metadata {
-    pub title: Option<String>,
+    pub title: String,
     pub slug: String,
-    pub extra: HashMap<String, ExtraMetadata>,
+    pub extra: Option<HashMap<String, ExtraMetadata>>,
 }
 
 pub enum ExtraMetadata {
@@ -38,7 +42,7 @@ fn is_terminal_delimiter(line: &str) -> bool {
 }
 
 fn extract_metadata<'c>(content: &'c str) -> Option<String> {
-    let lines_of_interest = |c: &'c str| c.lines().skip_while(|line| *line =="");
+    let lines_of_interest = |c: &'c str| c.lines().skip_while(|&line| line == "");
 
     let mut lines = lines_of_interest(content);
     let has_initial = lines.nth(0).map(is_initial_delimiter).unwrap_or(false);
@@ -48,7 +52,7 @@ fn extract_metadata<'c>(content: &'c str) -> Option<String> {
     }
 
     let metadata = lines_of_interest(content)
-        .skip(1)  // "---"
+        .skip(1)  // the initial "---"
         .take_while(|line| !is_terminal_delimiter(&line))  // until "---" or "..."
         .fold(Vec::new(), |mut vec, line| { vec.push(line); vec })
         .join("\n");
@@ -57,30 +61,48 @@ fn extract_metadata<'c>(content: &'c str) -> Option<String> {
 }
 
 
-// TODO: figure out type. HashMap<String, T> where T: ...
 pub fn parse_metadata(content: &str, file_name: &Path) -> Result<Metadata, String> {
-    let just_metadata = extract_metadata(&content)
+    let metadata = extract_metadata(&content)
         .ok_or(format!("file `{}` passed to `parse_metadata` has no metadata",
                        file_name.to_string_lossy()))?;
 
-    let yaml = YamlLoader::load_from_str(&just_metadata);
+    let bad_yaml_message = |reason: &str| {
+        format!("file `{}` passed to `parse_metadata` had invalid metadata: {}\n{}",
+                file_name.to_string_lossy(), metadata, reason)
+    };
+
+    let yaml = YamlLoader::load_from_str(&metadata)
+                          .map_err(|reason| bad_yaml_message(&reason.description()))?;
+
+    let yaml = yaml.into_iter()
+                   .next()
+                   .ok_or(bad_yaml_message("empty metadata block"))?;
+
+    let yaml = yaml.as_hash()
+                   .ok_or(bad_yaml_message("could not parse as hash"))?;
 
     // TODO: Parse from YAML
     let slug = file_name.file_stem()
-        .ok_or(format!("file name `{}` passed to `parse_metadata` has no stem",
-                       file_name.to_string_lossy()))?
-        .to_str()
-        .ok_or(format!("file name `{}` passed to `parse_metadata` has invalid UTF-8",
-                       file_name.to_string_lossy()))?;
+                        .ok_or(
+                            format!("file name `{}` passed to `parse_metadata` has no stem",
+                                    file_name.to_string_lossy()))?
+                        .to_str()
+                        .ok_or(
+                            format!("file name `{}` passed to `parse_metadata` has invalid UTF-8",
+                                    file_name.to_string_lossy()))?;
 
-    // TODO: actually, check if on YAML, -> Some if so, None if not.
-    let title = slug;
+    let title = match yaml.get(&Yaml::from_str("Title")).or(yaml.get(&Yaml::from_str("title"))) {
+        None |
+        Some(&Yaml::Null) => Err(required_key("title (case insensitive)", yaml)),
+        Some(&Yaml::String(ref string)) => Ok(string.clone()),
+        _ => Err(key_of_type("title (case insensitive)", Required::Yes, yaml, "string")),
+    }?;
 
     Ok(Metadata {
-           title: Some(slug.to_string()),
-           slug: slug.to_string(),
-           extra: HashMap::new(),
-       })
+        title: title,
+        slug: slug.to_string(),
+        extra: None,
+    })
 }
 
 #[cfg(test)]
@@ -88,7 +110,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_extract_metadata() {
+    fn correctly_extract_metadata() {
         let has_metadata = "---
 Title: With Terminal Dashes
 ---
