@@ -1,5 +1,7 @@
 //! Generate the site content.
 
+mod item;
+
 // Standard library
 use std::fs::File;
 use std::io::prelude::*;
@@ -13,15 +15,16 @@ use syntect::highlighting::ThemeSet;
 // First party
 use config::Config;
 use syntax_highlighting::syntax_highlight;
-use item;
 
 
 /// Load the `Paths` for all markdown files in the specified content directory.
 fn glob_md_paths(site_directory: &PathBuf, config: &Config) -> Result<Paths, String> {
-    let content_glob_str =
-        format!("{}/{}/**/*.md",
-                site_directory.to_str().ok_or(String::from("bad `site`"))?,
-                config.directories.content.to_str().ok_or(String::from("bad content directory"))?);
+    let content_glob_str = format!("{}/{}/**/*.md",
+                                   site_directory.to_str().ok_or(String::from("bad `site`"))?,
+                                   config.directories
+                                       .content
+                                       .to_str()
+                                       .ok_or(String::from("bad content directory"))?);
 
     glob(&content_glob_str).map_err(|err| format!("{:?}", err))
 }
@@ -59,8 +62,9 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
 
         let mut pandoc = pandoc.clone();
         pandoc.set_input(InputKind::Pipe(contents));
-        let pandoc_output = pandoc.execute()
-            .map_err(|err| format!("pandoc failed on {}:\n{:?}", path.to_string_lossy(), err))?;
+        let pandoc_output =
+            pandoc.execute()
+                .map_err(|err| format!("pandoc failed on {}:\n{:?}", path.to_string_lossy(), err))?;
 
         let converted = match pandoc_output {
             PandocOutput::ToFile(path_buf) => {
@@ -92,10 +96,10 @@ fn write_file(output_dir: &Path, slug: &str, contents: &str) -> Result<(), Strin
     let path = output_dir.join(slug).with_extension("html");
 
     let mut fd = File::create(&path).map_err(|err| {
-            format!("Could not open {} for write: {}",
-                    path.to_string_lossy(),
-                    err)
-        })?;
+                     format!("Could not open {} for write: {}",
+                             path.to_string_lossy(),
+                             err)
+                 })?;
 
     write!(fd, "{}", contents).map_err(|err| format!("{:?}", err.kind()))
 }
