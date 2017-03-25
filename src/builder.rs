@@ -59,16 +59,17 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
 
         let mut pandoc = pandoc.clone();
         pandoc.set_input(InputKind::Pipe(contents));
-        let pandoc_output = pandoc.execute()
-            .map_err(|err| format!("pandoc failed on {}:\n{:?}", path.to_string_lossy(), err))?;
 
-        let converted = match pandoc_output {
-            PandocOutput::ToFile(path_buf) => {
+        let converted = match pandoc.execute() {
+            Ok(PandocOutput::ToFile(path_buf)) => {
                 let msg = format!("We wrote to a file ({}) instead of a pipe. That was weird.",
                                   path_buf.to_string_lossy());
                 return Err(msg);
             }
-            PandocOutput::ToBuffer(string) => string,
+            Ok(PandocOutput::ToBuffer(string)) => string,
+            Err(err) => {
+                return Err(format!("pandoc failed on {}:\n{:?}", path.to_string_lossy(), err));
+            }
         };
 
         let highlighted = syntax_highlight(converted, theme);
