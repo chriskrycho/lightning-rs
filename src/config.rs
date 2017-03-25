@@ -50,16 +50,18 @@ impl Config {
         // along the way don't live long enough otherwise.
         let load_result = YamlLoader::load_from_str(&contents)
             .map_err(|err| format!("{} ({:?})", err, &config_path))?;
-        let yaml_config = load_result.into_iter().next().ok_or("Empty configuration file")?;
+        let yaml_config = load_result.into_iter()
+            .next()
+            .ok_or("Empty configuration file")?;
         let config_map = yaml_config.as_hash().ok_or("Configuration is not a map")?;
 
         let structure = Self::get_structure(config_map)?;
 
         Ok(Config {
-            site: Self::parse_site_meta(config_map)?,
-            directories: Directories::from_yaml(config_map, &config_path, &structure)?,
-            taxonomies: Self::parse_taxonomies(&structure, &config_path)?,
-        })
+               site: Self::parse_site_meta(config_map)?,
+               directories: Directories::from_yaml(config_map, &config_path, &structure)?,
+               taxonomies: Self::parse_taxonomies(&structure, &config_path)?,
+           })
     }
 
     fn get_structure<'map>(config_map: &'map BTreeMap<Yaml, Yaml>)
@@ -90,10 +92,11 @@ impl Config {
                         -> Result<Vec<Taxonomy>, String> {
         const TAXONOMIES: &'static str = "taxonomies";
 
-        let taxonomies_yaml = structure.get(&Yaml::from_str(TAXONOMIES))
-            .ok_or(format!("No `{}` key in {:?}", TAXONOMIES, config_path))?
-            .as_vec()
-            .ok_or(format!("`{}` is not an array in {:?}", TAXONOMIES, config_path))?;
+        let taxonomies_yaml =
+            structure.get(&Yaml::from_str(TAXONOMIES))
+                .ok_or(format!("No `{}` key in {:?}", TAXONOMIES, config_path))?
+                .as_vec()
+                .ok_or(format!("`{}` is not an array in {:?}", TAXONOMIES, config_path))?;
 
         let mut taxonomies = Vec::new();
         if taxonomies_yaml.len() == 0 {
@@ -101,8 +104,9 @@ impl Config {
         }
 
         for taxonomy_yaml in taxonomies_yaml {
-            let wrapper = taxonomy_yaml.as_hash()
-                .ok_or(key_of_type(TAXONOMIES, Required::Yes, taxonomy_yaml, "hash"))?;
+            let wrapper =
+                taxonomy_yaml.as_hash()
+                    .ok_or(key_of_type(TAXONOMIES, Required::Yes, taxonomy_yaml, "hash"))?;
             let key = wrapper.keys()
                 .next()
                 .ok_or(key_of_type("first key", Required::Yes, wrapper, "hash"))?;
@@ -141,28 +145,30 @@ impl Directories {
         let content_directory_yaml = config_map.get(&Yaml::from_str(CONTENT_DIRECTORY))
             .ok_or(required_key(CONTENT_DIRECTORY, config_map))?;
 
-        let content_directory =
-            Self::path_buf_from_yaml(&content_directory_yaml, CONTENT_DIRECTORY, &config_path)?;
+        let content_directory = Directories::path_buf_from_yaml(&content_directory_yaml,
+                                                                CONTENT_DIRECTORY,
+                                                                &config_path)?;
 
         let output_directory_yaml = config_map.get(&Yaml::from_str(OUTPUT_DIRECTORY))
             .ok_or(required_key(OUTPUT_DIRECTORY, config_map))?;
 
         let output_directory =
-            Self::path_buf_from_yaml(output_directory_yaml, OUTPUT_DIRECTORY, &config_path)?;
+            Directories::path_buf_from_yaml(output_directory_yaml, OUTPUT_DIRECTORY, &config_path)?;
 
         let template_directory_yaml =
             structure.get(&Yaml::from_str(TEMPLATE_DIRECTORY))
                 .ok_or(required_key(TEMPLATE_DIRECTORY, structure) +
                        &format!(" in {:?}", config_path))?;
 
-        let template_directory =
-            Self::path_buf_from_yaml(&template_directory_yaml, TEMPLATE_DIRECTORY, &config_path)?;
+        let template_directory = Directories::path_buf_from_yaml(&template_directory_yaml,
+                                                                 TEMPLATE_DIRECTORY,
+                                                                 &config_path)?;
 
         Ok(Directories {
-            content: content_directory,
-            output: output_directory,
-            template: template_directory,
-        })
+               content: content_directory,
+               output: output_directory,
+               template: template_directory,
+           })
     }
 
     fn path_buf_from_yaml(yaml: &Yaml,
@@ -219,27 +225,27 @@ impl Taxonomy {
         match taxonomy_type {
             BINARY => {
                 Ok(Taxonomy::Binary {
-                    name: name,
-                    templates: templates,
-                    hierarchical: Self::is_hierarchical(hash)?,
-                })
+                       name: name,
+                       templates: templates,
+                       hierarchical: Self::is_hierarchical(hash)?,
+                   })
             }
             MULTIPLE => {
                 Ok(Taxonomy::Multiple {
-                    name: name,
-                    templates: templates,
-                    default: Self::default_value(hash)?,
-                    hierarchical: Self::is_hierarchical(hash)?,
-                    required: Self::is_required(hash)?,
-                    limit: Self::limit(hash)?,
-                })
+                       name: name,
+                       templates: templates,
+                       default: Self::default_value(hash)?,
+                       hierarchical: Self::is_hierarchical(hash)?,
+                       required: Self::is_required(hash)?,
+                       limit: Self::limit(hash)?,
+                   })
             }
             TEMPORAL => {
                 Ok(Taxonomy::Temporal {
-                    name: name,
-                    templates: templates,
-                    required: Self::is_required(hash)?,
-                })
+                       name: name,
+                       templates: templates,
+                       required: Self::is_required(hash)?,
+                   })
             }
             _ => Err(format!("Invalid taxonomy type `{:?}` in {:?}", taxonomy_type, hash)),
         }
@@ -313,23 +319,24 @@ pub struct SiteInfo {
 
 impl SiteInfo {
     fn from_yaml(yaml: &yaml::Hash) -> Result<SiteInfo, String> {
-        let title = Self::parse_title(yaml)?;
-        let url = Self::parse_url(yaml)?;
-        let description = Self::parse_description(yaml)?;
-        let metadata = Self::parse_metadata(yaml)?;
+        let title = SiteInfo::parse_title(yaml)?;
+        let url = SiteInfo::parse_url(yaml)?;
+        let description = SiteInfo::parse_description(yaml)?;
+        let metadata = SiteInfo::parse_metadata(yaml)?;
         Ok(SiteInfo {
-            title: title,
-            url: url,
-            description: description,
-            metadata: metadata,
-        })
+               title: title,
+               url: url,
+               description: description,
+               metadata: metadata,
+           })
     }
 
     fn parse_title(yaml: &yaml::Hash) -> Result<String, String> {
         const TITLE: &'static str = "title";
 
         match yaml.get(&Yaml::from_str(TITLE)) {
-            None | Some(&Yaml::Null) => Err(required_key(TITLE, yaml)),
+            None |
+            Some(&Yaml::Null) => Err(required_key(TITLE, yaml)),
             Some(&Yaml::String(ref string)) => Ok(string.clone()),
             _ => Err(key_of_type(TITLE, Required::Yes, yaml, "string")),
         }
@@ -338,7 +345,8 @@ impl SiteInfo {
     fn parse_url(yaml: &yaml::Hash) -> Result<ValidatedUrl, String> {
         const URL: &'static str = "url";
         match yaml.get(&Yaml::from_str(URL)) {
-            None | Some(&Yaml::Null) => Err(required_key(URL, yaml)),
+            None |
+            Some(&Yaml::Null) => Err(required_key(URL, yaml)),
             Some(&Yaml::String(ref string)) => ValidatedUrl::new(&string),
             _ => Err(key_of_type(URL, Required::Yes, yaml, "string")),
         }
@@ -347,7 +355,8 @@ impl SiteInfo {
     fn parse_description(yaml: &yaml::Hash) -> Result<Option<String>, String> {
         const DESCRIPTION: &'static str = "description";
         match yaml.get(&Yaml::from_str(DESCRIPTION)) {
-            None | Some(&Yaml::Null) => Ok(None),
+            None |
+            Some(&Yaml::Null) => Ok(None),
             Some(&Yaml::String(ref string)) => Ok(Some(string.clone())),
             _ => Err(key_of_type(DESCRIPTION, Required::No, yaml, "string")),
         }
@@ -357,15 +366,18 @@ impl SiteInfo {
         const METADATA: &'static str = "metadata";
         let mut metadata = HashMap::new();
         match yaml.get(&Yaml::from_str(METADATA)) {
-            None | Some(&Yaml::Null) => Ok(metadata),
+            None |
+            Some(&Yaml::Null) => Ok(metadata),
             Some(&Yaml::Hash(ref hash)) => {
                 for key in hash.keys() {
                     println!("Key: {:?}\n", key);
-                    let key_str = key.as_str()
-                        .ok_or(key_of_type("key of hash map", Required::No, hash, "string"))?;
+                    let key_str =
+                        key.as_str()
+                            .ok_or(key_of_type("key of hash map", Required::No, hash, "string"))?;
 
                     match hash.get(key) {
-                        None | Some(&Yaml::Null) => {
+                        None |
+                        Some(&Yaml::Null) => {
                             return Err(key_of_type(key_str, Required::No, hash, "hash"));
                         }
                         Some(inner_yaml @ &Yaml::String(..)) |
@@ -416,9 +428,9 @@ impl Templates {
         let list = Self::list_from_yaml(template_yaml)?;
 
         Ok(Templates {
-            item: item,
-            list: list,
-        })
+               item: item,
+               list: list,
+           })
     }
 
     /// Get the `item` value for a taxonomy's templates.
@@ -546,8 +558,12 @@ structure:
 
     let mut loaded = YamlLoader::load_from_str(TAXONOMIES).unwrap();
     let first = loaded.pop().unwrap();
-    let structure =
-        first.as_hash().unwrap().get(&Yaml::from_str("structure")).unwrap().as_hash().unwrap();
+    let structure = first.as_hash()
+        .unwrap()
+        .get(&Yaml::from_str("structure"))
+        .unwrap()
+        .as_hash()
+        .unwrap();
 
     assert_eq!(Ok(expected),
                Config::parse_taxonomies(&structure, &"expected".into()));
@@ -606,3 +622,4 @@ site_info:
     let site_info = first.as_hash().unwrap()[&Yaml::from_str("site_info")].as_hash().unwrap();
     assert_eq!(Ok(expected), SiteInfo::from_yaml(&site_info));
 }
+
