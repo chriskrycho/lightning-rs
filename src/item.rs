@@ -9,15 +9,23 @@ use std::path::Path;
 use yaml_rust::{yaml, Yaml, YamlLoader};
 
 
+/// The metadata for each item, with common data natively on the struct.
 pub struct Metadata {
+    /// An item may or may not have a title, but it must explicitly opt out.
     pub title: Option<String>,
+    /// The `slug` may be auto-generated, but is required.
     pub slug: String,
+
+    pub date: Option<Date>,
     pub extra: HashMap<String, ExtraMetadata>,
 }
 
 
+/// Items may have metadata beyond the slug and title.
 pub enum ExtraMetadata {
+    /// A value consisting of a string with no newlines in it.
     SingleLineString(String),
+    /// A value consisting of
     MultiLineString(String),
     List(Vec<String>),
     Slug(String),
@@ -42,6 +50,7 @@ pub fn parse_metadata(content: &str, file_name: &Path) -> Result<Metadata, Strin
     Ok(Metadata {
         title: Some(slug.to_string()),
         slug: slug.to_string(),
+        date: None,
         extra: HashMap::new(),
     })
 }
