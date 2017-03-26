@@ -74,12 +74,8 @@ pub fn parse_metadata(content: &str, file_name: &Path) -> Result<Metadata, Strin
     let yaml = YamlLoader::load_from_str(&metadata)
                           .map_err(|reason| bad_yaml_message(&reason.description()))?;
 
-    let yaml = yaml.into_iter()
-                   .next()
-                   .ok_or(bad_yaml_message("empty metadata block"))?;
-
-    let yaml = yaml.as_hash()
-                   .ok_or(bad_yaml_message("could not parse as hash"))?;
+    let yaml = yaml.into_iter().next().ok_or(bad_yaml_message("empty metadata block"))?;
+    let yaml = yaml.as_hash().ok_or(bad_yaml_message("could not parse as hash"))?;
 
     // TODO: Parse from YAML
     let slug = file_name.file_stem()
@@ -91,12 +87,7 @@ pub fn parse_metadata(content: &str, file_name: &Path) -> Result<Metadata, Strin
                             format!("file name `{}` passed to `parse_metadata` has invalid UTF-8",
                                     file_name.to_string_lossy()))?;
 
-    let title = match yaml.get(&Yaml::from_str("Title")).or(yaml.get(&Yaml::from_str("title"))) {
-        None |
-        Some(&Yaml::Null) => Err(required_key("title (case insensitive)", yaml)),
-        Some(&Yaml::String(ref string)) => Ok(string.clone()),
-        _ => Err(key_of_type("title (case insensitive)", Required::Yes, yaml, "string")),
-    }?;
+    let title = case_insensitive_string("title", "Title", yaml, Required::No).unwrap_or("".into());
 
     Ok(Metadata {
         title: title,
