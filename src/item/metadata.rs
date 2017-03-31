@@ -5,7 +5,6 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::path::Path;
-use std::str::FromStr;
 
 // Third-party
 use yaml_rust::{yaml, Yaml, YamlLoader};
@@ -18,6 +17,46 @@ pub struct Metadata {
     pub title: String,
     pub slug: String,
     pub extra: Option<HashMap<String, ExtraMetadata>>,
+}
+
+impl Metadata {
+    pub fn parse(content: &str, file_name: &Path) -> Result<Metadata, String> {
+        let metadata = extract_metadata(&content)
+        .ok_or(format!("file `{}` passed to `Metadata::parse` has no metadata",
+                       file_name.to_string_lossy()))?;
+
+        let bad_yaml_message = |reason: &str| {
+            format!("file `{}` passed to `Metadata::parse` had invalid metadata: {}\n{}",
+                    file_name.to_string_lossy(),
+                    metadata,
+                    reason)
+        };
+
+        let yaml = YamlLoader::load_from_str(&metadata)
+                          .map_err(|reason| bad_yaml_message(&reason.description()))?;
+
+        let yaml = yaml.into_iter()
+            .next()
+            .ok_or(bad_yaml_message("empty metadata block"))?;
+        let yaml = yaml.as_hash().ok_or(bad_yaml_message("could not parse as hash"))?;
+
+        // TODO: Parse from YAML
+        let slug = file_name.file_stem()
+            .ok_or(format!("file name `{}` passed to `Metadata::parse` has no stem",
+                           file_name.to_string_lossy()))?
+            .to_str()
+            .ok_or(format!("file name `{}` passed to `Metadata::parse` has invalid UTF-8",
+                           file_name.to_string_lossy()))?;
+
+        let title = case_insensitive_string("title", "Title", yaml, Required::No)
+            .unwrap_or("".into());
+
+        Ok(Metadata {
+               title: title,
+               slug: slug.to_string(),
+               extra: None,
+           })
+    }
 }
 
 pub enum ExtraMetadata {
@@ -61,41 +100,6 @@ fn extract_metadata<'c>(content: &'c str) -> Option<String> {
 }
 
 
-pub fn parse_metadata(content: &str, file_name: &Path) -> Result<Metadata, String> {
-    let metadata = extract_metadata(&content)
-        .ok_or(format!("file `{}` passed to `parse_metadata` has no metadata",
-                       file_name.to_string_lossy()))?;
-
-    let bad_yaml_message = |reason: &str| {
-        format!("file `{}` passed to `parse_metadata` had invalid metadata: {}\n{}",
-                file_name.to_string_lossy(), metadata, reason)
-    };
-
-    let yaml = YamlLoader::load_from_str(&metadata)
-                          .map_err(|reason| bad_yaml_message(&reason.description()))?;
-
-    let yaml = yaml.into_iter().next().ok_or(bad_yaml_message("empty metadata block"))?;
-    let yaml = yaml.as_hash().ok_or(bad_yaml_message("could not parse as hash"))?;
-
-    // TODO: Parse from YAML
-    let slug = file_name.file_stem()
-                        .ok_or(
-                            format!("file name `{}` passed to `parse_metadata` has no stem",
-                                    file_name.to_string_lossy()))?
-                        .to_str()
-                        .ok_or(
-                            format!("file name `{}` passed to `parse_metadata` has invalid UTF-8",
-                                    file_name.to_string_lossy()))?;
-
-    let title = case_insensitive_string("title", "Title", yaml, Required::No).unwrap_or("".into());
-
-    Ok(Metadata {
-        title: title,
-        slug: slug.to_string(),
-        extra: None,
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -109,9 +113,8 @@ Title: With Terminal Dashes
 Some other text!e
         ";
 
-        assert_eq!(
-            extract_metadata(&has_metadata),
-            Some("Title: With Terminal Dashes".into()));
+        assert_eq!(extract_metadata(&has_metadata),
+                   Some("Title: With Terminal Dashes".into()));
 
         let has_metadata_terminal_dots = "---
 Title: With Terminal Dots
@@ -120,9 +123,8 @@ Title: With Terminal Dots
 Some other text!
         ";
 
-        assert_eq!(
-            extract_metadata(&has_metadata_terminal_dots),
-            Some("Title: With Terminal Dots".into()));
+        assert_eq!(extract_metadata(&has_metadata_terminal_dots),
+                   Some("Title: With Terminal Dots".into()));
 
         let no_metadata = "
 Some text, no metadata though.
@@ -150,9 +152,8 @@ Title: Who cares how many *initial* empty lines there are?
 ---
         ";
 
-        assert_eq!(
-            extract_metadata(&has_space_before_opening),
-            Some("Title: Who cares how many *initial* empty lines there are?".into()));
+        assert_eq!(extract_metadata(&has_space_before_opening),
+                   Some("Title: Who cares how many *initial* empty lines there are?".into()));
 
         let multiline_metadata = "---
 Jedi: Luke Skywalker
@@ -163,9 +164,8 @@ Badass: Princess Leia
 Whatever other content...
         ";
 
-        assert_eq!(
-            extract_metadata(&multiline_metadata),
-            Some("Jedi: Luke Skywalker\nRogue: Han Solo\nBadass: Princess Leia".into()));
+        assert_eq!(extract_metadata(&multiline_metadata),
+                   Some("Jedi: Luke Skywalker\nRogue: Han Solo\nBadass: Princess Leia".into()));
 
         let whole_lines_only_please = "---This: Is Not Valid
 Even: Thought it *almost* looks valid.
@@ -175,3 +175,4 @@ Even: Thought it *almost* looks valid.
         assert_eq!(extract_metadata(&whole_lines_only_please), None);
     }
 }
+

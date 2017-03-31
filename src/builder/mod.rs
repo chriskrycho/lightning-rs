@@ -1,7 +1,5 @@
 //! Generate the site content.
 
-mod item;
-
 // Standard library
 use std::fs::File;
 use std::io::prelude::*;
@@ -15,7 +13,7 @@ use syntect::highlighting::ThemeSet;
 // First party
 use config::Config;
 use syntax_highlighting::syntax_highlight;
-
+use item;
 
 /// Load the `Paths` for all markdown files in the specified content directory.
 fn glob_md_paths(site_directory: &PathBuf, config: &Config) -> Result<Paths, String> {
@@ -58,7 +56,7 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
     for path_result in markdown_paths {
         let path = path_result.map_err(|e| format!("{:?}", e))?;
         let contents = load_file(&path)?;
-        let metadata = item::parse_metadata(&contents, &path)?;
+        let metadata = item::Metadata::parse(&contents, &path)?;
 
         let mut pandoc = pandoc.clone();
         pandoc.set_input(InputKind::Pipe(contents));
@@ -95,10 +93,11 @@ fn write_file(output_dir: &Path, slug: &str, contents: &str) -> Result<(), Strin
     let path = output_dir.join(slug).with_extension("html");
 
     let mut fd = File::create(&path).map_err(|err| {
-            format!("Could not open {} for write: {}",
-                    path.to_string_lossy(),
-                    err)
-        })?;
+                     format!("Could not open {} for write: {}",
+                             path.to_string_lossy(),
+                             err)
+                 })?;
 
     write!(fd, "{}", contents).map_err(|err| format!("{:?}", err.kind()))
 }
+
