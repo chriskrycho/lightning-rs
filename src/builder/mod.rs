@@ -56,6 +56,10 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
     for path_result in markdown_paths {
         let path = path_result.map_err(|e| format!("{:?}", e))?;
         let contents = load_file(&path)?;
+
+        // TODO: get an *item*. Indeed, extract all of this over there: the
+        // builder needs to delegate all of that, and simply get back an item
+        // with metadata and string content to convert.
         let metadata = item::Metadata::parse(&contents, &path)?;
 
         let mut pandoc = pandoc.clone();
