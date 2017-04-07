@@ -19,8 +19,11 @@ use item;
 /// Load the `Paths` for all markdown files in the specified content directory.
 fn glob_md_paths(site_directory: &PathBuf, config: &Config) -> Result<Paths, String> {
     let content_glob_str = format!("{}/{}/**/*.md",
-                                   site_directory.to_str().ok_or(String::from("bad `site`"))?,
-                                   config.directories
+                                   site_directory
+                                       .to_str()
+                                       .ok_or(String::from("bad `site`"))?,
+                                   config
+                                       .directories
                                        .content
                                        .to_str()
                                        .ok_or(String::from("bad content directory"))?);
@@ -46,10 +49,12 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
 
     // TODO: build from config.
     let theme_file = PathBuf::from("data/base16-harmonic16.light.tmTheme");
-    let theme = &ThemeSet::get_theme(theme_file).map_err(|err| format!("{:?}", err))?;
+    let theme = &ThemeSet::get_theme(theme_file)
+                     .map_err(|err| format!("{:?}", err))?;
 
     let mut pandoc = Pandoc::new();
-    pandoc.set_input_format(InputFormat::Markdown)
+    pandoc
+        .set_input_format(InputFormat::Markdown)
         .set_output_format(OutputFormat::Html5)
         .add_options(&[PandocOption::Smart, PandocOption::NoHighlight])
         .set_output(OutputKind::Pipe);
@@ -88,9 +93,11 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
 
 
 fn load_file(path: &Path) -> Result<String, String> {
-    let mut file = File::open(&path).map_err(|err| format!("{:?}", err.kind()))?;
+    let mut file = File::open(&path)
+        .map_err(|err| format!("{:?}", err.kind()))?;
     let mut contents = String::new();
-    file.read_to_string(&mut contents).map_err(|err| format!("{:?}", err.kind()))?;
+    file.read_to_string(&mut contents)
+        .map_err(|err| format!("{:?}", err.kind()))?;
     Ok(contents)
 }
 
@@ -98,7 +105,8 @@ fn load_file(path: &Path) -> Result<String, String> {
 fn write_file(output_dir: &Path, slug: &str, contents: &str) -> Result<(), String> {
     let path = output_dir.join(slug).with_extension("html");
 
-    let mut fd = File::create(&path).map_err(|err| {
+    let mut fd = File::create(&path)
+        .map_err(|err| {
                      format!("Could not open {} for write: {}",
                              path.to_string_lossy(),
                              err)
@@ -106,4 +114,3 @@ fn write_file(output_dir: &Path, slug: &str, contents: &str) -> Result<(), Strin
 
     write!(fd, "{}", contents).map_err(|err| format!("{:?}", err.kind()))
 }
-

@@ -32,8 +32,8 @@ impl<Tz> Metadata<Tz>
 {
     pub fn parse(content: &str, file_name: &Path, tz: Tz) -> Result<Metadata<Tz>, String> {
         let metadata = extract_metadata(&content)
-        .ok_or(format!("file `{}` passed to `Metadata::parse` has no metadata",
-                       file_name.to_string_lossy()))?;
+            .ok_or(format!("file `{}` passed to `Metadata::parse` has no metadata",
+                           file_name.to_string_lossy()))?;
 
         let bad_yaml_message = |reason: &str| {
             format!("file `{}` passed to `Metadata::parse` had invalid metadata: {}\n{}",
@@ -43,16 +43,18 @@ impl<Tz> Metadata<Tz>
         };
 
         let yaml = YamlLoader::load_from_str(&metadata)
-                          .map_err(|reason| bad_yaml_message(&reason.description()))?;
+            .map_err(|reason| bad_yaml_message(&reason.description()))?;
 
         let yaml = yaml.into_iter()
             .next()
             .ok_or(bad_yaml_message("empty metadata block"))?;
 
-        let yaml = yaml.as_hash().ok_or(bad_yaml_message("could not parse as hash"))?;
+        let yaml = yaml.as_hash()
+            .ok_or(bad_yaml_message("could not parse as hash"))?;
 
         // TODO: Parse from YAML
-        let slug = file_name.file_stem()
+        let slug = file_name
+            .file_stem()
             .ok_or(format!("file name `{}` passed to `Metadata::parse` has no stem",
                            file_name.to_string_lossy()))?
             .to_str()
@@ -187,4 +189,3 @@ Even: Thought it *almost* looks valid.
         assert_eq!(extract_metadata(&whole_lines_only_please), None);
     }
 }
-

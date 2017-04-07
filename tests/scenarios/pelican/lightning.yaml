@@ -24,6 +24,12 @@ site_info:
   description: >
     A ridiculously fast site generator and engine.
 
+  # The `default_timezone` can be any of the full text strings specified by
+  # [the `chrono_tz` crate][chrono_tz] (see **Modules**).
+  #
+  # [chrono_tz]: https://docs.rs/chrono-tz/
+  default_timezone: Eastern
+
   # You may supply any other metadata you like, though only as key-value pairs.
   # Those pairs will be supplied to your templates as hashmaps. The default
   # value is null/`~` since no other metadata are assumed.
@@ -44,12 +50,6 @@ content_directory: content
 # may find it convenient to set this to "docs" so that you don't have to bother
 # with `gh-pages` branch.
 output_directory: output
-
-# The `default_timezone` can be any of the full text strings specified by
-# [the `chrono_tz` crate][chrono_tz] (see **Modules**).
-#
-# [chrono_tz]: https://docs.rs/chrono-tz/
-default_timezone: Eastern
 
 # Define the structure of the site, by supplying the location of a set of
 # templates to use in generating the site and a set of "taxonomies" which define

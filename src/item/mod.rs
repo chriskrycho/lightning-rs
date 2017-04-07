@@ -4,7 +4,7 @@ pub mod metadata;
 
 use chrono::TimeZone;
 
-pub use self::metadata::{Metadata,ExtraMetadata};
+pub use self::metadata::{Metadata, ExtraMetadata};
 
 /// A page or post or other such *item* of content.
 pub enum Item<Tz: TimeZone> {
@@ -18,5 +18,5 @@ pub enum Item<Tz: TimeZone> {
     Unprocessed {
         content: String,
         metadata: Metadata<Tz>,
-    }
+    },
 }
