@@ -11,6 +11,8 @@ use std::path::PathBuf;
 use std::u8;
 
 // Third-party
+use chrono::TimeZone;
+use chrono_tz::Tz;
 use yaml_rust::{yaml, Yaml, YamlLoader};
 
 // First-party
@@ -463,10 +465,13 @@ impl Templates {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-#[test]
-fn parses_valid_taxonomies() {
-    const TAXONOMIES: &'static str = "
+    #[test]
+    fn parses_valid_taxonomies() {
+        const TAXONOMIES: &'static str = "
 structure:
   taxonomies:
     - author:
@@ -506,73 +511,73 @@ structure:
           item: page.html
         ";
 
-    let expected = vec![Taxonomy::Multiple {
-                            name: "author".into(),
-                            default: None,
-                            limit: None,
-                            required: true,
-                            hierarchical: false,
-                            templates: Templates {
-                                item: "author.html".into(),
-                                list: Some("authors.html".into()),
+        let expected = vec![Taxonomy::Multiple {
+                                name: "author".into(),
+                                default: None,
+                                limit: None,
+                                required: true,
+                                hierarchical: false,
+                                templates: Templates {
+                                    item: "author.html".into(),
+                                    list: Some("authors.html".into()),
+                                },
                             },
-                        },
-                        Taxonomy::Multiple {
-                            name: "category".into(),
-                            default: Some("Blog".into()),
-                            limit: Some(1),
-                            required: false,
-                            hierarchical: false,
-                            templates: Templates {
-                                item: "category.html".into(),
-                                list: Some("categories.html".into()),
+                            Taxonomy::Multiple {
+                                name: "category".into(),
+                                default: Some("Blog".into()),
+                                limit: Some(1),
+                                required: false,
+                                hierarchical: false,
+                                templates: Templates {
+                                    item: "category.html".into(),
+                                    list: Some("categories.html".into()),
+                                },
                             },
-                        },
-                        Taxonomy::Multiple {
-                            name: "tag".into(),
-                            default: None,
-                            limit: None,
-                            required: false,
-                            hierarchical: false,
-                            templates: Templates {
-                                item: "tag.html".into(),
-                                list: Some("tags.html".into()),
+                            Taxonomy::Multiple {
+                                name: "tag".into(),
+                                default: None,
+                                limit: None,
+                                required: false,
+                                hierarchical: false,
+                                templates: Templates {
+                                    item: "tag.html".into(),
+                                    list: Some("tags.html".into()),
+                                },
                             },
-                        },
-                        Taxonomy::Temporal {
-                            name: "date".into(),
-                            required: false,
-                            templates: Templates {
-                                item: "archives.html".into(),
-                                list: Some("period_archives.html".into()),
+                            Taxonomy::Temporal {
+                                name: "date".into(),
+                                required: false,
+                                templates: Templates {
+                                    item: "archives.html".into(),
+                                    list: Some("period_archives.html".into()),
+                                },
                             },
-                        },
-                        Taxonomy::Binary {
-                            name: "page".into(),
-                            hierarchical: true,
-                            templates: Templates {
-                                item: "page.html".into(),
-                                list: None,
-                            },
-                        }];
+                            Taxonomy::Binary {
+                                name: "page".into(),
+                                hierarchical: true,
+                                templates: Templates {
+                                    item: "page.html".into(),
+                                    list: None,
+                                },
+                            }];
 
-    let mut loaded = YamlLoader::load_from_str(TAXONOMIES).unwrap();
-    let first = loaded.pop().unwrap();
-    let structure = first.as_hash()
-        .unwrap()
-        .get(&Yaml::from_str("structure"))
-        .unwrap()
-        .as_hash()
-        .unwrap();
+        let mut loaded = YamlLoader::load_from_str(TAXONOMIES).unwrap();
+        let first = loaded.pop().unwrap();
+        let structure = first.as_hash()
+            .unwrap()
+            .get(&Yaml::from_str("structure"))
+            .unwrap()
+            .as_hash()
+            .unwrap();
 
-    assert_eq!(Ok(expected),
-               Config::parse_taxonomies(&structure, &"expected".into()));
-}
+        assert_eq!(Ok(expected),
+                   Config::parse_taxonomies(&structure, &"expected".into()));
+    }
 
 
-#[test]
-fn parses_site_info() {
-    const SITE_INFO: &'static str = "\
+    #[test]
+    fn parses_site_info() {
+        const SITE_INFO: &'static str = "\
 site_info:
   title: lx (lightning)
   url: https://lightning.rs
@@ -583,25 +588,25 @@ site_info:
     quux: 2
     ";
 
-    let mut metadata = HashMap::new();
-    metadata.insert("foo".into(), Yaml::from_str("bar"));
-    metadata.insert("quux".into(), Yaml::from_str("2"));
-    let expected = SiteInfo {
-        title: "lx (lightning)".into(),
-        url: ValidatedUrl::new("https://lightning.rs").unwrap(),
-        description: Some("A ridiculously fast site generator and engine.\n".into()),
-        metadata: metadata,
-    };
+        let mut metadata = HashMap::new();
+        metadata.insert("foo".into(), Yaml::from_str("bar"));
+        metadata.insert("quux".into(), Yaml::from_str("2"));
+        let expected = SiteInfo {
+            title: "lx (lightning)".into(),
+            url: ValidatedUrl::new("https://lightning.rs").unwrap(),
+            description: Some("A ridiculously fast site generator and engine.\n".into()),
+            metadata: metadata,
+        };
 
-    let mut loaded = YamlLoader::load_from_str(SITE_INFO).unwrap();
-    let first = loaded.pop().unwrap();
-    let site_info = first.as_hash().unwrap()[&Yaml::from_str("site_info")].as_hash().unwrap();
-    assert_eq!(Ok(expected), SiteInfo::from_yaml(&site_info));
-}
+        let mut loaded = YamlLoader::load_from_str(SITE_INFO).unwrap();
+        let first = loaded.pop().unwrap();
+        let site_info = first.as_hash().unwrap()[&Yaml::from_str("site_info")].as_hash().unwrap();
+        assert_eq!(Ok(expected), SiteInfo::from_yaml(&site_info));
+    }
 
-#[test]
-fn parses_site_info_with_empty_metadata() {
-    const SITE_INFO_EMPTY_METADATA: &'static str = "
+    #[test]
+    fn parses_site_info_with_empty_metadata() {
+        const SITE_INFO_EMPTY_METADATA: &'static str = "
 site_info:
   title: lx (lightning)
   url: https://lightning.rs
@@ -610,16 +615,19 @@ site_info:
   metadata: ~
     ";
 
-    let expected = SiteInfo {
-        title: "lx (lightning)".into(),
-        url: ValidatedUrl::new("https://lightning.rs").unwrap(),
-        description: Some("A ridiculously fast site generator and engine.\n".into()),
-        metadata: HashMap::new(),
-    };
+        let expected = SiteInfo {
+            title: "lx (lightning)".into(),
+            url: ValidatedUrl::new("https://lightning.rs").unwrap(),
+            description: Some("A ridiculously fast site generator and engine.\n".into()),
+            metadata: HashMap::new(),
+        };
 
-    let mut loaded = YamlLoader::load_from_str(SITE_INFO_EMPTY_METADATA).unwrap();
-    let first = loaded.pop().unwrap();
-    let site_info = first.as_hash().unwrap()[&Yaml::from_str("site_info")].as_hash().unwrap();
-    assert_eq!(Ok(expected), SiteInfo::from_yaml(&site_info));
+        let mut loaded = YamlLoader::load_from_str(SITE_INFO_EMPTY_METADATA).unwrap();
+        let first = loaded.pop().unwrap();
+        let site_info = first.as_hash().unwrap()[&Yaml::from_str("site_info")].as_hash().unwrap();
+        assert_eq!(Ok(expected), SiteInfo::from_yaml(&site_info));
+    }
+
+
 }
 

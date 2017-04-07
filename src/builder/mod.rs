@@ -6,6 +6,7 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
 // Third party
+use chrono::UTC;
 use glob::{glob, Paths};
 use pandoc::{Pandoc, PandocOption, PandocOutput, InputFormat, InputKind, OutputFormat, OutputKind};
 use syntect::highlighting::ThemeSet;
@@ -60,7 +61,8 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
         // TODO: get an *item*. Indeed, extract all of this over there: the
         // builder needs to delegate all of that, and simply get back an item
         // with metadata and string content to convert.
-        let metadata = item::Metadata::parse(&contents, &path)?;
+        // TODO: use something besides UTC: pass it in from config.
+        let metadata = item::Metadata::parse(&contents, &path, UTC)?;
 
         let mut pandoc = pandoc.clone();
         pandoc.set_input(InputKind::Pipe(contents));

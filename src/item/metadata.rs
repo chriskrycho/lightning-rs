@@ -7,20 +7,30 @@ use std::error::Error;
 use std::path::Path;
 
 // Third-party
+use chrono::{DateTime, TimeZone};
 use yaml_rust::{yaml, Yaml, YamlLoader};
 
 // First-party
 use yaml_util::*;
 
 
-pub struct Metadata {
+pub struct Metadata<Tz: TimeZone> {
     pub title: String,
     pub slug: String,
+    pub date: Option<DateTime<Tz>>,
     pub extra: Option<HashMap<String, ExtraMetadata>>,
 }
 
-impl Metadata {
-    pub fn parse(content: &str, file_name: &Path) -> Result<Metadata, String> {
+pub struct MetadataFromFile<Tz: TimeZone> {
+    pub title: String,
+    pub date: Option<DateTime<Tz>>,
+    pub extra: Option<HashMap<String, ExtraMetadata>>,
+}
+
+impl<Tz> Metadata<Tz>
+    where Tz: TimeZone
+{
+    pub fn parse(content: &str, file_name: &Path, tz: Tz) -> Result<Metadata<Tz>, String> {
         let metadata = extract_metadata(&content)
         .ok_or(format!("file `{}` passed to `Metadata::parse` has no metadata",
                        file_name.to_string_lossy()))?;
@@ -38,6 +48,7 @@ impl Metadata {
         let yaml = yaml.into_iter()
             .next()
             .ok_or(bad_yaml_message("empty metadata block"))?;
+
         let yaml = yaml.as_hash().ok_or(bad_yaml_message("could not parse as hash"))?;
 
         // TODO: Parse from YAML
@@ -53,6 +64,7 @@ impl Metadata {
 
         Ok(Metadata {
                title: title,
+               date: None,
                slug: slug.to_string(),
                extra: None,
            })

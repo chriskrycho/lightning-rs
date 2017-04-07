@@ -1,5 +1,7 @@
 //! Generate web sites from Markdown content and YAML configuration.
 
+extern crate chrono;
+extern crate chrono_tz;
 extern crate glob;
 extern crate pandoc;
 extern crate quick_xml;
