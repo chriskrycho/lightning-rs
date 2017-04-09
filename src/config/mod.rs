@@ -206,4 +206,9 @@ impl Directories {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parses_full_config() {
+        unimplemented!();
+    }
 }
