@@ -45,8 +45,7 @@ impl Taxonomy {
         let templates = Templates::from_yaml(hash)?;
 
         // Name can't collide with keyword `type`.
-        let taxonomy_type = hash.get(&Yaml::from_str(TYPE))
-            .ok_or(required_key(TYPE, hash))?
+        let taxonomy_type = hash[&Yaml::from_str(TYPE)]
             .as_str()
             .ok_or(key_of_type(TYPE, Required::Yes, hash, "string"))?;
 
@@ -80,50 +79,40 @@ impl Taxonomy {
     }
 
     fn default_value(hash: &yaml::Hash) -> Result<Option<String>, String> {
-        const DEFAULT: &'static str = "default";
-
-        match hash.get(&Yaml::from_str(DEFAULT)) {
-            None |
-            Some(&Yaml::Null) => Ok(None),
-            Some(&Yaml::String(ref string)) => Ok(Some(string.clone())),
-            _ => Err(key_of_type(DEFAULT, Required::No, hash, "string")),
+        let key = "default";
+        match hash[&Yaml::from_str(key)] {
+            Yaml::Null => Ok(None),
+            Yaml::String(ref string) => Ok(Some(string.clone())),
+            _ => Err(key_of_type(key, Required::No, hash, "string")),
         }
     }
 
     fn is_hierarchical(hash: &yaml::Hash) -> Result<bool, String> {
-        const HIERARCHICAL: &'static str = "hierarchical";
-
-        match hash.get(&Yaml::from_str(HIERARCHICAL)) {
-            None |
-            Some(&Yaml::Boolean(false)) => Ok(false),
-            Some(&Yaml::Boolean(true)) => Ok(true),
-            _ => Err(key_of_type(HIERARCHICAL, Required::Yes, hash, "bool")),
+        let key = "hierarchical";
+        match hash[&Yaml::from_str(key)] {
+            Yaml::Boolean(boolean_value) => Ok(boolean_value),
+            _ => Err(key_of_type(key, Required::Yes, hash, "bool")),
         }
     }
 
     fn is_required(hash: &yaml::Hash) -> Result<bool, String> {
-        const REQUIRED: &'static str = "required";
-
-        match hash.get(&Yaml::from_str(REQUIRED)) {
-            None |
-            Some(&Yaml::Boolean(false)) => Ok(false),
-            Some(&Yaml::Boolean(true)) => Ok(true),
-            _ => Err(key_of_type(REQUIRED, Required::No, hash, "bool")),
+        let key = "required";
+        match hash[&Yaml::from_str(key)] {
+            Yaml::Boolean(bool_value) => Ok(bool_value),
+            _ => Err(key_of_type(key, Required::No, hash, "bool")),
         }
     }
 
     fn limit(hash: &yaml::Hash) -> Result<Option<u8>, String> {
-        const LIMIT: &'static str = "limit";
+        let key = "limit";
         let max = u8::MAX as i64;
-
-        match hash.get(&Yaml::from_str(LIMIT)) {
-            None |
-            Some(&Yaml::Null) => Ok(None),
-            Some(&Yaml::Integer(i)) if i < 0 => Err(bad_value(i, LIMIT, hash)),
-            Some(&Yaml::Integer(i)) if i == 0 => Ok(None),
-            Some(&Yaml::Integer(i)) if i > 0 && i < max => Ok(Some(i as u8)),
-            Some(&Yaml::Integer(i)) if i > max as i64 => Err(ridiculous_number(i, LIMIT, hash)),
-            _ => Err(key_of_type(LIMIT, Required::No, hash, "integer")),
+        match hash[&Yaml::from_str(key)] {
+            Yaml::Null => Ok(None),
+            Yaml::Integer(i) if i < 0 => Err(bad_value(i, key, hash)),
+            Yaml::Integer(i) if i == 0 => Ok(None),
+            Yaml::Integer(i) if i > 0 && i < max => Ok(Some(i as u8)),
+            Yaml::Integer(i) if i > max as i64 => Err(ridiculous_number(i, key, hash)),
+            _ => Err(key_of_type(key, Required::No, hash, "integer")),
         }
     }
 }
@@ -138,11 +127,10 @@ pub struct Templates {
 
 impl Templates {
     fn from_yaml(yaml: &yaml::Hash) -> Result<Templates, String> {
-        const TEMPLATES: &'static str = "templates";
-        let template_yaml = yaml.get(&Yaml::from_str(TEMPLATES))
-            .ok_or(required_key(TEMPLATES, yaml))?
+        let key = "templates";
+        let template_yaml = yaml[&Yaml::from_str(key)]
             .as_hash()
-            .ok_or(key_of_type(TEMPLATES, Required::Yes, yaml, "hash"))?;
+            .ok_or(key_of_type(key, Required::Yes, yaml, "hash"))?;
 
         let item = Self::item_from_yaml(template_yaml)?;
         let list = Self::list_from_yaml(template_yaml)?;
@@ -155,14 +143,11 @@ impl Templates {
 
     /// Get the `item` value for a taxonomy's templates.
     fn item_from_yaml(yaml: &yaml::Hash) -> Result<PathBuf, String> {
-        const ITEM: &'static str = "item";
-
-        let item_str = yaml.get(&Yaml::from_str(ITEM))
-            .ok_or(required_key(ITEM, yaml))?
-            .as_str()
-            .ok_or(key_of_type(ITEM, Required::Yes, yaml, "string"))?;
-
-        Ok(item_str.into())
+        let key = "item";
+        Ok(yaml[&Yaml::from_str(key)]
+               .as_str()
+               .ok_or(key_of_type(key, Required::Yes, yaml, "string"))?
+               .into())
     }
 
     /// Get the `list` value for a taxonomy's templates.
@@ -172,13 +157,11 @@ impl Templates {
     /// included, it is not allowed to be anything other than a `string` or
     /// explicitly set to null.
     fn list_from_yaml(yaml: &yaml::Hash) -> Result<Option<PathBuf>, String> {
-        const LIST: &'static str = "list";
-
-        match yaml.get(&Yaml::from_str(LIST)) {
-            None |
-            Some(&Yaml::Null) => Ok(None),
-            Some(&Yaml::String(ref string)) => Ok(Some(string.into())),
-            _ => Err(key_of_type(LIST, Required::No, yaml, "string")),
+        let key = "list";
+        match yaml[&Yaml::from_str(key)] {
+            Yaml::Null => Ok(None),
+            Yaml::String(ref string) => Ok(Some(string.into())),
+            _ => Err(key_of_type(key, Required::No, yaml, "string")),
         }
     }
 }
@@ -190,9 +173,7 @@ mod tests {
     fn load_taxonomy_at_key(taxonomy: &str, key: &str) -> BTreeMap<Yaml, Yaml> {
         let mut loaded = YamlLoader::load_from_str(&taxonomy).unwrap();
         let first = loaded.pop().unwrap();
-        first
-            .as_hash()
-            .unwrap()[&Yaml::from_str(key)]
+        first.as_hash().unwrap()[&Yaml::from_str(key)]
             .as_hash()
             .unwrap()
             .clone()

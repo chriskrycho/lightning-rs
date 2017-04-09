@@ -1,6 +1,7 @@
 
 // Standard library
 use std::collections::{BTreeMap, HashMap};
+use std::str::FromStr;
 
 // Third party
 use chrono_tz::Etc::UTC;
@@ -52,64 +53,66 @@ impl SiteInfo {
     }
 
     fn parse_title(yaml: &yaml::Hash) -> Result<String, String> {
-        const TITLE: &'static str = "title";
-
-        match yaml.get(&Yaml::from_str(TITLE)) {
-            None |
-            Some(&Yaml::Null) => Err(required_key(TITLE, yaml)),
-            Some(&Yaml::String(ref string)) => Ok(string.clone()),
-            _ => Err(key_of_type(TITLE, Required::Yes, yaml, "string")),
+        let key = "title";
+        match yaml[&Yaml::from_str(key)] {
+            Yaml::Null => Err(required_key(key, yaml)),
+            Yaml::String(ref string) => Ok(string.clone()),
+            _ => Err(key_of_type(key, Required::Yes, yaml, "string")),
         }
     }
 
     fn parse_url(yaml: &yaml::Hash) -> Result<ValidatedUrl, String> {
-        const URL: &'static str = "url";
-        match yaml.get(&Yaml::from_str(URL)) {
-            None |
-            Some(&Yaml::Null) => Err(required_key(URL, yaml)),
-            Some(&Yaml::String(ref string)) => ValidatedUrl::new(&string),
-            _ => Err(key_of_type(URL, Required::Yes, yaml, "string")),
+        let key = "url";
+        match yaml[&Yaml::from_str(key)] {
+            Yaml::Null => Err(required_key(key, yaml)),
+            Yaml::String(ref string) => ValidatedUrl::new(string),
+            _ => Err(key_of_type(key, Required::Yes, yaml, "string")),
         }
     }
 
     fn parse_default_timezone(yaml: &yaml::Hash) -> Result<Tz, String> {
-        unimplemented!()
+        let key = "default_timezone";
+        match yaml[&Yaml::from_str(key)] {
+            Yaml::Null => Err(required_key(key, yaml)),
+            Yaml::String(ref string) => Tz::from_str(&string),
+            _ => Err(key_of_type(key, Required::Yes, yaml, "string (time zone)")),
+        }
     }
 
     fn parse_description(yaml: &yaml::Hash) -> Result<Option<String>, String> {
-        const DESCRIPTION: &'static str = "description";
-        match yaml.get(&Yaml::from_str(DESCRIPTION)) {
-            None |
-            Some(&Yaml::Null) => Ok(None),
-            Some(&Yaml::String(ref string)) => Ok(Some(string.clone())),
-            _ => Err(key_of_type(DESCRIPTION, Required::No, yaml, "string")),
+        let key = "description";
+        match yaml[&Yaml::from_str(key)] {
+            Yaml::Null => Ok(None),
+            Yaml::String(ref string) => Ok(Some(string.clone())),
+            _ => Err(key_of_type(key, Required::No, yaml, "string")),
         }
     }
 
     fn parse_metadata(yaml: &yaml::Hash) -> Result<HashMap<String, Yaml>, String> {
-        const METADATA: &'static str = "metadata";
+        let key = "metadata";
         let mut metadata = HashMap::new();
-        match yaml.get(&Yaml::from_str(METADATA)) {
-            None |
-            Some(&Yaml::Null) => Ok(metadata),
-            Some(&Yaml::Hash(ref hash)) => {
-                for key in hash.keys() {
-                    let key_str =
-                        key.as_str()
+        match yaml[&Yaml::from_str(key)] {
+            Yaml::Null => Ok(metadata),
+            Yaml::Hash(ref hash) => {
+                for hash_key in hash.keys() {
+                    let hash_key_str =
+                        hash_key
+                            .as_str()
                             .ok_or(key_of_type("key of hash map", Required::No, hash, "string"))?;
 
-                    match hash.get(key) {
+                    match hash.get(hash_key) {
                         None |
                         Some(&Yaml::Null) => {
-                            return Err(key_of_type(key_str, Required::No, hash, "hash"));
+                            return Err(key_of_type(hash_key_str, Required::No, hash, "hash"));
                         }
                         Some(inner_yaml @ &Yaml::String(..)) |
                         Some(inner_yaml @ &Yaml::Boolean(..)) |
                         Some(inner_yaml @ &Yaml::Integer(..)) |
                         Some(inner_yaml @ &Yaml::Real(..)) => {
-                            let result = metadata.insert(String::from(key_str), inner_yaml.clone());
+                            let result = metadata.insert(String::from(hash_key_str),
+                                                         inner_yaml.clone());
                             if result.is_some() {
-                                let main = format!("Double insertion of key {}.\n", key_str);
+                                let main = format!("Double insertion of key {}.\n", hash_key_str);
                                 let detail = format!("First: {:?}\nSecond: {:?}",
                                                      result.unwrap(),
                                                      inner_yaml);
@@ -117,7 +120,7 @@ impl SiteInfo {
                             }
                         }
                         _ => {
-                            return Err(key_of_type(key_str,
+                            return Err(key_of_type(hash_key_str,
                                                    Required::No,
                                                    hash,
                                                    "string, boolean, or integer"))
@@ -126,7 +129,7 @@ impl SiteInfo {
                 }
                 Ok(metadata)
             }
-            _ => Err(key_of_type(METADATA, Required::No, yaml, "hash")),
+            _ => Err(key_of_type(key, Required::No, yaml, "hash")),
         }
     }
 }
