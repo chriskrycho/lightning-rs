@@ -119,57 +119,75 @@ mod tests {
     use super::*;
 
     #[test]
-    fn correctly_extract_metadata() {
-        let has_metadata = "---
+    fn extract_basic() {
+        let source = "---
 Title: With Terminal Dashes
 ---
 
 Some other text!e
         ";
 
-        assert_eq!(extract_metadata(&has_metadata),
+        assert_eq!(extract_metadata(&source),
                    Some("Title: With Terminal Dashes".into()));
+    }
 
-        let has_metadata_terminal_dots = "---
+    #[test]
+    fn extract_terminal_dots() {
+        let source = "---
 Title: With Terminal Dots
 ...
 
 Some other text!
         ";
 
-        assert_eq!(extract_metadata(&has_metadata_terminal_dots),
+        assert_eq!(extract_metadata(&source),
                    Some("Title: With Terminal Dots".into()));
+    }
 
-        let no_metadata = "
+    #[test]
+    fn no_metadata() {
+        let source = "
 Some text, no metadata though.
         ";
 
-        assert_eq!(extract_metadata(&no_metadata), None);
+        assert_eq!(extract_metadata(&source), None);
+    }
 
-        let has_opening_but_no_terminal = "---
+    #[test]
+    fn opening_but_no_closing() {
+        let source = "---
 This is *not* metadata; it has an opening `<hr/>`, which is weird.
         ";
 
-        assert_eq!(extract_metadata(&has_opening_but_no_terminal), None);
+        assert_eq!(extract_metadata(&source), None);
+    }
 
-        let has_closing_but_no_opening = "
+    #[test]
+    fn closing_but_no_opening() {
+        let source = "
 Whatever this says is irrelevant.
 ...
         ";
 
-        assert_eq!(extract_metadata(&has_closing_but_no_opening), None);
+        assert_eq!(extract_metadata(&source), None);
+    }
 
-        let has_space_before_opening = "
+    #[test]
+    fn space_before_opening() {
+        let source = "
 
 ---
 Title: Who cares how many *initial* empty lines there are?
 ---
         ";
 
-        assert_eq!(extract_metadata(&has_space_before_opening),
+        assert_eq!(extract_metadata(&source),
                    Some("Title: Who cares how many *initial* empty lines there are?".into()));
+    }
 
-        let multiline_metadata = "---
+    #[test]
+    fn multiline_metadata() {
+        let source = "---
 Jedi: Luke Skywalker
 Rogue: Han Solo
 Badass: Princess Leia
@@ -178,14 +196,52 @@ Badass: Princess Leia
 Whatever other content...
         ";
 
-        assert_eq!(extract_metadata(&multiline_metadata),
+        assert_eq!(extract_metadata(&source),
                    Some("Jedi: Luke Skywalker\nRogue: Han Solo\nBadass: Princess Leia".into()));
 
-        let whole_lines_only_please = "---This: Is Not Valid
+    }
+
+    #[test]
+    fn whole_lines_required() {
+        let source = "---This: Is Not Valid
 Even: Thought it *almost* looks valid.
 ...
         ";
 
-        assert_eq!(extract_metadata(&whole_lines_only_please), None);
+        assert_eq!(extract_metadata(&source), None);
+    }
+
+    #[test]
+    fn blank_spaces_before_closing() {
+        let source = "---
+Title: This is fine.
+Subtitle: Even with all the spaces.
+
+...
+        ";
+
+        assert_eq!(extract_metadata(&source),
+                   Some("Title: This is fine.\nSubtitle: Even with all the spaces.\n".into()))
+    }
+
+    #[test]
+    fn blank_spaces_anywhere_in_block() {
+        let source = "---
+
+Title: They Can Be At The Start
+
+Subtitle: Or even in the middle...
+
+
+
+And: they can even be multiple lines long.
+
+---
+        ";
+
+        assert_eq!(extract_metadata(&source),
+                   Some(String::from("\nTitle: They Can Be At The Start\n\n") +
+                        "Subtitle: Or even in the middle...\n\n\n\n" +
+                        "And: they can even be multiple lines long.\n"));
     }
 }
