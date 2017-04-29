@@ -36,10 +36,10 @@ pub enum Taxonomy {
 
 impl Taxonomy {
     pub fn from_yaml(hash: &yaml::Hash, name: &str) -> Result<Taxonomy, String> {
-        const TYPE: &'static str = "type";
-        const BINARY: &'static str = "binary";
-        const MULTIPLE: &'static str = "multiple";
-        const TEMPORAL: &'static str = "temporal";
+        const TYPE: &str = "type";
+        const BINARY: &str = "binary";
+        const MULTIPLE: &str = "multiple";
+        const TEMPORAL: &str = "temporal";
 
         let name = String::from(name);
         let templates = Templates::from_yaml(hash)?;

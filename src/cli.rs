@@ -9,10 +9,10 @@ use std::path::PathBuf;
 use clap::{App, ArgMatches};
 
 
-const INIT: &'static str = "init";
-const BUILD: &'static str = "build";
-const CREATE: &'static str = "create";
-const SERVE: &'static str = "serve";
+const INIT: &str = "init";
+const BUILD: &str = "build";
+const CREATE: &str = "create";
+const SERVE: &str = "serve";
 
 
 /// Commands which can be called, mapped from strings of the same name.

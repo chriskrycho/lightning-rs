@@ -22,7 +22,7 @@ use self::site_info::*;
 use self::taxonomy::*;
 
 
-const CONFIG_FILE_NAME: &'static str = "lightning.yaml";
+const CONFIG_FILE_NAME: &str = "lightning.yaml";
 
 
 #[derive(Debug, PartialEq)]
@@ -74,7 +74,7 @@ impl Config {
 
     fn get_structure<'map>(config_map: &'map BTreeMap<Yaml, Yaml>)
                            -> Result<&'map BTreeMap<Yaml, Yaml>, String> {
-        const STRUCTURE: &'static str = "structure";
+        const STRUCTURE: &str = "structure";
         config_map
             .get(&Yaml::from_str(STRUCTURE))
             .ok_or(required_key(STRUCTURE, config_map))?
@@ -85,7 +85,7 @@ impl Config {
 
     /// Load the site data from the configuration file.
     fn parse_site_meta(config_map: &BTreeMap<Yaml, Yaml>) -> Result<SiteInfo, String> {
-        const SITE_INFO: &'static str = "site_info";
+        const SITE_INFO: &str = "site_info";
         let site_info_yaml = config_map
             .get(&Yaml::from_str(SITE_INFO))
             .ok_or(required_key(SITE_INFO, config_map))?
@@ -100,7 +100,7 @@ impl Config {
     fn parse_taxonomies(structure: &BTreeMap<Yaml, Yaml>,
                         config_path: &PathBuf)
                         -> Result<Vec<Taxonomy>, String> {
-        const TAXONOMIES: &'static str = "taxonomies";
+        const TAXONOMIES: &str = "taxonomies";
 
         let taxonomies_yaml =
             structure
@@ -153,9 +153,9 @@ impl Directories {
                  config_path: &PathBuf,
                  structure: &BTreeMap<Yaml, Yaml>)
                  -> Result<Directories, String> {
-        const CONTENT_DIRECTORY: &'static str = "content_directory";
-        const OUTPUT_DIRECTORY: &'static str = "output_directory";
-        const TEMPLATE_DIRECTORY: &'static str = "directory";
+        const CONTENT_DIRECTORY: &str = "content_directory";
+        const OUTPUT_DIRECTORY: &str = "output_directory";
+        const TEMPLATE_DIRECTORY: &str = "directory";
 
         let content_directory_yaml = config_map
             .get(&Yaml::from_str(CONTENT_DIRECTORY))

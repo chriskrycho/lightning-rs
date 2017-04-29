@@ -80,8 +80,8 @@ pub enum ExtraMetadata {
     Slug(String),
 }
 
-const TRIPLE_DASH: &'static str = "---";
-const TRIPLE_DOT: &'static str = "...";
+const TRIPLE_DASH: &str = "---";
+const TRIPLE_DOT: &str = "...";
 
 fn is_initial_delimiter(line: &str) -> bool {
     line == TRIPLE_DASH

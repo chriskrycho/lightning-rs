@@ -28,7 +28,8 @@ pub fn case_insensitive_string(lower: &str,
                                yaml: &Hash,
                                required: Required)
                                -> Result<String, String> {
-    match yaml.get(&Yaml::from_str(lower)).or(yaml.get(&Yaml::from_str(upper))) {
+    match yaml.get(&Yaml::from_str(lower))
+              .or(yaml.get(&Yaml::from_str(upper))) {
         Some(&Yaml::String(ref string)) => Ok(string.clone()),
         None |
         Some(&Yaml::Null) => {
@@ -76,4 +77,3 @@ pub fn ridiculous_number<V: fmt::Display + ops::Add>(value: V,
             u8::MAX,
             context)
 }
-

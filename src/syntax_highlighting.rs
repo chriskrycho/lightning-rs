@@ -83,17 +83,17 @@ impl Default for ParseState {
 
 impl<'e> From<&'e Event> for ParseEvent {
     fn from(event: &'e Event) -> ParseEvent {
-        // TODO @1.15: remove `'static`.
-        const PRE: &'static [u8] = b"pre";
-        const CODE: &'static [u8] = b"code";
-        const CLASS: &'static [u8] = b"class";
-        const WHITE_SPACE: &'static [u8] = b"";
+        const PRE: &[u8] = b"pre";
+        const CODE: &[u8] = b"code";
+        const CLASS: &[u8] = b"class";
+        const WHITE_SPACE: &[u8] = b"";
 
         match *event {
             Event::Start(ref element) => {
                 match element.name() {
                     PRE => {
-                        let maybe_class_attr = element.attributes()
+                        let maybe_class_attr = element
+                            .attributes()
                             .map(|attr| attr.unwrap())
                             .filter(|&(attr, _value)| attr == CLASS)
                             .next();
@@ -169,7 +169,8 @@ pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
             if let Ok(unescaped_content) = event.element().unescaped_content() {
                 if let Ok(content_to_highlight) = str::from_utf8(&unescaped_content) {
                     if let Some(valid_syntax) = ss.find_syntax_by_token(&language) {
-                        let syntax_definition = syntax_definitions.entry(language.clone())
+                        let syntax_definition = syntax_definitions
+                            .entry(language.clone())
                             .or_insert(valid_syntax);
 
                         let highlighted = highlighted_snippet_for_string(content_to_highlight,
