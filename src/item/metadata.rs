@@ -27,6 +27,20 @@ pub struct MetadataFromFile<Tz: TimeZone> {
     pub extra: Option<HashMap<String, ExtraMetadata>>,
 }
 
+fn slug_from_file_name(file_name: &Path) -> Result<String, String> {
+    let stem = file_name
+        .file_stem()
+        .ok_or(format!("file name `{}` passed to `Metadata::parse` has no stem",
+                       file_name.to_string_lossy()))?;
+
+    let slug = stem.to_str()
+        .ok_or(format!("file name `{}` passed to `Metadata::parse` has invalid UTF-8",
+                       file_name.to_string_lossy()))?
+        .into();
+
+    Ok(slug)
+}
+
 impl<Tz> Metadata<Tz>
     where Tz: TimeZone
 {
@@ -52,17 +66,15 @@ impl<Tz> Metadata<Tz>
         let yaml = yaml.as_hash()
             .ok_or(bad_yaml_message("could not parse as hash"))?;
 
-        // TODO: Parse from YAML
-        let slug = file_name
-            .file_stem()
-            .ok_or(format!("file name `{}` passed to `Metadata::parse` has no stem",
-                           file_name.to_string_lossy()))?
-            .to_str()
-            .ok_or(format!("file name `{}` passed to `Metadata::parse` has invalid UTF-8",
-                           file_name.to_string_lossy()))?;
+        let slug = match case_insensitive_string("slug", "Slug", yaml, Required::No) {
+            Ok(Some(slug)) => slug,
+            Ok(None) | Err(_) => slug_from_file_name(file_name)?,
+        };
 
-        let title = case_insensitive_string("title", "Title", yaml, Required::No)
-            .unwrap_or("".into());
+        let title = match case_insensitive_string("title", "Title", yaml, Required::No) {
+            Ok(Some(title)) => title,
+            Ok(None) | Err(_) => "".into(),
+        };
 
         Ok(Metadata {
                title: title,
