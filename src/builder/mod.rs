@@ -6,7 +6,7 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
 // Third party
-use chrono::UTC;
+use chrono::FixedOffset;
 use glob::{glob, Paths};
 use pandoc::{Pandoc, PandocOption, PandocOutput, InputFormat, InputKind, OutputFormat, OutputKind};
 use syntect::highlighting::ThemeSet;
@@ -18,15 +18,15 @@ use item;
 
 /// Load the `Paths` for all markdown files in the specified content directory.
 fn glob_md_paths(site_directory: &PathBuf, config: &Config) -> Result<Paths, String> {
-    let content_glob_str = format!("{}/{}/**/*.md",
-                                   site_directory
-                                       .to_str()
-                                       .ok_or(String::from("bad `site`"))?,
-                                   config
-                                       .directories
-                                       .content
-                                       .to_str()
-                                       .ok_or(String::from("bad content directory"))?);
+    let content_glob_str = format!(
+        "{}/{}/**/*.md",
+        site_directory.to_str().ok_or(String::from("bad `site`"))?,
+        config
+            .directories
+            .content
+            .to_str()
+            .ok_or(String::from("bad content directory"))?
+    );
 
     glob(&content_glob_str).map_err(|err| format!("{:?}", err))
 }
@@ -67,14 +67,17 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
         // builder needs to delegate all of that, and simply get back an item
         // with metadata and string content to convert.
         // TODO: use something besides UTC: pass it in from config.
-        let metadata = item::Metadata::parse(&contents, &path, UTC)?;
+        let utcish = FixedOffset::east(0);
+        let item = item::Item::from_str_unprocessed(&contents, &path, utcish, &config.taxonomies)?;
 
         let mut pandoc = pandoc.clone();
         pandoc.set_input(InputKind::Pipe(contents));
         let converted = match pandoc.execute() {
             Ok(PandocOutput::ToFile(path_buf)) => {
-                let msg = format!("We wrote to a file ({}) instead of a pipe. That was weird.",
-                                  path_buf.to_string_lossy());
+                let msg = format!(
+                    "We wrote to a file ({}) instead of a pipe. That was weird.",
+                    path_buf.to_string_lossy()
+                );
                 return Err(msg);
             }
             Ok(PandocOutput::ToBuffer(string)) => string,
@@ -85,7 +88,13 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
 
         let highlighted = syntax_highlight(converted, theme);
 
-        write_file(&config.directories.output, &metadata.slug, &highlighted)?;
+        // TODO: this is a temporary hack to get this to build.
+        let slug = match item {
+            item::Item::Processed { metadata, .. } => metadata.slug,
+            item::Item::Unprocessed { metadata, .. } => metadata.slug,
+        };
+
+        write_file(&config.directories.output, &slug, &highlighted)?;
     }
 
     Ok(())
@@ -106,11 +115,15 @@ fn write_file(output_dir: &Path, slug: &str, contents: &str) -> Result<(), Strin
     let path = output_dir.join(slug).with_extension("html");
 
     let mut fd = File::create(&path)
-        .map_err(|err| {
-                     format!("Could not open {} for write: {}",
-                             path.to_string_lossy(),
-                             err)
-                 })?;
+        .map_err(
+            |err| {
+                format!(
+                    "Could not open {} for write: {}",
+                    path.to_string_lossy(),
+                    err
+                )
+            }
+        )?;
 
     write!(fd, "{}", contents).map_err(|err| format!("{:?}", err.kind()))
 }

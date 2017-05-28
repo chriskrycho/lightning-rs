@@ -43,13 +43,15 @@ impl SiteInfo {
         let metadata = SiteInfo::parse_metadata(yaml)?;
         let default_timezone = SiteInfo::parse_default_timezone(yaml)?;
 
-        Ok(SiteInfo {
-               title: title,
-               url: url,
-               description: description,
-               metadata: metadata,
-               default_timezone: default_timezone,
-           })
+        Ok(
+            SiteInfo {
+                title: title,
+                url: url,
+                description: description,
+                metadata: metadata,
+                default_timezone: default_timezone,
+            }
+        )
     }
 
     fn parse_title(yaml: &yaml::Hash) -> Result<String, String> {
@@ -109,21 +111,27 @@ impl SiteInfo {
                         Some(inner_yaml @ &Yaml::Boolean(..)) |
                         Some(inner_yaml @ &Yaml::Integer(..)) |
                         Some(inner_yaml @ &Yaml::Real(..)) => {
-                            let result = metadata.insert(String::from(hash_key_str),
-                                                         inner_yaml.clone());
+                            let result =
+                                metadata.insert(String::from(hash_key_str), inner_yaml.clone());
                             if result.is_some() {
                                 let main = format!("Double insertion of key {}.\n", hash_key_str);
-                                let detail = format!("First: {:?}\nSecond: {:?}",
-                                                     result.unwrap(),
-                                                     inner_yaml);
+                                let detail = format!(
+                                    "First: {:?}\nSecond: {:?}",
+                                    result.unwrap(),
+                                    inner_yaml
+                                );
                                 return Err(main + &detail);
                             }
                         }
                         _ => {
-                            return Err(key_of_type(hash_key_str,
-                                                   Required::No,
-                                                   hash,
-                                                   "string, boolean, or integer"))
+                            return Err(
+                                key_of_type(
+                                    hash_key_str,
+                                    Required::No,
+                                    hash,
+                                    "string, boolean, or integer",
+                                )
+                            )
                         }
                     }
                 }

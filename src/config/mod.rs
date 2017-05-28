@@ -37,8 +37,12 @@ impl Config {
     pub fn load(directory: &PathBuf) -> Result<Config, String> {
         let config_path = directory.join(CONFIG_FILE_NAME);
         if !config_path.exists() {
-            return Err(format!("The specified configuration path {:?} does not exist.",
-                               config_path.to_string_lossy()));
+            return Err(
+                format!(
+                    "The specified configuration path {:?} does not exist.",
+                    config_path.to_string_lossy()
+                )
+            );
         }
 
         let mut file =
@@ -59,21 +63,21 @@ impl Config {
             .into_iter()
             .next()
             .ok_or("Empty configuration file")?;
-        let config_map = yaml_config
-            .as_hash()
-            .ok_or("Configuration is not a map")?;
+        let config_map = yaml_config.as_hash().ok_or("Configuration is not a map")?;
 
         let structure = Self::get_structure(config_map)?;
 
-        Ok(Config {
-               site: Self::parse_site_meta(config_map)?,
-               directories: Directories::from_yaml(config_map, &config_path, &structure)?,
-               taxonomies: Self::parse_taxonomies(&structure, &config_path)?,
-           })
+        Ok(
+            Config {
+                site: Self::parse_site_meta(config_map)?,
+                directories: Directories::from_yaml(config_map, &config_path, &structure)?,
+                taxonomies: Self::parse_taxonomies(&structure, &config_path)?,
+            }
+        )
     }
 
     fn get_structure<'map>(config_map: &'map BTreeMap<Yaml, Yaml>)
-                           -> Result<&'map BTreeMap<Yaml, Yaml>, String> {
+        -> Result<&'map BTreeMap<Yaml, Yaml>, String> {
         const STRUCTURE: &str = "structure";
         config_map
             .get(&Yaml::from_str(STRUCTURE))
@@ -97,9 +101,10 @@ impl Config {
 
 
     /// Load the taxonomies from the configuration file.
-    fn parse_taxonomies(structure: &BTreeMap<Yaml, Yaml>,
-                        config_path: &PathBuf)
-                        -> Result<Vec<Taxonomy>, String> {
+    fn parse_taxonomies(
+        structure: &BTreeMap<Yaml, Yaml>,
+        config_path: &PathBuf,
+    ) -> Result<Vec<Taxonomy>, String> {
         const TAXONOMIES: &str = "taxonomies";
 
         let taxonomies_yaml =
@@ -149,10 +154,11 @@ pub struct Directories {
 
 
 impl Directories {
-    fn from_yaml(config_map: &BTreeMap<Yaml, Yaml>,
-                 config_path: &PathBuf,
-                 structure: &BTreeMap<Yaml, Yaml>)
-                 -> Result<Directories, String> {
+    fn from_yaml(
+        config_map: &BTreeMap<Yaml, Yaml>,
+        config_path: &PathBuf,
+        structure: &BTreeMap<Yaml, Yaml>,
+    ) -> Result<Directories, String> {
         const CONTENT_DIRECTORY: &str = "content_directory";
         const OUTPUT_DIRECTORY: &str = "output_directory";
         const TEMPLATE_DIRECTORY: &str = "directory";
@@ -161,9 +167,11 @@ impl Directories {
             .get(&Yaml::from_str(CONTENT_DIRECTORY))
             .ok_or(required_key(CONTENT_DIRECTORY, config_map))?;
 
-        let content_directory = Directories::path_buf_from_yaml(&content_directory_yaml,
-                                                                CONTENT_DIRECTORY,
-                                                                &config_path)?;
+        let content_directory = Directories::path_buf_from_yaml(
+            &content_directory_yaml,
+            CONTENT_DIRECTORY,
+            &config_path,
+        )?;
 
         let output_directory_yaml = config_map
             .get(&Yaml::from_str(OUTPUT_DIRECTORY))
@@ -175,24 +183,30 @@ impl Directories {
         let template_directory_yaml =
             structure
                 .get(&Yaml::from_str(TEMPLATE_DIRECTORY))
-                .ok_or(required_key(TEMPLATE_DIRECTORY, structure) +
-                       &format!(" in {:?}", config_path))?;
+                .ok_or(
+                    required_key(TEMPLATE_DIRECTORY, structure) + &format!(" in {:?}", config_path),
+                )?;
 
-        let template_directory = Directories::path_buf_from_yaml(&template_directory_yaml,
-                                                                 TEMPLATE_DIRECTORY,
-                                                                 &config_path)?;
+        let template_directory = Directories::path_buf_from_yaml(
+            &template_directory_yaml,
+            TEMPLATE_DIRECTORY,
+            &config_path,
+        )?;
 
-        Ok(Directories {
-               content: content_directory,
-               output: output_directory,
-               template: template_directory,
-           })
+        Ok(
+            Directories {
+                content: content_directory,
+                output: output_directory,
+                template: template_directory,
+            }
+        )
     }
 
-    fn path_buf_from_yaml(yaml: &Yaml,
-                          key: &str,
-                          config_path: &PathBuf)
-                          -> Result<PathBuf, String> {
+    fn path_buf_from_yaml(
+        yaml: &Yaml,
+        key: &str,
+        config_path: &PathBuf,
+    ) -> Result<PathBuf, String> {
         match yaml {
             &Yaml::String(ref path_str) => Ok(PathBuf::from(path_str)),
             value => Err(bad_value(value, key, yaml) + &format!(" in {:?}", config_path)),

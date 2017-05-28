@@ -51,28 +51,34 @@ impl Taxonomy {
 
         match taxonomy_type {
             BINARY => {
-                Ok(Taxonomy::Binary {
-                       name: name,
-                       templates: templates,
-                       hierarchical: Self::is_hierarchical(hash)?,
-                   })
+                Ok(
+                    Taxonomy::Binary {
+                        name: name,
+                        templates: templates,
+                        hierarchical: Self::is_hierarchical(hash)?,
+                    }
+                )
             }
             MULTIPLE => {
-                Ok(Taxonomy::Multiple {
-                       name: name,
-                       templates: templates,
-                       default: Self::default_value(hash)?,
-                       hierarchical: Self::is_hierarchical(hash)?,
-                       required: Self::is_required(hash)?,
-                       limit: Self::limit(hash)?,
-                   })
+                Ok(
+                    Taxonomy::Multiple {
+                        name: name,
+                        templates: templates,
+                        default: Self::default_value(hash)?,
+                        hierarchical: Self::is_hierarchical(hash)?,
+                        required: Self::is_required(hash)?,
+                        limit: Self::limit(hash)?,
+                    }
+                )
             }
             TEMPORAL => {
-                Ok(Taxonomy::Temporal {
-                       name: name,
-                       templates: templates,
-                       required: Self::is_required(hash)?,
-                   })
+                Ok(
+                    Taxonomy::Temporal {
+                        name: name,
+                        templates: templates,
+                        required: Self::is_required(hash)?,
+                    }
+                )
             }
             _ => Err(format!("Invalid taxonomy type `{:?}` in {:?}", taxonomy_type, hash)),
         }
@@ -135,19 +141,23 @@ impl Templates {
         let item = Self::item_from_yaml(template_yaml)?;
         let list = Self::list_from_yaml(template_yaml)?;
 
-        Ok(Templates {
-               item: item,
-               list: list,
-           })
+        Ok(
+            Templates {
+                item: item,
+                list: list,
+            }
+        )
     }
 
     /// Get the `item` value for a taxonomy's templates.
     fn item_from_yaml(yaml: &yaml::Hash) -> Result<PathBuf, String> {
         let key = "item";
-        Ok(yaml[&Yaml::from_str(key)]
-               .as_str()
-               .ok_or(key_of_type(key, Required::Yes, yaml, "string"))?
-               .into())
+        Ok(
+            yaml[&Yaml::from_str(key)]
+                .as_str()
+                .ok_or(key_of_type(key, Required::Yes, yaml, "string"))?
+                .into()
+        )
     }
 
     /// Get the `list` value for a taxonomy's templates.
@@ -155,7 +165,7 @@ impl Templates {
     /// This return type isn't as crazy as it looks. A `list` entry is allowed
     /// to be explicitly `null`/`~` or simply unset, but if the key is
     /// included, it is not allowed to be anything other than a `string` or
-    /// explicitly set to null.
+    /// explicitly set to `null`.
     fn list_from_yaml(yaml: &yaml::Hash) -> Result<Option<PathBuf>, String> {
         let key = "list";
         match yaml[&Yaml::from_str(key)] {
@@ -182,7 +192,8 @@ mod tests {
     #[test]
     fn parses_hierarchical_multiple() {
         let taxonomy_name = "author";
-        let taxonomy = format!("
+        let taxonomy = format!(
+            "
 {}:
     type: multiple
     required: true
@@ -191,7 +202,8 @@ mod tests {
         list: authors.html
         item: author.html
         ",
-                               taxonomy_name);
+            taxonomy_name
+        );
 
         let expected = Taxonomy::Multiple {
             name: "author".into(),
@@ -206,14 +218,17 @@ mod tests {
         };
 
         let taxonomy_yaml = load_taxonomy_at_key(&taxonomy, taxonomy_name);
-        assert_eq!(Ok(expected),
-                   Taxonomy::from_yaml(&taxonomy_yaml, taxonomy_name));
+        assert_eq!(
+            Ok(expected),
+            Taxonomy::from_yaml(&taxonomy_yaml, taxonomy_name)
+        );
     }
 
     #[test]
     fn parses_nonhierarchical_multiple() {
         let taxonomy_name = "category";
-        let taxonomy = format!("
+        let taxonomy = format!(
+            "
 {}:
     type: multiple
     default: Blog
@@ -224,7 +239,8 @@ mod tests {
         list: categories.html
         item: category.html
         ",
-                               taxonomy_name);
+            taxonomy_name
+        );
 
         let expected = Taxonomy::Multiple {
             name: "category".into(),
@@ -239,14 +255,17 @@ mod tests {
         };
 
         let taxonomy_yaml = load_taxonomy_at_key(&taxonomy, taxonomy_name);
-        assert_eq!(Ok(expected),
-                   Taxonomy::from_yaml(&taxonomy_yaml, taxonomy_name));
+        assert_eq!(
+            Ok(expected),
+            Taxonomy::from_yaml(&taxonomy_yaml, taxonomy_name)
+        );
     }
 
     #[test]
     fn parses_nonhierarchical_multiple_without_default() {
         let taxonomy_name = "tag";
-        let taxonomy = format!("
+        let taxonomy = format!(
+            "
 {}:
     type: multiple
     limit: ~
@@ -256,7 +275,8 @@ mod tests {
         list: tags.html
         item: tag.html
         ",
-                               taxonomy_name);
+            taxonomy_name
+        );
 
         let expected = Taxonomy::Multiple {
             name: "tag".into(),
@@ -271,14 +291,17 @@ mod tests {
         };
 
         let taxonomy_yaml = load_taxonomy_at_key(&taxonomy, taxonomy_name);
-        assert_eq!(Ok(expected),
-                   Taxonomy::from_yaml(&taxonomy_yaml, taxonomy_name));
+        assert_eq!(
+            Ok(expected),
+            Taxonomy::from_yaml(&taxonomy_yaml, taxonomy_name)
+        );
     }
 
     #[test]
     fn parses_temporal() {
         let taxonomy_name = "date";
-        let taxonomy = format!("
+        let taxonomy = format!(
+            "
 {}:
     type: temporal
     required: false
@@ -286,7 +309,8 @@ mod tests {
         list: period_archives.html
         item: archives.html
         ",
-                               taxonomy_name);
+            taxonomy_name
+        );
 
         let expected = Taxonomy::Temporal {
             name: "date".into(),
@@ -298,21 +322,25 @@ mod tests {
         };
 
         let taxonomy_yaml = load_taxonomy_at_key(&taxonomy, taxonomy_name);
-        assert_eq!(Ok(expected),
-                   Taxonomy::from_yaml(&taxonomy_yaml, taxonomy_name));
+        assert_eq!(
+            Ok(expected),
+            Taxonomy::from_yaml(&taxonomy_yaml, taxonomy_name)
+        );
     }
 
     #[test]
     fn parses_binary() {
         let taxonomy_name = "page";
-        let taxonomy = format!("
+        let taxonomy = format!(
+            "
 {}:
     type: binary
     hierarchical: true
     templates:
         item: page.html
         ",
-                               taxonomy_name);
+            taxonomy_name
+        );
 
         let expected = Taxonomy::Binary {
             name: "page".into(),
@@ -324,7 +352,9 @@ mod tests {
         };
 
         let taxonomy_yaml = load_taxonomy_at_key(&taxonomy, taxonomy_name);
-        assert_eq!(Ok(expected),
-                   Taxonomy::from_yaml(&taxonomy_yaml, taxonomy_name));
+        assert_eq!(
+            Ok(expected),
+            Taxonomy::from_yaml(&taxonomy_yaml, taxonomy_name)
+        );
     }
 }

@@ -173,9 +173,11 @@ pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
                             .entry(language.clone())
                             .or_insert(valid_syntax);
 
-                        let highlighted = highlighted_snippet_for_string(content_to_highlight,
-                                                                         syntax_definition,
-                                                                         &theme);
+                        let highlighted = highlighted_snippet_for_string(
+                            content_to_highlight,
+                            syntax_definition,
+                            &theme,
+                        );
                         let text = Element::new(highlighted);
                         assert!(writer.write(Event::Text(text)).is_ok());
                         continue;
@@ -202,35 +204,54 @@ mod tests {
 
         let lang = "rust";
 
-        assert_eq!(ParseState::NotInBlock.next(ParseEvent::StartPre(Some(lang.into()))),
-                   ParseState::MaybeStartBlock(lang.into()));
+        assert_eq!(
+            ParseState::NotInBlock.next(ParseEvent::StartPre(Some(lang.into()))),
+            ParseState::MaybeStartBlock(lang.into())
+        );
 
-        assert_eq!(ParseState::NotInBlock.next(ParseEvent::EndCode),
-                   ParseState::NotInBlock);
+        assert_eq!(
+            ParseState::NotInBlock.next(ParseEvent::EndCode),
+            ParseState::NotInBlock
+        );
 
-        assert_eq!(ParseState::NotInBlock.next(ParseEvent::Other),
-                   ParseState::NotInBlock);
+        assert_eq!(
+            ParseState::NotInBlock.next(ParseEvent::Other),
+            ParseState::NotInBlock
+        );
 
-        assert_eq!(ParseState::NotInBlock.next(ParseEvent::StartCode),
-                   ParseState::NotInBlock);
+        assert_eq!(
+            ParseState::NotInBlock.next(ParseEvent::StartCode),
+            ParseState::NotInBlock
+        );
 
-        assert_eq!(ParseState::MaybeStartBlock(lang.into()).next(ParseEvent::StartCode),
-                   ParseState::WillStartCodeBlock(lang.into()));
+        assert_eq!(
+            ParseState::MaybeStartBlock(lang.into()).next(ParseEvent::StartCode),
+            ParseState::WillStartCodeBlock(lang.into())
+        );
 
-        assert_eq!(ParseState::MaybeStartBlock(lang.into()).next(ParseEvent::Text),
-                   ParseState::NotInBlock);
+        assert_eq!(
+            ParseState::MaybeStartBlock(lang.into()).next(ParseEvent::Text),
+            ParseState::NotInBlock
+        );
 
-        assert_eq!(ParseState::MaybeStartBlock(lang.into()).next(ParseEvent::EndCode),
-                   ParseState::NotInBlock);
+        assert_eq!(
+            ParseState::MaybeStartBlock(lang.into()).next(ParseEvent::EndCode),
+            ParseState::NotInBlock
+        );
 
-        assert_eq!(ParseState::MaybeStartBlock(lang.into())
-                       .next(ParseEvent::StartPre(Some(lang.into()))),
-                   ParseState::NotInBlock);
+        assert_eq!(
+            ParseState::MaybeStartBlock(lang.into()).next(ParseEvent::StartPre(Some(lang.into()))),
+            ParseState::NotInBlock
+        );
 
-        assert_eq!(ParseState::MaybeStartBlock(lang.into()).next(ParseEvent::Other),
-                   ParseState::NotInBlock);
+        assert_eq!(
+            ParseState::MaybeStartBlock(lang.into()).next(ParseEvent::Other),
+            ParseState::NotInBlock
+        );
 
-        assert_eq!(ParseState::WillStartCodeBlock(lang.into()).next(ParseEvent::Text),
-                   ParseState::InCodeBlock(lang.into()));
+        assert_eq!(
+            ParseState::WillStartCodeBlock(lang.into()).next(ParseEvent::Text),
+            ParseState::InCodeBlock(lang.into())
+        );
     }
 }
