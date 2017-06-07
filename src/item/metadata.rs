@@ -4,56 +4,57 @@
 // First-party
 use std::collections::HashMap;
 use std::error::Error;
-use std::path::Path;
 
 // Third-party
-use chrono::{DateTime, TimeZone};
-use yaml_rust::{yaml, Yaml, YamlLoader};
+use chrono::{DateTime, FixedOffset, Local, LocalResult, ParseError, TimeZone};
+use chrono::NaiveDateTime;
+use yaml_rust::{YamlLoader};
 
 // First-party
 use yaml_util::*;
+use config::taxonomy::Taxonomy;
 
 
-pub struct Metadata<Tz: TimeZone> {
+pub struct Metadata {
     pub title: String,
     pub slug: String,
-    pub date: Option<DateTime<Tz>>,
-    pub extra: Option<HashMap<String, ExtraMetadata>>,
+    pub date: Option<DateTime<FixedOffset>>,
+    pub taxonomies: HashMap<String, Vec<String>>,
+    pub other: HashMap<String, OtherMetadata>,
 }
 
-pub struct MetadataFromFile<Tz: TimeZone> {
-    pub title: String,
-    pub date: Option<DateTime<Tz>>,
-    pub extra: Option<HashMap<String, ExtraMetadata>>,
+pub struct Defaults {
+    pub slug: String,
 }
 
-fn slug_from_file_name(file_name: &Path) -> Result<String, String> {
-    let stem = file_name
-        .file_stem()
-        .ok_or(format!("file name `{}` passed to `Metadata::parse` has no stem",
-                       file_name.to_string_lossy()))?;
+impl Metadata {
+    /// Extract the metadata for an item from its body.
+    ///
+    /// - `defaults`: used as a fallback wherever the required item is not
+    ///   present in the supplied content.
+    /// - `tz`: the time zone to use if the item includes a `Taxonomy::Temporal`
+    ///   field.
+    /// - `taxonomies`:
+    pub fn from_content(
+        content: &str,
+        defaults: Defaults,
+        date_format: &str,
+        tz: Option<FixedOffset>,
+        taxonomy_configs: &Vec<Taxonomy>,
+    ) -> Result<Metadata, String> {
 
-    let slug = stem.to_str()
-        .ok_or(format!("file name `{}` passed to `Metadata::parse` has invalid UTF-8",
-                       file_name.to_string_lossy()))?
-        .into();
-
-    Ok(slug)
-}
-
-impl<Tz> Metadata<Tz>
-    where Tz: TimeZone
-{
-    pub fn parse(content: &str, file_name: &Path, tz: Tz) -> Result<Metadata<Tz>, String> {
-        let metadata = extract_metadata(&content)
-            .ok_or(format!("file `{}` passed to `Metadata::parse` has no metadata",
-                           file_name.to_string_lossy()))?;
+        let metadata =
+            extract_metadata(&content)
+                .ok_or(
+                    format!("content passed to `Metadata::parse` has no metadata and no default"),
+                )?;
 
         let bad_yaml_message = |reason: &str| {
-            format!("file `{}` passed to `Metadata::parse` had invalid metadata: {}\n{}",
-                    file_name.to_string_lossy(),
-                    metadata,
-                    reason)
+            format!(
+                "content passed to `Metadata::parse` had invalid metadata: {}\n{}",
+                metadata,
+                reason
+            )
         };
 
         let yaml = YamlLoader::load_from_str(&metadata)
@@ -64,32 +65,59 @@ impl<Tz> Metadata<Tz>
             .ok_or(bad_yaml_message("empty metadata block"))?;
 
         let yaml = yaml.as_hash()
-            .ok_or(bad_yaml_message("could not parse as hash"))?;
+            .ok_or(bad_yaml_message("could not parse item as metadata hash"))?;
 
-        let slug = match case_insensitive_string("slug", "Slug", yaml, Required::No) {
-            Ok(Some(slug)) => slug,
-            Ok(None) | Err(_) => slug_from_file_name(file_name)?,
+        let slug = case_insensitive_string("slug", yaml, Required::No)?
+            .unwrap_or(defaults.slug);
+
+        let title = case_insensitive_string("title", yaml, Required::No)?
+            .unwrap_or("".into());
+
+        let naive_date_time_result = case_insensitive_string("date", yaml, Required::No)?
+            .map(|supplied_value| NaiveDateTime::parse_from_str(&supplied_value, date_format));
+
+        // TODO: extract into function; this is gross.
+        let date = match naive_date_time_result {
+            Some(Err(parse_error)) => {
+                return Err(format!("{}", parse_error));
+            },
+            Some(Ok(ndt)) => {
+                let offset = if let Some(offset) = tz {
+                    offset
+                } else {
+                    let local = Local;
+                    let local_offset = local.offset_from_local_datetime(&ndt).single();
+                    local_offset.unwrap_or(FixedOffset::east(0))
+                };
+
+                match offset.from_local_datetime(&ndt) {
+                    LocalResult::None |
+                    LocalResult::Ambiguous(_, _) => None,
+                    LocalResult::Single(dt) => Some(dt),
+                }
+            },
+            None => None,
         };
 
-        let title = match case_insensitive_string("title", "Title", yaml, Required::No) {
-            Ok(Some(title)) => title,
-            Ok(None) | Err(_) => "".into(),
-        };
+        let taxonomies = HashMap::new();
+        let other = HashMap::new();
 
-        Ok(Metadata {
-               title: title,
-               date: None,
-               slug: slug.to_string(),
-               extra: None,
-           })
+        Ok(
+            Metadata {
+                date,
+                title,
+                slug,
+                taxonomies,
+                other,
+            }
+        )
     }
 }
 
-pub enum ExtraMetadata {
+pub enum OtherMetadata {
     SingleLineString(String),
     MultiLineString(String),
     List(Vec<String>),
-    Slug(String),
 }
 
 const TRIPLE_DASH: &str = "---";
@@ -125,22 +153,28 @@ fn extract_metadata<'c>(content: &'c str) -> Option<String> {
     Some(metadata)
 }
 
+fn extract_taxonomies(content: &str, config_taxonomies: Vec<Taxonomy>) -> Vec<String> {
+    unimplemented!()
+}
+
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn extract_basic() {
+    fn extract_basic_metadata() {
         let source = "---
 Title: With Terminal Dashes
 ---
 
-Some other text!e
+Some other text!
         ";
 
-        assert_eq!(extract_metadata(&source),
-                   Some("Title: With Terminal Dashes".into()));
+        assert_eq!(
+            extract_metadata(&source),
+            Some("Title: With Terminal Dashes".into())
+        );
     }
 
     #[test]
@@ -152,8 +186,10 @@ Title: With Terminal Dots
 Some other text!
         ";
 
-        assert_eq!(extract_metadata(&source),
-                   Some("Title: With Terminal Dots".into()));
+        assert_eq!(
+            extract_metadata(&source),
+            Some("Title: With Terminal Dots".into())
+        );
     }
 
     #[test]
@@ -193,8 +229,10 @@ Title: Who cares how many *initial* empty lines there are?
 ---
         ";
 
-        assert_eq!(extract_metadata(&source),
-                   Some("Title: Who cares how many *initial* empty lines there are?".into()));
+        assert_eq!(
+            extract_metadata(&source),
+            Some("Title: Who cares how many *initial* empty lines there are?".into())
+        );
     }
 
     #[test]
@@ -208,8 +246,10 @@ Badass: Princess Leia
 Whatever other content...
         ";
 
-        assert_eq!(extract_metadata(&source),
-                   Some("Jedi: Luke Skywalker\nRogue: Han Solo\nBadass: Princess Leia".into()));
+        assert_eq!(
+            extract_metadata(&source),
+            Some("Jedi: Luke Skywalker\nRogue: Han Solo\nBadass: Princess Leia".into())
+        );
 
     }
 
@@ -232,8 +272,10 @@ Subtitle: Even with all the spaces.
 ...
         ";
 
-        assert_eq!(extract_metadata(&source),
-                   Some("Title: This is fine.\nSubtitle: Even with all the spaces.\n".into()))
+        assert_eq!(
+            extract_metadata(&source),
+            Some("Title: This is fine.\nSubtitle: Even with all the spaces.\n".into())
+        )
     }
 
     #[test]
@@ -251,9 +293,13 @@ And: they can even be multiple lines long.
 ---
         ";
 
-        assert_eq!(extract_metadata(&source),
-                   Some(String::from("\nTitle: They Can Be At The Start\n\n") +
-                        "Subtitle: Or even in the middle...\n\n\n\n" +
-                        "And: they can even be multiple lines long.\n"));
+        assert_eq!(
+            extract_metadata(&source),
+            Some(
+                String::from("\nTitle: They Can Be At The Start\n\n") +
+                    "Subtitle: Or even in the middle...\n\n\n\n" +
+                    "And: they can even be multiple lines long.\n"
+            )
+        );
     }
 }
