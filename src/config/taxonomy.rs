@@ -18,8 +18,17 @@ pub enum Taxonomy {
         templates: Templates,
         hierarchical: bool,
     },
+    Singular {
+        name: String,
+        fields: Vec<String>,
+        templates: Templates,
+        default: Option<String>,
+        required: bool,
+        hierarchical: bool,
+    },
     Multiple {
         name: String,
+        fields: Vec<String>,
         templates: Templates,
         default: Option<String>,
         limit: Option<u8>,
@@ -38,6 +47,7 @@ impl Taxonomy {
     pub fn from_yaml(hash: &yaml::Hash, name: &str) -> Result<Taxonomy, String> {
         const TYPE: &str = "type";
         const BINARY: &str = "binary";
+        const SINGULAR: &str = "singular";
         const MULTIPLE: &str = "multiple";
         const TEMPORAL: &str = "temporal";
 
@@ -45,7 +55,8 @@ impl Taxonomy {
         let templates = Templates::from_yaml(hash)?;
 
         // Name can't collide with keyword `type`.
-        let taxonomy_type = hash[&Yaml::from_str(TYPE)]
+        let taxonomy_type = hash.get(&Yaml::from_str(TYPE))
+            .ok_or(key_of_type(TYPE, Required::Yes, hash, "string"))?
             .as_str()
             .ok_or(key_of_type(TYPE, Required::Yes, hash, "string"))?;
 
@@ -58,7 +69,19 @@ impl Taxonomy {
                         hierarchical: Self::is_hierarchical(hash)?,
                     }
                 )
-            }
+            },
+            SINGULAR => {
+                Ok(
+                    Taxonomy::Singular {
+                        name: name,
+                        templates: templates,
+                        default: Self::default_value(hash)?,
+                        hierarchical: Self::is_hierarchical(hash)?,
+                        required: Self::is_required(hash)?,
+                        fields: Vec::new(),
+                    }
+                )
+            },
             MULTIPLE => {
                 Ok(
                     Taxonomy::Multiple {
@@ -68,9 +91,10 @@ impl Taxonomy {
                         hierarchical: Self::is_hierarchical(hash)?,
                         required: Self::is_required(hash)?,
                         limit: Self::limit(hash)?,
+                        fields: Vec::new(),
                     }
                 )
-            }
+            },
             TEMPORAL => {
                 Ok(
                     Taxonomy::Temporal {
@@ -79,7 +103,7 @@ impl Taxonomy {
                         required: Self::is_required(hash)?,
                     }
                 )
-            }
+            },
             _ => Err(format!("Invalid taxonomy type `{:?}` in {:?}", taxonomy_type, hash)),
         }
     }
@@ -211,6 +235,7 @@ mod tests {
             limit: None,
             required: true,
             hierarchical: false,
+            fields: Vec::new(),
             templates: Templates {
                 item: "author.html".into(),
                 list: Some("authors.html".into()),
@@ -248,6 +273,7 @@ mod tests {
             limit: Some(1),
             required: false,
             hierarchical: false,
+            fields: Vec::new(),
             templates: Templates {
                 item: "category.html".into(),
                 list: Some("categories.html".into()),
@@ -284,6 +310,7 @@ mod tests {
             limit: None,
             required: false,
             hierarchical: false,
+            fields: Vec::new(),
             templates: Templates {
                 item: "tag.html".into(),
                 list: Some("tags.html".into()),

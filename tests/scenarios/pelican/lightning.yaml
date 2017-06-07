@@ -73,7 +73,7 @@ output_directory: output
 # Lightning supplies default layouts to match the behavior of Jekyll, Pelican,
 # and Hugo. If you'd like to contribute a generator, please open a pull request
 # on the repository!
-structure:
+layout:
   # configuration: <path/to/lightning-structure.yaml>
 
   # The `directory` may be specified as a relative or absolute path. By default,
@@ -81,15 +81,32 @@ structure:
   # ran `lx init`. If you want to develop your site structure separately
   directory: layout
 
-  # The index is the root of the site; it is the only *required* template. The
-  # file may be named whatever you want, but this `index` key must be set.
-  index: index.html
+  # TODO/aspirational: Specify the template engine to use.
+  # engine:
 
-  # Each taxonomy may be one of "boolean", "multiple", or "temporal". These
-  # options are mutually exclusive: a taxonomy may use time *or* it may define
-  # its own structure, but sad to say, we don't get to define the structure of
-  # time itself (unless you're a [Time Lord], in which case I have some
-  # questions for you).
+  # There are several required templates whcih are necessary to build any site.
+  # The files themselves may be named whatever you like, but these keys must be
+  # set and the corresponding files must exist at the specified paths within the
+  # directory. Template paths here and as specified for taxonomies are
+  # always relative paths from the `directory` specified above.
+  #
+  # For example, given a `directory` of `/Users/chris/my-blog/layout` and an
+  # `index` of `weirdly/nested/index.html`, Lightning will expect the file to
+  # exist at `/Users/chris/my-blog/layout/weirdly/nested/index.html`.
+  #
+  # Note that these use whatever extension you like; `.html` is merely usual.
+  templates:
+    # The `index` template renders the root of the site---the page the user
+    # lands on first.
+    index: index.html
+    # The `item` specifies the layout of individual content items on the site.
+    item: item.html
+
+  # Each taxonomy may be one of "boolean", "singular", "multiple", or
+  # "temporal". These options are mutually exclusive: a taxonomy may use time
+  # *or* it may define its own structure, but sad to say, we don't get to define
+  # the structure of time itself (unless you're a [Time Lord], in which case I
+  # would like to borrow your TARDIS).
   #
   # [Time Lord]: https://en.wikipedia.org/wiki/Time_Lord
   #
@@ -97,7 +114,13 @@ structure:
   # have both "Tech" and "Art" as categories, for example. Boolean taxonomies do
   # not have multiple variants; so e.g. in this setup an item is a "page" or it
   # is not---unlike the category taxonomy, where an item does not belong to the
-  # "category" taxonomy so much as to one of the variants within the taxonomy.
+  # "category" taxonomy so much as to one of the variants *within* the taxonomy.
+  #
+  # "Singular"-type taxonomies are simply a convenience for writing a "multiple"
+  # taxonomy which allows only one item to belong to it.  For example, some blog
+  # engines (e.g. Pelican) allow an item to belong to only a single category.
+  # This is equivalent to specifying a `multiple`-type taxonomy (as below) with
+  # `limit: 1`, but is common enough that it has its own syntax.
   #
   # The "default" key allows you to specify a default value for items.
   #
@@ -138,20 +161,32 @@ structure:
           list: authors.html  # All authors
           item: author.html  # Everything authored by me
 
-    # If we set a `limit` explicitly, the taxonomy allow only that many
-    # variants per item. So in this case, an item may be in at most 1 category.
+    # `singular` taxonomies allow only a single entry in the taxonomy for any
+    # specific item.
+    #
     # Here, we also set a default category of "Blog", so any item which does not
     # specify a category will automatically be included in the "Blog" category.
     - category:
-        type: multiple
+        type: singular
         default: Blog
-        limit: 1
         required: false
         hierarchical: false
         templates:
           list: categories.html  # All categories
-          item: category.html  # Things categorized as "Tech"
+          item: category.html  # E.g. things categorized as "Tech"
 
+    # `multiple` taxonomies are identical with `singular` taxonomies except that
+    # they allow more than of the taxonomy item to appear. This is useful if,
+    # for example, you wish to support a traditional `tag`-like taxonomy, or the
+    # ability to nest categories. By default (i.e. if you do not include the
+    # `limit` field), the taxonomy supports inclusion of an unlimited number of
+    # taxonomy items.
+    #
+    # If we set a `limit` explicitly, the taxonomy allows only that many
+    # variants per item. You could, for example, decide to keep your tagging
+    # system sane by setting a limit of 5 tags per post: you wouldn't want
+    # things to get out of hand, after all!
+    #
     # You can also make an unlimited taxonomy explicitly, by setting the
     # `limit` to `~`, which is "null" in YAML. So here, a post may have as many
     # tags as you like.
@@ -172,28 +207,73 @@ structure:
     - date:  # TODO: these might be wrong re:Pelican, so confirm
         type: temporal
         required: false
+        # The `format` defaults to `"%Y-%m-%d %H:%M %P"`, which corresponds to
+        # `2017-01-01 12:01 am` for 1 minute after midnight on January 1, 2017.
+        # See [the formatting docs] for `chrono::format::strftime` function for
+        # other options.
+        #
+        # [the formatting docs]: https://docs.rs/chrono/0.3.1/chrono/format/strftime/index.html#specifiers
+        format:
         templates:
           list: period_archives.html
           item: archives.html
 
     # It is easy to define a page-style taxonomy: simply use `type: binary` and
-    # then on a piece of content set e.g. `page: true`. If you want all items
-    # to belong to a taxonomy by default and to opt, you may set `default: true`.
+    # then on a piece of content set e.g. `page: true`. If you want all items to
+    # belong to a taxonomy by default and to opt, you may set `default: true`.
     - page:
         type: binary
         hierarchical: true
+        # Note that in the case of a `binary` template, the `list` template
+        # defines a page which lists all pages.
         templates:
           # list: pages.html  # If I wanted a page where I listed all pages...
-          item: page.html
+          item: page.html  # The template for each individual page
+
+    - series:
+        type: singular
+        hierarchical: false
+        # The `fields` are used to specify a taxonomy when it includes more data
+        # than simply the name. For example, in the case of a "series," the
+        # series has a name, but each item in it also includes a "part", so that
+        # an item is ultimately taxonomized as being something like
+        # "Series Foo, Part 2" from input data like this:
+        #
+        # ```yaml
+        # Series:
+        #   Name: Foo
+        #   Part: 2
+        # ```
+        #
+        # `fields` may be `required` (the item will fail to build and an error will be logged if the taxonomy
+        # is specified but not all its required fields are set) or `optional` (the item will build fine).
+        fields:
+          required:
+            - name
+            - part
+          optional: ~
+        # Note that if `item` is not set, it will fall back to the default
+        # item template.
+        templates:
+          list: series-list.html  # the list of all series on the site
+          item: series.html  # the template for each individual series
 
   feeds:
-    # If engine is commented out or removed, no feeds will be generated. If it
-    # is included, a full RSS feed of every time-categorized item on the site
+    # If all engines are commented out or removed, no feeds will be generated.
+    # If it is included, a full feed of every time-categorized item on the site
     # will be generated. (NOTE: If there are no `temporal` taxonomies, feed
-    # items will will be generated.)
-    engine: RSS  # `RSS` or `Atom`
+    # items will not be generated.) The default configuration generates [RSS],
+    # [Atom], and [JSON] feeds.
+    #
+    # [RSS]: http://cyber.harvard.edu/rss/rss.html
+    # [Atom]: https://tools.ietf.org/html/rfc4287
+    # [JSON]: https://jsonfeed.org
+    engines:
+      - RSS
+      # - Atom
+      - JSON
 
-    # Generate additional feeds be
+    # Specify additional feeds to be generated.
     additional:
 
       # The 'taxonomies' block allows you to specify taxonomies for which you
@@ -205,6 +285,7 @@ structure:
       taxonomies:
         - category
         - tag
+        - series
 
       # TODO: Something like this---
       custom:
