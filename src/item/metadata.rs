@@ -8,7 +8,7 @@ use std::error::Error;
 // Third-party
 use chrono::{DateTime, FixedOffset, Local, LocalResult, ParseError, TimeZone};
 use chrono::NaiveDateTime;
-use yaml_rust::{YamlLoader};
+use yaml_rust::YamlLoader;
 
 // First-party
 use yaml_util::*;
@@ -73,14 +73,15 @@ impl Metadata {
         let title = case_insensitive_string("title", yaml, Required::No)?
             .unwrap_or("".into());
 
-        let naive_date_time_result = case_insensitive_string("date", yaml, Required::No)?
-            .map(|supplied_value| NaiveDateTime::parse_from_str(&supplied_value, date_format));
+        let naive_date_time_result =
+            case_insensitive_string("date", yaml, Required::No)?
+                .map(|supplied_value| NaiveDateTime::parse_from_str(&supplied_value, date_format));
 
         // TODO: extract into function; this is gross.
         let date = match naive_date_time_result {
             Some(Err(parse_error)) => {
                 return Err(format!("{}", parse_error));
-            },
+            }
             Some(Ok(ndt)) => {
                 let offset = if let Some(offset) = tz {
                     offset
@@ -95,7 +96,7 @@ impl Metadata {
                     LocalResult::Ambiguous(_, _) => None,
                     LocalResult::Single(dt) => Some(dt),
                 }
-            },
+            }
             None => None,
         };
 

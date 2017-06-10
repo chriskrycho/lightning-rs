@@ -69,7 +69,7 @@ impl Taxonomy {
                         hierarchical: Self::is_hierarchical(hash)?,
                     }
                 )
-            },
+            }
             SINGULAR => {
                 Ok(
                     Taxonomy::Singular {
@@ -81,7 +81,7 @@ impl Taxonomy {
                         fields: Vec::new(),
                     }
                 )
-            },
+            }
             MULTIPLE => {
                 Ok(
                     Taxonomy::Multiple {
@@ -94,7 +94,7 @@ impl Taxonomy {
                         fields: Vec::new(),
                     }
                 )
-            },
+            }
             TEMPORAL => {
                 Ok(
                     Taxonomy::Temporal {
@@ -103,7 +103,7 @@ impl Taxonomy {
                         required: Self::is_required(hash)?,
                     }
                 )
-            },
+            }
             _ => Err(format!("Invalid taxonomy type `{:?}` in {:?}", taxonomy_type, hash)),
         }
     }
