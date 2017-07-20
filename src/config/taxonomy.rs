@@ -62,49 +62,45 @@ impl Taxonomy {
 
         match taxonomy_type {
             BINARY => {
-                Ok(
-                    Taxonomy::Binary {
-                        name: name,
-                        templates: templates,
-                        hierarchical: Self::is_hierarchical(hash)?,
-                    }
-                )
+                Ok(Taxonomy::Binary {
+                    name: name,
+                    templates: templates,
+                    hierarchical: Self::is_hierarchical(hash)?,
+                })
             }
             SINGULAR => {
-                Ok(
-                    Taxonomy::Singular {
-                        name: name,
-                        templates: templates,
-                        default: Self::default_value(hash)?,
-                        hierarchical: Self::is_hierarchical(hash)?,
-                        required: Self::is_required(hash)?,
-                        fields: Vec::new(),
-                    }
-                )
+                Ok(Taxonomy::Singular {
+                    name: name,
+                    templates: templates,
+                    default: Self::default_value(hash)?,
+                    hierarchical: Self::is_hierarchical(hash)?,
+                    required: Self::is_required(hash)?,
+                    fields: Vec::new(),
+                })
             }
             MULTIPLE => {
-                Ok(
-                    Taxonomy::Multiple {
-                        name: name,
-                        templates: templates,
-                        default: Self::default_value(hash)?,
-                        hierarchical: Self::is_hierarchical(hash)?,
-                        required: Self::is_required(hash)?,
-                        limit: Self::limit(hash)?,
-                        fields: Vec::new(),
-                    }
-                )
+                Ok(Taxonomy::Multiple {
+                    name: name,
+                    templates: templates,
+                    default: Self::default_value(hash)?,
+                    hierarchical: Self::is_hierarchical(hash)?,
+                    required: Self::is_required(hash)?,
+                    limit: Self::limit(hash)?,
+                    fields: Vec::new(),
+                })
             }
             TEMPORAL => {
-                Ok(
-                    Taxonomy::Temporal {
-                        name: name,
-                        templates: templates,
-                        required: Self::is_required(hash)?,
-                    }
-                )
+                Ok(Taxonomy::Temporal {
+                    name: name,
+                    templates: templates,
+                    required: Self::is_required(hash)?,
+                })
             }
-            _ => Err(format!("Invalid taxonomy type `{:?}` in {:?}", taxonomy_type, hash)),
+            _ => Err(format!(
+                "Invalid taxonomy type `{:?}` in {:?}",
+                taxonomy_type,
+                hash
+            )),
         }
     }
 
@@ -165,12 +161,10 @@ impl Templates {
         let item = Self::item_from_yaml(template_yaml)?;
         let list = Self::list_from_yaml(template_yaml)?;
 
-        Ok(
-            Templates {
-                item: item,
-                list: list,
-            }
-        )
+        Ok(Templates {
+            item: item,
+            list: list,
+        })
     }
 
     /// Get the `item` value for a taxonomy's templates.
@@ -180,7 +174,7 @@ impl Templates {
             yaml[&Yaml::from_str(key)]
                 .as_str()
                 .ok_or(key_of_type(key, Required::Yes, yaml, "string"))?
-                .into()
+                .into(),
         )
     }
 

@@ -3,6 +3,7 @@
   <component name="ProjectRootManager" version="2" languageLevel="JDK_1_6" default="true" />
   <component name="RustProjectSettings">
     <option name="toolchainHomeDirectory" value="$USER_HOME$/.cargo/bin" />
+    <option name="useCargoCheckForBuild" value="true" />
   </component>
   <component name="masterDetails">
     <states>

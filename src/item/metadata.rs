@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::error::Error;
 
 // Third-party
-use chrono::{DateTime, FixedOffset, Local, LocalResult, ParseError, TimeZone};
+use chrono::{DateTime, FixedOffset, Local, LocalResult, TimeZone};
 use chrono::NaiveDateTime;
 use yaml_rust::YamlLoader;
 
@@ -43,11 +43,10 @@ impl Metadata {
         taxonomy_configs: &Vec<Taxonomy>,
     ) -> Result<Metadata, String> {
 
-        let metadata =
-            extract_metadata(&content)
-                .ok_or(
-                    format!("content passed to `Metadata::parse` has no metadata and no default"),
-                )?;
+        let metadata = extract_metadata(&content)
+            .ok_or(format!(
+                "content passed to `Metadata::parse` has no metadata and no default"
+            ))?;
 
         let bad_yaml_message = |reason: &str| {
             format!(
@@ -68,33 +67,35 @@ impl Metadata {
             .ok_or(bad_yaml_message("could not parse item as metadata hash"))?;
 
         let slug = case_insensitive_string("slug", yaml, Required::No)?
-            .unwrap_or(defaults.slug);
+            .unwrap_or(defaults.slug.clone());
 
         let title = case_insensitive_string("title", yaml, Required::No)?
             .unwrap_or("".into());
 
-        let naive_date_time_result =
-            case_insensitive_string("date", yaml, Required::No)?
-                .map(|supplied_value| NaiveDateTime::parse_from_str(&supplied_value, date_format));
+        // TODO: use taxonomy configs or fall back to defaults.
+        let naive_date_time_result = case_insensitive_string("date", yaml, Required::No)?
+            .map(|supplied_value| {
+                NaiveDateTime::parse_from_str(&supplied_value, date_format)
+            });
 
         // TODO: extract into function; this is gross.
         let date = match naive_date_time_result {
             Some(Err(parse_error)) => {
                 return Err(format!("{}", parse_error));
             }
-            Some(Ok(ndt)) => {
+            Some(Ok(naive_date_time)) => {
                 let offset = if let Some(offset) = tz {
                     offset
                 } else {
                     let local = Local;
-                    let local_offset = local.offset_from_local_datetime(&ndt).single();
+                    let local_offset = local.offset_from_local_datetime(&naive_date_time).single();
                     local_offset.unwrap_or(FixedOffset::east(0))
                 };
 
-                match offset.from_local_datetime(&ndt) {
+                match offset.from_local_datetime(&naive_date_time) {
                     LocalResult::None |
                     LocalResult::Ambiguous(_, _) => None,
-                    LocalResult::Single(dt) => Some(dt),
+                    LocalResult::Single(date_time) => Some(date_time),
                 }
             }
             None => None,
@@ -103,15 +104,13 @@ impl Metadata {
         let taxonomies = HashMap::new();
         let other = HashMap::new();
 
-        Ok(
-            Metadata {
-                date,
-                title,
-                slug,
-                taxonomies,
-                other,
-            }
-        )
+        Ok(Metadata {
+            date,
+            title,
+            slug,
+            taxonomies,
+            other,
+        })
     }
 }
 

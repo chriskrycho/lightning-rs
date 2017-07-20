@@ -84,9 +84,9 @@ layout:
   directory: layout
 
   # TODO/aspirational: Specify the template engine to use.
-  # engine:
+  # engine: handlebars
 
-  # There are several required templates whcih are necessary to build any site.
+  # There are several required templates which are necessary to build any site.
   # The files themselves may be named whatever you like, but these keys must be
   # set and the corresponding files must exist at the specified paths within the
   # directory. Template paths here and as specified for taxonomies are
@@ -155,27 +155,27 @@ layout:
     # number of authors for each post. Since there is no default tag, items
     # without tags set explicitly will not be associated with any tag. (You
     # could also specify this explicitly by setting `default: ~`.)
-    - author:
-        type: multiple
-        required: true
-        hierarchical: false
-        templates:
-          list: authors.html  # All authors
-          item: author.html  # Everything authored by me
+    author:
+      type: multiple
+      required: true
+      hierarchical: false
+      templates:
+        list: authors.html  # All authors
+        item: author.html  # Everything authored by me
 
     # `singular` taxonomies allow only a single entry in the taxonomy for any
     # specific item.
     #
     # Here, we also set a default category of "Blog", so any item which does not
     # specify a category will automatically be included in the "Blog" category.
-    - category:
-        type: singular
-        default: Blog
-        required: false
-        hierarchical: false
-        templates:
-          list: categories.html  # All categories
-          item: category.html  # E.g. things categorized as "Tech"
+    category:
+      type: singular
+      default: Blog
+      required: false
+      hierarchical: false
+      templates:
+        list: categories.html  # All categories
+        item: category.html  # E.g. things categorized as "Tech"
 
     # `multiple` taxonomies are identical with `singular` taxonomies except that
     # they allow more than of the taxonomy item to appear. This is useful if,
@@ -192,73 +192,73 @@ layout:
     # You can also make an unlimited taxonomy explicitly, by setting the
     # `limit` to `~`, which is "null" in YAML. So here, a post may have as many
     # tags as you like.
-    - tag:
-        type: multiple
-        limit: ~
-        required: false
-        hierarchical: false
-        templates:
-          list: tags.html  # All tags
-          item: tag.html  # Things tagged "rust"
+    tag:
+      type: multiple
+      limit: ~
+      required: false
+      hierarchical: false
+      templates:
+        list: tags.html  # All tags
+        item: tag.html  # Things tagged "rust"
 
     # Note: the `date` taxonomy is normally implicit, and automatically
     # associated with any piece of content stamped with a `date` field. You
     # only need to define it explicitly if you want to customize the associated
     # templates, or if you want to use something besides `date` to specify the
     # time stamp for a given item. The `limit` field here is *always* ignored.
-    - date:  # TODO: these might be wrong re:Pelican, so confirm
-        type: temporal
-        required: false
-        # The `format` defaults to `"%Y-%m-%d %H:%M %P"`, which corresponds to
-        # `2017-01-01 12:01 am` for 1 minute after midnight on January 1, 2017.
-        # See [the formatting docs] for `chrono::format::strftime` function for
-        # other options.
-        #
-        # [the formatting docs]: https://docs.rs/chrono/0.3.1/chrono/format/strftime/index.html#specifiers
-        format:
-        templates:
-          list: period_archives.html
-          item: archives.html
+    date:  # TODO: these might be wrong re:Pelican, so confirm
+      type: temporal
+      required: false
+      # The `format` defaults to `"%Y-%m-%d %H:%M %P"`, which corresponds to
+      # `2017-01-01 12:01 am` for 1 minute after midnight on January 1, 2017.
+      # See [the formatting docs] for `chrono::format::strftime` function for
+      # other options.
+      #
+      # [the formatting docs]: https://docs.rs/chrono/0.3.1/chrono/format/strftime/index.html#specifiers
+      format:
+      templates:
+        list: period_archives.html
+        item: archives.html
 
     # It is easy to define a page-style taxonomy: simply use `type: binary` and
     # then on a piece of content set e.g. `page: true`. If you want all items to
     # belong to a taxonomy by default and to opt, you may set `default: true`.
-    - page:
-        type: binary
-        hierarchical: true
-        # Note that in the case of a `binary` template, the `list` template
-        # defines a page which lists all pages.
-        templates:
-          # list: pages.html  # If I wanted a page where I listed all pages...
-          item: page.html  # The template for each individual page
+    page:
+      type: binary
+      hierarchical: true
+      # Note that in the case of a `binary` template, the `list` template
+      # defines a page which lists all pages.
+      templates:
+        # list: pages.html  # If I wanted a page where I listed all pages...
+        item: page.html  # The template for each individual page
 
-    - series:
-        type: singular
-        hierarchical: false
-        # The `fields` are used to specify a taxonomy when it includes more data
-        # than simply the name. For example, in the case of a "series," the
-        # series has a name, but each item in it also includes a "part", so that
-        # an item is ultimately taxonomized as being something like
-        # "Series Foo, Part 2" from input data like this:
-        #
-        # ```yaml
-        # Series:
-        #   Name: Foo
-        #   Part: 2
-        # ```
-        #
-        # `fields` may be `required` (the item will fail to build and an error will be logged if the taxonomy
-        # is specified but not all its required fields are set) or `optional` (the item will build fine).
-        fields:
-          required:
-            - name
-            - part
-          optional: ~
-        # Note that if `item` is not set, it will fall back to the default
-        # item template.
-        templates:
-          list: series-list.html  # the list of all series on the site
-          item: series.html  # the template for each individual series
+    series:
+      type: singular
+      hierarchical: false
+      # The `fields` are used to specify a taxonomy when it includes more data
+      # than simply the name. For example, in the case of a "series," the
+      # series has a name, but each item in it also includes a "part", so that
+      # an item is ultimately taxonomized as being something like
+      # "Series Foo, Part 2" from input data like this:
+      #
+      # ```yaml
+      # Series:
+      #   Name: Foo
+      #   Part: 2
+      # ```
+      #
+      # `fields` may be `required` (the item will fail to build and an error will be logged if the taxonomy
+      # is specified but not all its required fields are set) or `optional` (the item will build fine).
+      fields:
+        required:
+          - name
+          - part
+        optional: ~
+      # Note that if `item` is not set, it will fall back to the default
+      # item template.
+      templates:
+        list: series-list.html  # the list of all series on the site
+        item: series.html  # the template for each individual series
 
   feeds:
     # If all engines are commented out or removed, no feeds will be generated.
@@ -291,14 +291,14 @@ layout:
 
       # TODO: Something like this---
       custom:
-        - Art and Tech:
-            taxonomies:
-              - category: art
-              - category: tech
-        - Family Poetry:
-            taxonomies:
-              - tag: family
-              - tag: poetry
+        Art and Tech:
+          taxonomies:
+            - category: art
+            - category: tech
+        Family Poetry:
+          taxonomies:
+            - tag: family
+            - tag: poetry
 
 
   # Define rules for other content to include or exclude.

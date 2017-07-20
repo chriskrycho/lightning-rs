@@ -26,35 +26,35 @@ impl Item {
         taxonomies: &Vec<Taxonomy>,
     ) -> Result<Item, String> {
 
-        let defaults = Defaults { slug: slug_from_file_name(file_name)? };
+        let defaults = Defaults {
+            slug: slug_from_file_name(file_name)?,
+        };
 
-        Ok(
-            Item::Unprocessed {
-                content: content.to_string(),
-                metadata: Metadata::from_content(content, defaults, tz, taxonomies)?,
-            }
-        )
+        Ok(Item::Unprocessed {
+            content: content.to_string(),
+            metadata: Metadata::from_content(
+                content,
+                defaults,
+                "%Y-%m-%d %H:%M".into(), // TODO: from config?
+                Some(tz),
+                taxonomies,
+            )?,
+        })
     }
 }
 
 
 fn slug_from_file_name(file_name: &Path) -> Result<String, String> {
-    let stem = file_name
-        .file_stem()
-        .ok_or(
-            format!(
-                "file name `{}` passed to `Metadata::parse` has no stem",
-                file_name.to_string_lossy()
-            )
-        )?;
+    let stem = file_name.file_stem().ok_or(format!(
+        "file name `{}` passed to `Metadata::parse` has no stem",
+        file_name.to_string_lossy()
+    ))?;
 
     let slug = stem.to_str()
-        .ok_or(
-            format!(
-                "file name `{}` passed to `Metadata::parse` has invalid UTF-8",
-                file_name.to_string_lossy()
-            )
-        )?
+        .ok_or(format!(
+            "file name `{}` passed to `Metadata::parse` has invalid UTF-8",
+            file_name.to_string_lossy()
+        ))?
         .into();
 
     Ok(slug)
