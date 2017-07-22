@@ -93,6 +93,7 @@ impl SiteInfo {
     fn parse_metadata(yaml: &yaml::Hash) -> Result<HashMap<String, Yaml>, String> {
         let key = "metadata";
         let mut metadata = HashMap::new();
+        // TODO: don't use `[...]` access here; go back to using `.get()`.
         match yaml[&Yaml::from_str(key)] {
             Yaml::Null => Ok(metadata),
             Yaml::Hash(ref hash) => {

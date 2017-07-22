@@ -68,24 +68,24 @@ impl Config {
             .ok_or("Empty configuration file")?;
         let config_map = yaml_config.as_hash().ok_or("Configuration is not a map")?;
 
-        let structure = Self::get_structure(config_map)?;
+        let layout = Self::get_layout(config_map)?;
 
         Ok(Config {
             site: Self::parse_site_meta(config_map)?,
-            directories: Directories::from_yaml(config_map, &config_path, &structure)?,
-            taxonomies: Self::parse_taxonomies(&structure, &config_path)?,
+            directories: Directories::from_yaml(config_map, &config_path, &layout)?,
+            taxonomies: Self::parse_taxonomies(&layout, &config_path)?,
         })
     }
 
-    fn get_structure<'map>(
+    fn get_layout<'map>(
         config_map: &'map BTreeMap<Yaml, Yaml>,
     ) -> Result<&'map BTreeMap<Yaml, Yaml>, String> {
-        const STRUCTURE: &str = "structure";
+        const LAYOUT: &str = "layout";
         config_map
-            .get(&Yaml::from_str(STRUCTURE))
-            .ok_or(required_key(STRUCTURE, config_map))?
+            .get(&Yaml::from_str(LAYOUT))
+            .ok_or(required_key(LAYOUT, config_map))?
             .as_hash()
-            .ok_or(key_of_type(STRUCTURE, Required::Yes, config_map, "hash"))
+            .ok_or(key_of_type(LAYOUT, Required::Yes, config_map, "hash"))
     }
 
 

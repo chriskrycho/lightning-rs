@@ -31,6 +31,9 @@ impl Item {
             slug: slug_from_file_name(file_name)?,
         };
 
+        // TODO: MetaData::from_content() should probably not require all this
+        // to be passed in like this. Maybe a builder of some sort? Or have it
+        // take some default values?
         Ok(Item::Unprocessed {
             content: content.to_string(),
             metadata: Metadata::from_content(

@@ -5,6 +5,7 @@ authors = ["Chris Krycho <chris@chriskrycho.com>"]
 
 [[bin]]
 name = "lx"
+path = "src/main.rs"
 
 [dependencies]
 chrono = "0.4"
