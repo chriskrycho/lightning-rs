@@ -25,11 +25,15 @@ use self::taxonomy::*;
 const CONFIG_FILE_NAME: &str = "lightning.yaml";
 
 
+pub type Name = String;
+pub type Taxonomies = HashMap<Name, Taxonomy>;
+
+
 #[derive(Debug, PartialEq)]
 pub struct Config {
     pub site: SiteInfo,
     pub directories: Directories,
-    pub taxonomies: Vec<Taxonomy>,
+    pub taxonomies: Taxonomies, 
 }
 
 
@@ -102,7 +106,7 @@ impl Config {
     fn parse_taxonomies(
         structure: &BTreeMap<Yaml, Yaml>,
         config_path: &PathBuf,
-    ) -> Result<HashMap<String, Taxonomy>, String> {
+    ) -> Result<Taxonomies, String> {
         const TAXONOMIES: &str = "taxonomies";
 
         let taxonomies_yaml = structure
@@ -115,7 +119,7 @@ impl Config {
                 config_path
             ))?;
 
-        let mut taxonomies = HashMap::new();
+        let mut taxonomies = Taxonomies::new();
         if taxonomies_yaml.len() == 0 {
             return Ok(taxonomies);
         }

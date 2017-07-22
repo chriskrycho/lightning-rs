@@ -12,15 +12,18 @@ use yaml_rust::YamlLoader;
 
 // First-party
 use yaml_util::*;
+use config::Taxonomies;
 use config::taxonomy::Taxonomy;
 
+
+pub type OtherMetadata = HashMap<String, OtherMetadatum>;
 
 pub struct Metadata {
     pub title: String,
     pub slug: String,
     pub date: Option<DateTime<FixedOffset>>,
-    pub taxonomies: HashMap<String, Vec<String>>,
-    pub other: HashMap<String, OtherMetadata>,
+    pub taxonomies: Taxonomies, 
+    pub other: OtherMetadata, 
 }
 
 pub struct Defaults {
@@ -40,7 +43,7 @@ impl Metadata {
         defaults: Defaults,
         date_format: &str,
         tz: Option<FixedOffset>,
-        taxonomy_configs: &Vec<Taxonomy>,
+        taxonomy_configs: &Taxonomies,
     ) -> Result<Metadata, String> {
 
         let metadata = extract_metadata(&content)
@@ -114,7 +117,7 @@ impl Metadata {
     }
 }
 
-pub enum OtherMetadata {
+pub enum OtherMetadatum {
     SingleLineString(String),
     MultiLineString(String),
     List(Vec<String>),

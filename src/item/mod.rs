@@ -6,6 +6,7 @@ use std::path::Path;
 
 use chrono::FixedOffset;
 
+use config::Taxonomies;
 use config::taxonomy::Taxonomy;
 pub use self::metadata::{Metadata, Defaults};
 
@@ -23,7 +24,7 @@ impl Item {
         content: &str,
         file_name: &Path,
         tz: FixedOffset,
-        taxonomies: &Vec<Taxonomy>,
+        taxonomies: &Taxonomies,
     ) -> Result<Item, String> {
 
         let defaults = Defaults {
