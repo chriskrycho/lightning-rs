@@ -71,7 +71,7 @@ impl Taxonomy {
                 templates: templates,
                 default: Self::default_value(hash)?,
                 hierarchical: Self::is_hierarchical(hash)?,
-                required: Self::is_required(hash)?,
+                required: Self::required_field_value(hash)?,
                 fields: Vec::new(),
             }),
             MULTIPLE => Ok(Taxonomy::Multiple {
@@ -79,20 +79,29 @@ impl Taxonomy {
                 templates: templates,
                 default: Self::default_value(hash)?,
                 hierarchical: Self::is_hierarchical(hash)?,
-                required: Self::is_required(hash)?,
+                required: Self::required_field_value(hash)?,
                 limit: Self::limit(hash)?,
                 fields: Vec::new(),
             }),
             TEMPORAL => Ok(Taxonomy::Temporal {
                 name: name,
                 templates: templates,
-                required: Self::is_required(hash)?,
+                required: Self::required_field_value(hash)?,
             }),
             _ => Err(format!(
                 "Invalid taxonomy type `{:?}` in {:?}",
                 taxonomy_type,
                 hash
             )),
+        }
+    }
+
+    pub fn is_required(&self) -> bool {
+        match self {
+            &Taxonomy::Temporal { required, .. } => required,
+            &Taxonomy::Singular { required, .. } => required,
+            &Taxonomy::Temporal { required, .. } => required,
+            &Taxonomy::Binary { .. } => false,
         }
     }
 
@@ -113,7 +122,7 @@ impl Taxonomy {
         }
     }
 
-    fn is_required(hash: &yaml::Hash) -> Result<bool, String> {
+    fn required_field_value(hash: &yaml::Hash) -> Result<bool, String> {
         let key = "required";
         match hash[&Yaml::from_str(key)] {
             Yaml::Boolean(bool_value) => Ok(bool_value),

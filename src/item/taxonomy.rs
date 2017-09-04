@@ -30,16 +30,19 @@ impl Taxonomy {
         let mut errs = HashMap::new();
 
         for (name, config) in configs {
-            if let Some(value) = metadata.get(&Yaml::from_str(&name)) {
-                match Taxonomy::from_entry(value, name, config) {
+            match metadata.get(&Yaml::from_str(&name)) {
+                None => if config.is_required() {
+                    errs.insert(name.clone(), String::from("is required but not present"));
+                },
+                Some(value) => match Taxonomy::from_entry(value, name, config) {
                     Ok(taxonomy) => {
                         taxonomies.insert(name.clone(), taxonomy);
                     }
                     Err(reason) => {
                         errs.insert(name.clone(), reason);
                     }
-                }
-            };
+                },
+            }
         }
 
         if errs.len() == 0 {
