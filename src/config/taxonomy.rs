@@ -61,41 +61,33 @@ impl Taxonomy {
             .ok_or(key_of_type(TYPE, Required::Yes, hash, "string"))?;
 
         match taxonomy_type {
-            BINARY => {
-                Ok(Taxonomy::Binary {
-                    name: name,
-                    templates: templates,
-                    hierarchical: Self::is_hierarchical(hash)?,
-                })
-            }
-            SINGULAR => {
-                Ok(Taxonomy::Singular {
-                    name: name,
-                    templates: templates,
-                    default: Self::default_value(hash)?,
-                    hierarchical: Self::is_hierarchical(hash)?,
-                    required: Self::is_required(hash)?,
-                    fields: Vec::new(),
-                })
-            }
-            MULTIPLE => {
-                Ok(Taxonomy::Multiple {
-                    name: name,
-                    templates: templates,
-                    default: Self::default_value(hash)?,
-                    hierarchical: Self::is_hierarchical(hash)?,
-                    required: Self::is_required(hash)?,
-                    limit: Self::limit(hash)?,
-                    fields: Vec::new(),
-                })
-            }
-            TEMPORAL => {
-                Ok(Taxonomy::Temporal {
-                    name: name,
-                    templates: templates,
-                    required: Self::is_required(hash)?,
-                })
-            }
+            BINARY => Ok(Taxonomy::Binary {
+                name: name,
+                templates: templates,
+                hierarchical: Self::is_hierarchical(hash)?,
+            }),
+            SINGULAR => Ok(Taxonomy::Singular {
+                name: name,
+                templates: templates,
+                default: Self::default_value(hash)?,
+                hierarchical: Self::is_hierarchical(hash)?,
+                required: Self::is_required(hash)?,
+                fields: Vec::new(),
+            }),
+            MULTIPLE => Ok(Taxonomy::Multiple {
+                name: name,
+                templates: templates,
+                default: Self::default_value(hash)?,
+                hierarchical: Self::is_hierarchical(hash)?,
+                required: Self::is_required(hash)?,
+                limit: Self::limit(hash)?,
+                fields: Vec::new(),
+            }),
+            TEMPORAL => Ok(Taxonomy::Temporal {
+                name: name,
+                templates: templates,
+                required: Self::is_required(hash)?,
+            }),
             _ => Err(format!(
                 "Invalid taxonomy type `{:?}` in {:?}",
                 taxonomy_type,

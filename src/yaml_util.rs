@@ -51,21 +51,15 @@ pub fn case_insensitive_string(
 
     match yaml.get(&upper_key).or(yaml.get(&lower_key)) {
         Some(&Yaml::String(ref value)) => Ok(Some(value.clone())),
-        _ => {
-            match required {
-                Required::No => Ok(None),
-                Required::Yes => {
-                    Err(
-                        key_of_type(
-                            format!("{} (case insensitive)", value).as_str(),
-                            required,
-                            yaml,
-                            "string",
-                        )
-                    )
-                }
-            }
-        }
+        _ => match required {
+            Required::No => Ok(None),
+            Required::Yes => Err(key_of_type(
+                format!("{} (case insensitive)", value).as_str(),
+                required,
+                yaml,
+                "string",
+            )),
+        },
     }
 }
 

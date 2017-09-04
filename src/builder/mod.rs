@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 // Third party
 use chrono::FixedOffset;
 use glob::{glob, Paths};
-use pandoc::{Pandoc, PandocOption, PandocOutput, InputFormat, InputKind, OutputFormat, OutputKind};
+use pandoc::{InputFormat, InputKind, OutputFormat, OutputKind, Pandoc, PandocOption, PandocOutput};
 use syntect::highlighting::ThemeSet;
 
 // First party
@@ -49,8 +49,7 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
 
     // TODO: build from config.
     let theme_file = PathBuf::from("data/base16-harmonic16.light.tmTheme");
-    let theme = &ThemeSet::get_theme(theme_file)
-                     .map_err(|err| format!("{:?}", err))?;
+    let theme = &ThemeSet::get_theme(theme_file).map_err(|err| format!("{:?}", err))?;
 
     let mut pandoc = Pandoc::new();
     pandoc
@@ -82,7 +81,11 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
             }
             Ok(PandocOutput::ToBuffer(string)) => string,
             Err(err) => {
-                return Err(format!("pandoc failed on {}:\n{:?}", path.to_string_lossy(), err));
+                return Err(format!(
+                    "pandoc failed on {}:\n{:?}",
+                    path.to_string_lossy(),
+                    err
+                ));
             }
         };
 
@@ -102,8 +105,7 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
 
 
 fn load_file(path: &Path) -> Result<String, String> {
-    let mut file = File::open(&path)
-        .map_err(|err| format!("{:?}", err.kind()))?;
+    let mut file = File::open(&path).map_err(|err| format!("{:?}", err.kind()))?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)
         .map_err(|err| format!("{:?}", err.kind()))?;
@@ -114,16 +116,13 @@ fn load_file(path: &Path) -> Result<String, String> {
 fn write_file(output_dir: &Path, slug: &str, contents: &str) -> Result<(), String> {
     let path = output_dir.join(slug).with_extension("html");
 
-    let mut fd = File::create(&path)
-        .map_err(
-            |err| {
-                format!(
-                    "Could not open {} for write: {}",
-                    path.to_string_lossy(),
-                    err
-                )
-            }
-        )?;
+    let mut fd = File::create(&path).map_err(|err| {
+        format!(
+            "Could not open {} for write: {}",
+            path.to_string_lossy(),
+            err
+        )
+    })?;
 
     write!(fd, "{}", contents).map_err(|err| format!("{:?}", err.kind()))
 }

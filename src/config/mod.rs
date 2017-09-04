@@ -12,7 +12,7 @@ use std::fs::File;
 use std::path::PathBuf;
 
 // Third-party
-use yaml_rust::{yaml, Yaml, YamlLoader};
+use yaml_rust::{Yaml, YamlLoader};
 
 // First-party
 use validated_types::Url as ValidatedUrl;
@@ -33,7 +33,7 @@ pub type Taxonomies = HashMap<Name, Taxonomy>;
 pub struct Config {
     pub site: SiteInfo,
     pub directories: Directories,
-    pub taxonomies: Taxonomies, 
+    pub taxonomies: Taxonomies,
 }
 
 
@@ -47,10 +47,9 @@ impl Config {
             ));
         }
 
-        let mut file = File::open(&config_path)
-            .map_err(|reason| {
-                format!("Error reading {:?}: {:?}", config_path, reason)
-            })?;
+        let mut file = File::open(&config_path).map_err(|reason| {
+            format!("Error reading {:?}: {:?}", config_path, reason)
+        })?;
 
         let mut contents = String::new();
         match file.read_to_string(&mut contents) {
@@ -177,11 +176,9 @@ impl Directories {
         let output_directory =
             Directories::path_buf_from_yaml(output_directory_yaml, OUTPUT_DIRECTORY, &config_path)?;
 
-        let template_directory_yaml = structure
-            .get(&Yaml::from_str(TEMPLATE_DIRECTORY))
-            .ok_or(
-                required_key(TEMPLATE_DIRECTORY, structure) + &format!(" in {:?}", config_path),
-            )?;
+        let template_directory_yaml = structure.get(&Yaml::from_str(TEMPLATE_DIRECTORY)).ok_or(
+            required_key(TEMPLATE_DIRECTORY, structure) + &format!(" in {:?}", config_path),
+        )?;
 
         let template_directory = Directories::path_buf_from_yaml(
             &template_directory_yaml,
@@ -219,6 +216,6 @@ mod tests {
 
     #[test]
     fn parses_full_config() {
-        unimplemented!();
+        unimplemented!("Wouldn't it be nice to actualy have a test? 😬");
     }
 }

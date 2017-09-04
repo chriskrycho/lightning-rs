@@ -8,12 +8,12 @@ use std::error::Error;
 // Third-party
 use chrono::{DateTime, FixedOffset, Local, LocalResult, TimeZone};
 use chrono::NaiveDateTime;
-use yaml_rust::YamlLoader;
+use yaml_rust::{yaml, Yaml, YamlLoader};
 
 // First-party
 use yaml_util::*;
-use config::Taxonomies;
-use config::taxonomy::Taxonomy;
+use config;
+use item;
 
 
 pub type OtherMetadata = HashMap<String, OtherMetadatum>;
@@ -22,8 +22,8 @@ pub struct Metadata {
     pub title: String,
     pub slug: String,
     pub date: Option<DateTime<FixedOffset>>,
-    pub taxonomies: Taxonomies, 
-    pub other: OtherMetadata, 
+    pub taxonomies: HashMap<String, item::taxonomy::Taxonomy>,
+    pub other: OtherMetadata,
 }
 
 pub struct Defaults {
@@ -33,23 +33,24 @@ pub struct Defaults {
 impl Metadata {
     /// Extract the metadata for an item from its body.
     ///
+    /// - `content`: the content from which to parse the metadata
     /// - `defaults`: used as a fallback wherever the required item is not
     ///   present in the supplied content.
-    /// - `tz`: the time zone to use if the item includes a `Taxonomy::Temporal`
-    ///   field.
+    /// - `date_format`: the date format string to use when parsing a
+    ///   `Taxonomy::Temporal` field.
+    /// - `tz`: the time zone to use when parsing a `Taxonomy::Temporal`
+    ///   fields.
     /// - `taxonomies`:
     pub fn from_content(
         content: &str,
         defaults: Defaults,
         date_format: &str,
         tz: Option<FixedOffset>,
-        taxonomy_configs: &Taxonomies,
+        taxonomy_configs: &config::Taxonomies,
     ) -> Result<Metadata, String> {
-
-        let metadata = extract_metadata(&content)
-            .ok_or(format!(
-                "content passed to `Metadata::parse` has no metadata and no default"
-            ))?;
+        let metadata = extract_metadata(&content).ok_or(format!(
+            "content passed to `Metadata::parse` has no metadata and no default"
+        ))?;
 
         let bad_yaml_message = |reason: &str| {
             format!(
@@ -69,17 +70,15 @@ impl Metadata {
         let yaml = yaml.as_hash()
             .ok_or(bad_yaml_message("could not parse item as metadata hash"))?;
 
-        let slug = case_insensitive_string("slug", yaml, Required::No)?
-            .unwrap_or(defaults.slug.clone());
+        let slug =
+            case_insensitive_string("slug", yaml, Required::No)?.unwrap_or(defaults.slug.clone());
 
-        let title = case_insensitive_string("title", yaml, Required::No)?
-            .unwrap_or("".into());
+        let title = case_insensitive_string("title", yaml, Required::No)?.unwrap_or("".into());
 
         // TODO: use taxonomy configs or fall back to defaults.
-        let naive_date_time_result = case_insensitive_string("date", yaml, Required::No)?
-            .map(|supplied_value| {
-                NaiveDateTime::parse_from_str(&supplied_value, date_format)
-            });
+        let naive_date_time_result = case_insensitive_string("date", yaml, Required::No)?.map(
+            |supplied_value| NaiveDateTime::parse_from_str(&supplied_value, date_format),
+        );
 
         // TODO: extract into function; this is gross.
         let date = match naive_date_time_result {
@@ -96,15 +95,14 @@ impl Metadata {
                 };
 
                 match offset.from_local_datetime(&naive_date_time) {
-                    LocalResult::None |
-                    LocalResult::Ambiguous(_, _) => None,
+                    LocalResult::None | LocalResult::Ambiguous(_, _) => None,
                     LocalResult::Single(date_time) => Some(date_time),
                 }
             }
             None => None,
         };
 
-        let taxonomies = HashMap::new();
+        let taxonomies = item::taxonomy::Taxonomy::from_yaml_hash(&yaml, taxonomy_configs);
         let other = HashMap::new();
 
         Ok(Metadata {
@@ -154,10 +152,6 @@ fn extract_metadata<'c>(content: &'c str) -> Option<String> {
         .join("\n");
 
     Some(metadata)
-}
-
-fn extract_taxonomies(content: &str, config_taxonomies: Vec<Taxonomy>) -> Vec<String> {
-    unimplemented!()
 }
 
 
@@ -253,7 +247,6 @@ Whatever other content...
             extract_metadata(&source),
             Some("Jedi: Luke Skywalker\nRogue: Han Solo\nBadass: Princess Leia".into())
         );
-
     }
 
     #[test]

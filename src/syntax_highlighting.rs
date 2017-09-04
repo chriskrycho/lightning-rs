@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::str;
 
 // Third party
-use quick_xml::{XmlReader, XmlWriter, Element, Event};
+use quick_xml::{Element, Event, XmlReader, XmlWriter};
 use syntect::html::highlighted_snippet_for_string;
 use syntect::highlighting::Theme;
 use syntect::parsing::{SyntaxDefinition, SyntaxSet};
@@ -65,8 +65,9 @@ impl ParseState {
             (NotInBlock, StartPre(Some(language))) => MaybeStartBlock(language),
             (MaybeStartBlock(language), Whitespace) => MaybeStartBlock(language),
             (MaybeStartBlock(language), StartCode) => WillStartCodeBlock(language),
-            (WillStartCodeBlock(language), Text) |
-            (WillStartCodeBlock(language), Whitespace) => InCodeBlock(language),
+            (WillStartCodeBlock(language), Text) | (WillStartCodeBlock(language), Whitespace) => {
+                InCodeBlock(language)
+            }
             (InCodeBlock(_), EndCode) => NotInBlock,
             (_, _) => NotInBlock,
         }
@@ -89,40 +90,34 @@ impl<'e> From<&'e Event> for ParseEvent {
         const WHITE_SPACE: &[u8] = b"";
 
         match *event {
-            Event::Start(ref element) => {
-                match element.name() {
-                    PRE => {
-                        let maybe_class_attr = element
-                            .attributes()
-                            .map(|attr| attr.unwrap())
-                            .filter(|&(attr, _value)| attr == CLASS)
-                            .next();
+            Event::Start(ref element) => match element.name() {
+                PRE => {
+                    let maybe_class_attr = element
+                        .attributes()
+                        .map(|attr| attr.unwrap())
+                        .filter(|&(attr, _value)| attr == CLASS)
+                        .next();
 
-                        if let Some((_attr, value)) = maybe_class_attr {
-                            match str::from_utf8(value) {
-                                Ok(lang) => ParseEvent::StartPre(Some(lang.into())),
-                                Err(_) => ParseEvent::StartPre(None),
-                            }
-                        } else {
-                            ParseEvent::StartPre(None)
+                    if let Some((_attr, value)) = maybe_class_attr {
+                        match str::from_utf8(value) {
+                            Ok(lang) => ParseEvent::StartPre(Some(lang.into())),
+                            Err(_) => ParseEvent::StartPre(None),
                         }
+                    } else {
+                        ParseEvent::StartPre(None)
                     }
-                    CODE => ParseEvent::StartCode,
-                    _ => ParseEvent::Other,
                 }
-            }
-            Event::End(ref element) => {
-                match element.name() {
-                    CODE => ParseEvent::EndCode,
-                    _ => ParseEvent::Other,
-                }
-            }
-            Event::Text(ref element) => {
-                match element.name() {
-                    WHITE_SPACE => ParseEvent::Whitespace,
-                    _ => ParseEvent::Text,
-                }
-            }
+                CODE => ParseEvent::StartCode,
+                _ => ParseEvent::Other,
+            },
+            Event::End(ref element) => match element.name() {
+                CODE => ParseEvent::EndCode,
+                _ => ParseEvent::Other,
+            },
+            Event::Text(ref element) => match element.name() {
+                WHITE_SPACE => ParseEvent::Whitespace,
+                _ => ParseEvent::Text,
+            },
             _ => ParseEvent::Other,
         }
     }

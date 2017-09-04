@@ -1,6 +1,7 @@
 //! Items are the fundamental building blocks of the content of a site.
 
 pub mod metadata;
+pub mod taxonomy;
 
 use std::path::Path;
 
@@ -8,7 +9,7 @@ use chrono::FixedOffset;
 
 use config::Taxonomies;
 use config::taxonomy::Taxonomy;
-pub use self::metadata::{Metadata, Defaults};
+pub use self::metadata::{Defaults, Metadata};
 
 /// A page or post or other such *item* of content.
 pub enum Item {
@@ -26,7 +27,6 @@ impl Item {
         tz: FixedOffset,
         taxonomies: &Taxonomies,
     ) -> Result<Item, String> {
-
         let defaults = Defaults {
             slug: slug_from_file_name(file_name)?,
         };

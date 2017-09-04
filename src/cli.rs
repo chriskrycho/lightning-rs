@@ -51,8 +51,12 @@ pub fn cli() -> Command {
     // likely, our *configuration* of clap's) fault. In any case... `unwrap()`
     // at will, commander!
     match matches.subcommand_name().unwrap() {
-        INIT => Init { site: site_directory(matches.subcommand_matches(INIT).unwrap()) },
-        BUILD => Build { site: site_directory(matches.subcommand_matches(BUILD).unwrap()) },
+        INIT => Init {
+            site: site_directory(matches.subcommand_matches(INIT).unwrap()),
+        },
+        BUILD => Build {
+            site: site_directory(matches.subcommand_matches(BUILD).unwrap()),
+        },
         CREATE => Create,
         SERVE => Serve,
         _ => panic!("ERROR: `clap.rs` is configured wrong somehow, kids."),
