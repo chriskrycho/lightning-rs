@@ -20,7 +20,7 @@ pub struct Directories {
 
 
 impl Directories {
-    fn from_yaml(
+    pub fn from_yaml(
         config_map: &BTreeMap<Yaml, Yaml>,
         config_path: &PathBuf,
         structure: &BTreeMap<Yaml, Yaml>,

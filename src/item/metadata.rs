@@ -8,7 +8,7 @@ use std::error::Error;
 // Third-party
 use chrono::{DateTime, FixedOffset, Local, LocalResult, TimeZone};
 use chrono::NaiveDateTime;
-use yaml_rust::{yaml, Yaml, YamlLoader};
+use yaml_rust::YamlLoader;
 
 // First-party
 use yaml_util::*;
@@ -102,7 +102,9 @@ impl Metadata {
             None => None,
         };
 
-        let taxonomies = item::taxonomy::Taxonomy::from_yaml_hash(&yaml, taxonomy_configs);
+        // This isn't amazing but it gets the job done. I could just as well do
+        // it inside the Taxonomy::from_yaml call, I think.
+        let taxonomies = item::taxonomy::Taxonomy::from_yaml_hash(&yaml, taxonomy_configs)?;
         let other = HashMap::new();
 
         Ok(Metadata {
