@@ -100,7 +100,7 @@ impl Taxonomy {
         match self {
             &Taxonomy::Temporal { required, .. } => required,
             &Taxonomy::Singular { required, .. } => required,
-            &Taxonomy::Temporal { required, .. } => required,
+            &Taxonomy::Multiple { required, .. } => required,
             &Taxonomy::Binary { .. } => false,
         }
     }
