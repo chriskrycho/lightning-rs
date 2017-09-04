@@ -12,6 +12,7 @@ use config::templates::Templates;
 
 #[derive(Debug, PartialEq)]
 pub enum Taxonomy {
+    // TODO: what would it even *mean* for `Binary` to be hierarchical?
     Binary {
         name: String,
         templates: Templates,

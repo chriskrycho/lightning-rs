@@ -225,7 +225,7 @@ layout:
     # belong to a taxonomy by default and to opt, you may set `default: true`.
     page:
       type: binary
-      hierarchical: true
+      hierarchical: true  # TODO: Does this make any sense?
       # Note that in the case of a `binary` template, the `list` template
       # defines a page which lists all pages.
       templates:
