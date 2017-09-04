@@ -8,7 +8,6 @@ use std::path::Path;
 use chrono::FixedOffset;
 
 use config::Taxonomies;
-use config::taxonomy::Taxonomy;
 pub use self::metadata::{Defaults, Metadata};
 
 /// A page or post or other such *item* of content.

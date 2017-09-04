@@ -21,9 +21,9 @@ impl Taxonomy {
         configs: &config::Taxonomies,
     ) -> HashMap<String, Taxonomy> {
         let mut taxonomies = HashMap::new();
-        for key in configs.keys() {
+        for (key, config) in configs {
             if let Some(value) = metadata.get(&Yaml::from_str(&key)) {
-                if let Some(taxonomy) = Taxonomy::from_entry(value) {
+                if let Some(taxonomy) = Taxonomy::from_entry(value, config) {
                     taxonomies.insert(key.clone(), taxonomy);
                 }
             };
@@ -32,7 +32,7 @@ impl Taxonomy {
         taxonomies
     }
 
-    fn from_entry(yaml: &Yaml) -> Option<Taxonomy> {
-        unimplemented!("Need to parse each YAML hash item into a `Taxonomy`");
+    fn from_entry(yaml: &Yaml, config: &config::taxonomy::Taxonomy) -> Option<Taxonomy> {
+        unimplemented!()
     }
 }
