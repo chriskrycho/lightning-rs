@@ -104,7 +104,13 @@ layout:
     # The `item` specifies the layout of individual content items on the site.
     item: item.html
 
-  # Each taxonomy may be one of "boolean", "singular", "multiple", or
+  # Define how to interpret taxonomies.
+  taxonomy_rules:
+    # Treat YAML string values made up of a comma-separated items as a *list*
+    # instead of as a single string
+    commas_as_lists: true
+
+  # Each taxonomy may be one of "boolean", "categorical", "taglike", or
   # "temporal". These options are mutually exclusive: a taxonomy may use time
   # *or* it may define its own structure, but sad to say, we don't get to define
   # the structure of time itself (unless you're a [Time Lord], in which case I
@@ -112,13 +118,13 @@ layout:
   #
   # [Time Lord]: https://en.wikipedia.org/wiki/Time_Lord
   #
-  # "Multiple"-type taxonomies have as many variants as you define. You might
+  # "TagLike"-type taxonomies have as many variants as you define. You might
   # have both "Tech" and "Art" as categories, for example. Boolean taxonomies do
-  # not have multiple variants; so e.g. in this setup an item is a "page" or it
+  # not have tag-like variants; so e.g. in this setup an item is a "page" or it
   # is not---unlike the category taxonomy, where an item does not belong to the
   # "category" taxonomy so much as to one of the variants *within* the taxonomy.
   #
-  # "Singular"-type taxonomies are simply a convenience for writing a "multiple"
+  # "Singular"-type taxonomies are simply a convenience for writing a "taglike"
   # taxonomy which allows only one item to belong to it.  For example, some blog
   # engines (e.g. Pelican) allow an item to belong to only a single category.
   # This is equivalent to specifying a `multiple`-type taxonomy (as below) with
@@ -156,7 +162,7 @@ layout:
     # without tags set explicitly will not be associated with any tag. (You
     # could also specify this explicitly by setting `default: ~`.)
     author:
-      type: multiple
+      type: taglike
       required: true
       hierarchical: false
       templates:
@@ -193,7 +199,7 @@ layout:
     # `limit` to `~`, which is "null" in YAML. So here, a post may have as many
     # tags as you like.
     tag:
-      type: multiple
+      type: taglike
       limit: ~
       required: false
       hierarchical: false
@@ -220,13 +226,12 @@ layout:
         list: period_archives.html
         item: archives.html
 
-    # It is easy to define a page-style taxonomy: simply use `type: binary` and
+    # It is easy to define a page-style taxonomy: simply use `type: boolean` and
     # then on a piece of content set e.g. `page: true`. If you want all items to
     # belong to a taxonomy by default and to opt, you may set `default: true`.
     page:
-      type: binary
-      hierarchical: true  # TODO: Does this make any sense?
-      # Note that in the case of a `binary` template, the `list` template
+      type: boolean
+      # Note that in the case of a `boolean` template, the `list` template
       # defines a page which lists all pages.
       templates:
         # list: pages.html  # If I wanted a page where I listed all pages...

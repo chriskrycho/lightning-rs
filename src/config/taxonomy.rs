@@ -10,34 +10,96 @@ use yaml_util::*;
 use config::templates::Templates;
 
 
+/// A `config::Taxonomy` represents a way of *defining* taxonomies for a site.
+///
+/// Each taxonomy may be one of "boolean", "categorical", "taglike", or
+/// "temporal". These options are mutually exclusive: a taxonomy may use time
+/// *or* it may define its own structure, but sad to say, we don't get to define
+/// the structure of time itself (unless you're a [Time Lord], in which case I
+/// would like to borrow your TARDIS).
+///
+/// [Time Lord]: https://en.wikipedia.org/wiki/Time_Lord
 #[derive(Debug, PartialEq)]
 pub enum Taxonomy {
-    // TODO: what would it even *mean* for `Binary` to be hierarchical?
-    Binary {
+    /// A taxonomy to which an item either belongs or does not.
+    ///
+    /// For example, in many CMS setups, an item is either a standalone "page"
+    /// or *not*.
+    ///
+    /// Boolean taxonomies do not have multiple variants; so e.g. in this setup
+    /// an item is a "page" or it is not---unlike a `Multiple` taxonomy, where
+    /// an item does not belong to e.g. the "category" taxonomy so much as to
+    /// one of the variants *within* the taxonomy.
+    Boolean { name: String, templates: Templates },
+
+    /// "TagLike"-type taxonomies have as many variants as you define. You
+    /// might have both "Tech" and "Art" as categories, for example. Then an
+    /// item could belong to both of them, if it were about digital art
+    /// creation.
+    TagLike {
+        /// The name of the taxonomy.
         name: String,
-        templates: Templates,
-        hierarchical: bool,
-    },
-    Singular {
-        name: String,
+
+        /// The `fields` are used to specify a taxonomy when it includes more
+        /// data than simply the name. For example, in the case of a "series,"
+        /// the series has a name, but each item in it also includes a "part",
+        /// so that an item is ultimately taxonomized as being something like
+        /// "Series Foo, Part 2" from input data like this:
+        ///
+        /// ```yaml
+        /// Series:
+        ///   Name: Foo
+        ///   Part: 2
+        /// ```
+        ///
+        /// `fields` may be `required` (the item will fail to build and an error
+        /// will be logged if the taxonomy is specified but not all its required
+        /// fields are set) or `optional` (the item will build fine).
         fields: Vec<String>,
+
+        /// The templates to use in generating this taxonomy.
         templates: Templates,
+
+        /// The "default" key allows you to specify a default value for items.
         default: Option<String>,
+
+        /// Use the "limit" field to specify whether a multiple-variant taxonomy
+        /// may have more than one field applied. The field may be implicitly
+        /// set to null by leaving it out, or explicitly set to null with `~`.
+        /// If set, it must be a number greater than 0. (Other values will be
+        /// treated as errors.) See examples below.
+        limit: Option<usize>,
+
+        /// The "required" key may be set for any field which is required for
+        /// all pieces of content (e.g. on many sites, "author" might be
+        /// required).
         required: bool,
+
+        /// Use the `hierarchical` field to specify (`true` or `false`) whether
+        /// a taxonomy may be nested, e.g. "Parent Category -> Child Category".
+        /// Taxonomies are implicitly defined with `hierarchical: false` if the
+        /// field is not included explicitly.
         hierarchical: bool,
     },
-    Multiple {
-        name: String,
-        fields: Vec<String>,
-        templates: Templates,
-        default: Option<String>,
-        limit: Option<u8>,
-        required: bool,
-        hierarchical: bool,
-    },
+
+    /// `Temporal` taxonomies represent time -- usually as a *date*.
+    ///
+    /// Note: the `date` taxonomy is normally implicit, and automatically
+    /// associated with any piece of content stamped with a `date` field. You
+    /// only need to define it explicitly if you want to customize the
+    /// associated templates, or if you want to use something besides `date` to
+    /// specify the time stamp for a given item. The `limit` field here is
+    /// *always* ignored.
     Temporal {
+        /// The name of the taxonomy.
         name: String,
+
+        /// The templates to use in generating this taxonomy.
         templates: Templates,
+
+        /// The "required" key may be set for any field which is required for
+        /// all pieces of content (e.g. on many sites, "author" might be
+        /// required).
         required: bool,
     },
 }
@@ -46,9 +108,9 @@ pub enum Taxonomy {
 impl Taxonomy {
     pub fn from_yaml(hash: &yaml::Hash, name: &str) -> Result<Taxonomy, String> {
         const TYPE: &str = "type";
-        const BINARY: &str = "binary";
+        const BOOLEAN: &str = "boolean";
         const SINGULAR: &str = "singular";
-        const MULTIPLE: &str = "multiple";
+        const TAGLIKE: &str = "multiple";
         const TEMPORAL: &str = "temporal";
 
         let name = String::from(name);
@@ -61,20 +123,22 @@ impl Taxonomy {
             .ok_or(key_of_type(TYPE, Required::Yes, hash, "string"))?;
 
         match taxonomy_type {
-            BINARY => Ok(Taxonomy::Binary {
+            BOOLEAN => Ok(Taxonomy::Boolean {
                 name: name,
                 templates: templates,
-                hierarchical: Self::is_hierarchical(hash)?,
             }),
-            SINGULAR => Ok(Taxonomy::Singular {
+
+            SINGULAR => Ok(Taxonomy::TagLike {
                 name: name,
                 templates: templates,
                 default: Self::default_value(hash)?,
                 hierarchical: Self::is_hierarchical(hash)?,
                 required: Self::required_field_value(hash)?,
+                limit: Some(1),
                 fields: Vec::new(),
             }),
-            MULTIPLE => Ok(Taxonomy::Multiple {
+
+            TAGLIKE => Ok(Taxonomy::TagLike {
                 name: name,
                 templates: templates,
                 default: Self::default_value(hash)?,
@@ -83,11 +147,13 @@ impl Taxonomy {
                 limit: Self::limit(hash)?,
                 fields: Vec::new(),
             }),
+
             TEMPORAL => Ok(Taxonomy::Temporal {
                 name: name,
                 templates: templates,
                 required: Self::required_field_value(hash)?,
             }),
+
             _ => Err(format!(
                 "Invalid taxonomy type `{:?}` in {:?}",
                 taxonomy_type,
@@ -98,10 +164,9 @@ impl Taxonomy {
 
     pub fn is_required(&self) -> bool {
         match self {
+            &Taxonomy::Boolean { .. } => false,
+            &Taxonomy::TagLike { required, .. } => required,
             &Taxonomy::Temporal { required, .. } => required,
-            &Taxonomy::Singular { required, .. } => required,
-            &Taxonomy::Multiple { required, .. } => required,
-            &Taxonomy::Binary { .. } => false,
         }
     }
 
@@ -301,12 +366,12 @@ mod tests {
     }
 
     #[test]
-    fn parses_binary() {
+    fn parses_boolean() {
         let taxonomy_name = "page";
         let taxonomy = format!(
             "
 {}:
-    type: binary
+    type: boolean
     hierarchical: true
     templates:
         item: page.html
@@ -314,9 +379,8 @@ mod tests {
             taxonomy_name
         );
 
-        let expected = Taxonomy::Binary {
+        let expected = Taxonomy::Boolean {
             name: "page".into(),
-            hierarchical: true,
             templates: Templates {
                 item: "page.html".into(),
                 list: None,

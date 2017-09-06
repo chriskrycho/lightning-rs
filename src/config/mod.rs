@@ -32,10 +32,17 @@ pub type Taxonomies = HashMap<Name, Taxonomy>;
 
 
 #[derive(Debug, PartialEq)]
+pub struct Rules {
+    pub commasAsLists: bool,
+}
+
+
+#[derive(Debug, PartialEq)]
 pub struct Config {
     pub site: SiteInfo,
     pub directories: Directories,
     pub taxonomies: Taxonomies,
+    pub rules: Rules,
 }
 
 
@@ -70,11 +77,13 @@ impl Config {
         let config_map = yaml_config.as_hash().ok_or("Configuration is not a map")?;
 
         let layout = Self::get_layout(config_map)?;
+        let rules = Self::get_rules(&layout)?;
 
         Ok(Config {
             site: Self::parse_site_meta(config_map)?,
             directories: Directories::from_yaml(config_map, &config_path, &layout)?,
             taxonomies: Self::parse_taxonomies(&layout, &config_path)?,
+            rules: Self::parse_rules(&rules),
         })
     }
 
@@ -87,6 +96,15 @@ impl Config {
             .ok_or(required_key(LAYOUT, config_map))?
             .as_hash()
             .ok_or(key_of_type(LAYOUT, Required::Yes, config_map, "hash"))
+    }
+
+
+    fn get_rules<'l>(layout: &'l BTreeMap<Yaml, Yaml>) -> Result<&'l BTreeMap<Yaml, Yaml>, String> {
+        const RULES: &str = "taxonomy_rules";
+        layout.get(&Yaml::from_str(RULES))
+            .ok_or(required_key(RULES, layout))?
+            .as_hash()
+            .ok_or(key_of_type(RULES, Required::Yes, layout, "hash"))
     }
 
 
@@ -139,6 +157,10 @@ impl Config {
         }
 
         Ok(taxonomies)
+    }
+
+    fn parse_rules(&BTreeMap<Yaml, Yaml>) -> Result<Rules, String> {
+        unimplemented!()
     }
 }
 

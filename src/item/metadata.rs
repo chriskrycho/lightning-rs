@@ -293,11 +293,12 @@ And: they can even be multiple lines long.
 
         assert_eq!(
             extract_metadata(&source),
-            Some(
-                String::from("\nTitle: They Can Be At The Start\n\n") +
-                    "Subtitle: Or even in the middle...\n\n\n\n" +
-                    "And: they can even be multiple lines long.\n"
-            )
+            Some(format!(
+                "\n{}\n\n{}\n\n\n\n{}\n",
+                "Title: They Can Be At The Start",
+                "Subtitle: Or even in the middle...",
+                "And: they can even be multiple lines long."
+            ))
         );
     }
 }
