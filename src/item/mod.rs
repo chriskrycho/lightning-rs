@@ -7,7 +7,7 @@ use std::path::Path;
 
 use chrono::FixedOffset;
 
-use config::Taxonomies;
+use config::Config;
 pub use self::metadata::{Defaults, Metadata};
 
 /// A page or post or other such *item* of content.
@@ -24,7 +24,7 @@ impl Item {
         content: &str,
         file_name: &Path,
         tz: FixedOffset,
-        taxonomies: &Taxonomies,
+        config: &Config,
     ) -> Result<Item, String> {
         let defaults = Defaults {
             slug: slug_from_file_name(file_name)?,
@@ -40,7 +40,7 @@ impl Item {
                 defaults,
                 "%Y-%m-%d %H:%M".into(), // TODO: from config?
                 Some(tz),
-                taxonomies,
+                config,
             )?,
         })
     }

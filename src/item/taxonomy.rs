@@ -4,17 +4,26 @@
 use std::collections::HashMap;
 
 // Third party
-use yaml_rust::{yaml, Yaml, YamlLoader};
+use yaml_rust::{yaml, Yaml};
 
 // First party
 use config;
 use config::Config;
 
+/// PathSegments: a list of "paths" which comprise a hierarchical taxonomy.
+///
+/// If there is only one segment, i.e. the taxonomy is not hierarchical, this
+/// will simply be a single-item `Vec`.
+pub type PathSegments = Vec<String>;
 
+/// An `item::taxonomy::Taxonomy` is a taxonomy *value* for an item.
 pub enum Taxonomy {
     Boolean { name: String, value: bool },
-    Single { name: String, value: String },
-    TagLike { name: String, values: Vec<String> },
+    TagLike {
+        name: String,
+        values: Vec<PathSegments>,
+    },
+    Temporal { name: String, value: String }, // TODO: `String` is wrong for Temporal
 }
 
 impl Taxonomy {
@@ -89,25 +98,29 @@ impl Taxonomy {
                 limit,        // TODO: and this
                 ..
             } => match entry {
-                &Yaml::String(ref value) => {
-                    let values = if commas_as_lists {
-                        vec![]
+                &Yaml::String(ref taxonomy_string) => {
+                    let taxonomy_values = if commas_as_lists {
+                        vec![taxonomy_string.clone()]
                     } else {
-                        value.split(',').collect()
+                        taxonomy_string.split(',').map(String::from).collect()
+                    };
+
+                    let taxonomy_values = if hierarchical {
+                        taxonomy_values
+                            .iter()
+                            .map(|tv| tv.split('/').map(String::from).collect())
+                            .collect()
+                    } else {
+                        vec![taxonomy_values]
                     };
 
                     match limit {
-                        Some(limit_value) => if values.len() > limit_value {
+                        Some(limit_value) => if taxonomy_values.len() > limit_value {
                             Err(format!("only {} values allowed", limit_value))
-                        } else if limit_value == 1 {
-                            Ok(Some(Taxonomy::Single {
-                                name: name.into(),
-                                value: value.clone(),  // just use the base value
-                            }))
                         } else {
                             Ok(Some(Taxonomy::TagLike {
                                 name: name.into(),
-                                values,
+                                values: taxonomy_values,
                             }))
                         },
                         None => unimplemented!(),

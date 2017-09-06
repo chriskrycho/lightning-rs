@@ -67,7 +67,7 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
         // with metadata and string content to convert.
         // TODO: use something besides UTC: pass it in from config.
         let utcish = FixedOffset::east(0);
-        let item = item::Item::from_str_unprocessed(&contents, &path, utcish, &config.taxonomies)?;
+        let item = item::Item::from_str_unprocessed(&contents, &path, utcish, &config)?;
 
         let mut pandoc = pandoc.clone();
         pandoc.set_input(InputKind::Pipe(contents));

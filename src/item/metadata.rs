@@ -46,7 +46,7 @@ impl Metadata {
         defaults: Defaults,
         date_format: &str,
         tz: Option<FixedOffset>,
-        taxonomy_configs: &config::Taxonomies,
+        config: &config::Config,
     ) -> Result<Metadata, String> {
         let metadata = extract_metadata(&content).ok_or(format!(
             "content passed to `Metadata::parse` has no metadata and no default"
@@ -104,7 +104,7 @@ impl Metadata {
 
         // This isn't amazing but it gets the job done. I could just as well do
         // it inside the Taxonomy::from_yaml call, I think.
-        let taxonomies = item::taxonomy::Taxonomy::from_yaml_hash(&yaml, taxonomy_configs)?;
+        let taxonomies = item::taxonomy::Taxonomy::from_yaml_hash(&yaml, config)?;
         let other = HashMap::new();
 
         Ok(Metadata {

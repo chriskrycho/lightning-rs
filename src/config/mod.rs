@@ -83,7 +83,7 @@ impl Config {
             site: Self::parse_site_meta(config_map)?,
             directories: Directories::from_yaml(config_map, &config_path, &layout)?,
             taxonomies: Self::parse_taxonomies(&layout, &config_path)?,
-            rules: Self::parse_rules(&rules),
+            rules: Self::parse_rules(&rules)?,
         })
     }
 
@@ -159,7 +159,7 @@ impl Config {
         Ok(taxonomies)
     }
 
-    fn parse_rules(&BTreeMap<Yaml, Yaml>) -> Result<Rules, String> {
+    fn parse_rules(rules: &BTreeMap<Yaml, Yaml>) -> Result<Rules, String> {
         unimplemented!()
     }
 }

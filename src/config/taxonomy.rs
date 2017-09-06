@@ -195,14 +195,14 @@ impl Taxonomy {
         }
     }
 
-    fn limit(hash: &yaml::Hash) -> Result<Option<u8>, String> {
+    fn limit(hash: &yaml::Hash) -> Result<Option<usize>, String> {
         let key = "limit";
-        let max = u8::MAX as i64;
+        let max = usize::max_value() as i64;
         match hash[&Yaml::from_str(key)] {
             Yaml::Null => Ok(None),
             Yaml::Integer(i) if i < 0 => Err(bad_value(i, key, hash)),
             Yaml::Integer(i) if i == 0 => Ok(None),
-            Yaml::Integer(i) if i > 0 && i < max => Ok(Some(i as u8)),
+            Yaml::Integer(i) if i > 0 && i < max => Ok(Some(i as usize)),
             Yaml::Integer(i) if i > max as i64 => Err(ridiculous_number(i, key, hash)),
             _ => Err(key_of_type(key, Required::No, hash, "integer")),
         }
@@ -229,7 +229,7 @@ mod tests {
         let taxonomy = format!(
             "
 {}:
-    type: multiple
+    type: taglike
     required: true
     hierarchical: false
     templates:
@@ -265,7 +265,7 @@ mod tests {
         let taxonomy = format!(
             "
 {}:
-    type: multiple
+    type: taglike
     default: Blog
     limit: 1
     required: false
@@ -303,7 +303,7 @@ mod tests {
         let taxonomy = format!(
             "
 {}:
-    type: multiple
+    type: taglike
     limit: ~
     required: false
     hierarchical: false
