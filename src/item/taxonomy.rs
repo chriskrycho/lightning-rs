@@ -44,7 +44,8 @@ impl Taxonomy {
                     errs.insert(name.clone(), String::from("is required but not present"));
                 },
                 Some(value) => {
-                    match Taxonomy::from_entry(value, name, taxonomy, config.rules.commasAsLists) {
+                    match Taxonomy::from_entry(value, name, taxonomy, config.rules.commas_as_lists)
+                    {
                         Ok(Some(taxonomy)) => {
                             taxonomies.insert(name.clone(), taxonomy);
                         }
@@ -95,37 +96,41 @@ impl Taxonomy {
             &config::taxonomy::Taxonomy::TagLike {
                 required,
                 hierarchical,
-                limit,
+                limit: maybe_limit,
                 ..
             } => match entry {
                 &Yaml::String(ref taxonomy_string) => {
-                    let taxonomy_values = if commas_as_lists {
-                        vec![taxonomy_string.clone()]
-                    } else {
-                        taxonomy_string.split(',').map(String::from).collect()
-                    };
+                    let taxonomy_values = get_taxonomy_values(taxonomy_string, commas_as_lists);
 
-                    let taxonomy_values = if hierarchical {
-                        taxonomy_values
-                            .iter()
-                            .map(|tv| tv.split('/').map(String::from).collect())
-                            .collect()
-                    } else {
-                        vec![taxonomy_values]
-                    };
-
-                    match limit {
-                        Some(limit_value) if taxonomy_values.len() > limit_value => {
-                            Err(format!("only {} values allowed", limit_value))
+                    match maybe_limit {
+                        Some(limit) if taxonomy_values.len() > limit => {
+                            Err(format!("only {} values allowed", limit))
                         }
                         Some(..) | None => Ok(Some(Taxonomy::TagLike {
                             name: name.into(),
-                            values: taxonomy_values,
+                            values: get_split_taxonomy_values(&taxonomy_values, hierarchical),
                         })),
                     }
                 }
-                &Yaml::Hash(ref hash) => unimplemented!(),
-                &Yaml::Array(ref values) => unimplemented!(),
+
+                // TODO: e.g. series with fields.
+                &Yaml::Hash(ref hash) => {
+                    // TODO: Do fields match? If they don't match, how to handle
+                    // them: ignore, or error, or warn?
+                    unimplemented!()
+                }
+
+                &Yaml::Array(ref values) => {
+                    if all_of_same_yaml_type(values) {
+                        Ok(Some(Taxonomy::TagLike {
+                            name: name.into(),
+                            values: values.clone(), // TODO: actually extract them!
+                        }))
+                    } else {
+                        Err("not all values were of the same type".into())
+                    }
+                }
+
                 &Yaml::Null => if required {
                     Err("is required".into())
                 } else {
@@ -139,4 +144,68 @@ impl Taxonomy {
             }
         }
     }
+}
+
+
+fn get_taxonomy_values(taxonomy_string: &str, commas_as_lists: bool) -> Vec<String> {
+    if commas_as_lists {
+        taxonomy_string.split(',').map(String::from).collect()
+    } else {
+        vec![taxonomy_string.into()]
+    }
+}
+
+
+fn get_split_taxonomy_values(
+    taxonomy_values: &Vec<String>,
+    hierarchical: bool,
+) -> Vec<Vec<String>> {
+    if hierarchical {
+        taxonomy_values
+            .iter()
+            .map(|tv| tv.split('/').map(String::from).collect())
+            .collect()
+    } else {
+        vec![taxonomy_values.clone()]
+    }
+}
+
+
+fn all_of_same_yaml_type(values: &Vec<yaml::Yaml>) -> bool {
+    if values.len() == 0 {
+        return true;
+    }
+
+    let is_same_variant: Box<Fn(&Yaml) -> bool> = match values.first().unwrap() {
+        &Yaml::Alias(..) => Box::new(|_v| false),
+        &Yaml::Array(..) => Box::new(|v| v.as_vec().is_some()),
+        &Yaml::BadValue => Box::new(|v| v.is_badvalue()),
+        &Yaml::Boolean(..) => Box::new(|v| v.as_bool().is_some()),
+        &Yaml::Hash(..) => Box::new(|v| v.as_hash().is_some()),
+        &Yaml::Integer(..) => Box::new(|v| v.as_i64().is_some()),
+        &Yaml::Null => Box::new(|v| v.is_null()),
+        &Yaml::Real(..) => Box::new(|v| v.as_f64().is_some()),
+        &Yaml::String(..) => Box::new(|v| v.as_str().is_some()),
+    };
+
+    values.iter().all(|v| is_same_variant(v))
+}
+
+// TODO: is this even *possible*? I don't think so...
+fn extract_values<T>(values: &Vec<yaml::Yaml>) -> Result<Vec<T>, String> {
+    if !all_of_same_yaml_type(values) {
+        return Err("not all values were of the same type".into());
+    }
+
+    values
+        .iter()
+        .map(|v| match v {
+            &Yaml::Alias(..) => None,
+            &Yaml::Array(nested_values) => Some(nested_values),
+            &Yaml::BadValue => None,
+            &Yaml::Boolean(value) => Some(value),
+            &Yaml::Hash(nested_values) => Some(nested_values),
+            _ => None,
+        })
+        .collect()
 }
