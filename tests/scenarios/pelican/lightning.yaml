@@ -252,8 +252,9 @@ layout:
       #   Part: 2
       # ```
       #
-      # `fields` may be `required` (the item will fail to build and an error will be logged if the taxonomy
-      # is specified but not all its required fields are set) or `optional` (the item will build fine).
+      # `fields` may be `required` (the item will fail to build and an error
+      # will be logged if the taxonomy is specified but not all its required
+      # fields are set) or `optional` (the item will build fine).
       fields:
         required:
           - name
