@@ -33,7 +33,7 @@ pub type Taxonomies = HashMap<Name, Taxonomy>;
 
 #[derive(Debug, PartialEq)]
 pub struct Rules {
-    pub commasAsLists: bool,
+    pub commas_as_lists: bool,
 }
 
 
@@ -101,7 +101,8 @@ impl Config {
 
     fn get_rules<'l>(layout: &'l BTreeMap<Yaml, Yaml>) -> Result<&'l BTreeMap<Yaml, Yaml>, String> {
         const RULES: &str = "taxonomy_rules";
-        layout.get(&Yaml::from_str(RULES))
+        layout
+            .get(&Yaml::from_str(RULES))
             .ok_or(required_key(RULES, layout))?
             .as_hash()
             .ok_or(key_of_type(RULES, Required::Yes, layout, "hash"))

@@ -1,6 +1,5 @@
 
 // Standard library
-use std::u8;
 
 // Third party
 use yaml_rust::{yaml, Yaml};

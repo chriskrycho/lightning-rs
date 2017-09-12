@@ -1,12 +1,11 @@
 
 // Standard library
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::str::FromStr;
 
 // Third party
-use chrono_tz::Etc::UTC;
 use chrono_tz::Tz;
-use yaml_rust::{yaml, Yaml, YamlLoader};
+use yaml_rust::{yaml, Yaml};
 
 // First party
 pub use validated_types::Url as ValidatedUrl;
