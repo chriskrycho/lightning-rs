@@ -94,8 +94,8 @@ impl Taxonomy {
 
             &config::taxonomy::Taxonomy::TagLike {
                 required,
-                hierarchical, // TODO: what should we do with this?
-                limit,        // TODO: and this
+                hierarchical,
+                limit,
                 ..
             } => match entry {
                 &Yaml::String(ref taxonomy_string) => {
@@ -115,15 +115,13 @@ impl Taxonomy {
                     };
 
                     match limit {
-                        Some(limit_value) => if taxonomy_values.len() > limit_value {
+                        Some(limit_value) if taxonomy_values.len() > limit_value => {
                             Err(format!("only {} values allowed", limit_value))
-                        } else {
-                            Ok(Some(Taxonomy::TagLike {
-                                name: name.into(),
-                                values: taxonomy_values,
-                            }))
-                        },
-                        None => unimplemented!(),
+                        }
+                        Some(..) | None => Ok(Some(Taxonomy::TagLike {
+                            name: name.into(),
+                            values: taxonomy_values,
+                        })),
                     }
                 }
                 &Yaml::Hash(ref hash) => unimplemented!(),
