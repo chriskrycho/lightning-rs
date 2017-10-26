@@ -211,14 +211,23 @@ impl Taxonomy {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+    use yaml_rust::YamlLoader;
     use super::*;
 
     fn load_taxonomy_at_key(taxonomy: &str, key: &str) -> BTreeMap<Yaml, Yaml> {
         let mut loaded = YamlLoader::load_from_str(&taxonomy).unwrap();
-        let first = loaded.pop().unwrap();
-        first.as_hash().unwrap()[&Yaml::from_str(key)]
+        let first = loaded
+            .pop()
+            .expect("empty taxonomy – probably malformed data");
+
+        first
             .as_hash()
-            .unwrap()
+            .expect("failed to read taxonomy item as a hash – probably malformed data")
+            .get(&Yaml::from_str(key))
+            .expect("couldn't get a value from taxonomy – probably malformed data")
+            .as_hash()
+            .expect("failed to generate a hash – probably malformed data")
             .clone()
     }
 
