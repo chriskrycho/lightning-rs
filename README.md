@@ -138,3 +138,6 @@ What else should be on this list?
 [Pandoc]: http://pandoc.org
 [Metalsmith]: http://www.metalsmith.io
 [Hugo]: https://github.com/spf13/hugo
+
+# Building
+cmake is a dependency. Install it and make sure the path to it is in .bash_profile, .profile or .bashrc.
