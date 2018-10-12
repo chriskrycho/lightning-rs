@@ -139,6 +139,9 @@ impl SiteInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeMap;
+    use chrono_tz::UTC;
+    use yaml_rust::YamlLoader;
 
     fn load_site_info(source: &str) -> BTreeMap<Yaml, Yaml> {
         let mut loaded = YamlLoader::load_from_str(source).unwrap();

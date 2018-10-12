@@ -212,6 +212,9 @@ impl Taxonomy {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use::config::taxonomy::Taxonomy;
+    use std::collections::BTreeMap;
+    use yaml_rust::YamlLoader;
 
     fn load_taxonomy_at_key(taxonomy: &str, key: &str) -> BTreeMap<Yaml, Yaml> {
         let mut loaded = YamlLoader::load_from_str(&taxonomy).unwrap();
@@ -238,7 +241,7 @@ mod tests {
             taxonomy_name
         );
 
-        let expected = Taxonomy::Multiple {
+        let expected = Taxonomy::TagLike {
             name: "author".into(),
             default: None,
             limit: None,
@@ -276,7 +279,7 @@ mod tests {
             taxonomy_name
         );
 
-        let expected = Taxonomy::Multiple {
+        let expected = Taxonomy::TagLike {
             name: "category".into(),
             default: Some("Blog".into()),
             limit: Some(1),
@@ -313,7 +316,7 @@ mod tests {
             taxonomy_name
         );
 
-        let expected = Taxonomy::Multiple {
+        let expected = Taxonomy::TagLike {
             name: "tag".into(),
             default: None,
             limit: None,

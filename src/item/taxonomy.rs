@@ -14,7 +14,7 @@ use config::Config;
 ///
 /// If there is only one segment, i.e. the taxonomy is not hierarchical, this
 /// will simply be a single-item `Vec`.
-pub type PathSegments = Vec<String>;
+pub type PathSegments = Vec<String>; // SM - TagLike already includes the Vec so it isn't needed here?
 
 /// An `item::taxonomy::Taxonomy` is a taxonomy *value* for an item.
 pub enum Taxonomy {
@@ -124,7 +124,8 @@ impl Taxonomy {
                     if all_of_same_yaml_type(values) {
                         Ok(Some(Taxonomy::TagLike {
                             name: name.into(),
-                            values: values.clone(), // TODO: actually extract them!
+                            //values: values.clone(), // TODO: actually extract them!
+                            values: extract_values(values),
                         }))
                     } else {
                         Err("not all values were of the same type".into())
@@ -159,7 +160,7 @@ fn get_taxonomy_values(taxonomy_string: &str, commas_as_lists: bool) -> Vec<Stri
 fn get_split_taxonomy_values(
     taxonomy_values: &Vec<String>,
     hierarchical: bool,
-) -> Vec<Vec<String>> {
+) -> Vec<PathSegments> {
     if hierarchical {
         taxonomy_values
             .iter()
@@ -192,20 +193,26 @@ fn all_of_same_yaml_type(values: &Vec<yaml::Yaml>) -> bool {
 }
 
 // TODO: is this even *possible*? I don't think so...
-fn extract_values<T>(values: &Vec<yaml::Yaml>) -> Result<Vec<T>, String> {
-    if !all_of_same_yaml_type(values) {
-        return Err("not all values were of the same type".into());
-    }
+// SM - it may be possible but the type of T has to be known at compile time. If the type can't be known then we would have to use a enum.
+// SM - I think this should just be a list of 
+//fn extract_values<T>(values: &Vec<yaml::Yaml>) -> Result<Vec<T>, String> {
+fn extract_values(values: &Vec<yaml::Yaml>) -> Vec<PathSegments> {
+// SM - don't need this bit, it's done before calling the function
+//    if !all_of_same_yaml_type(values) {
+//        //return Err("not all values were of the same type".into());
+//        panic!("not all values were of the same type");
+//    }
 
-    values
+    vec![values
         .iter()
         .map(|v| match v {
-            &Yaml::Alias(..) => None,
-            &Yaml::Array(nested_values) => Some(nested_values),
-            &Yaml::BadValue => None,
-            &Yaml::Boolean(value) => Some(value),
-            &Yaml::Hash(nested_values) => Some(nested_values),
-            _ => None,
+            //&Yaml::Alias(..) => None,
+            //&Yaml::Array(nested_values) => Some(nested_values),
+            //&Yaml::BadValue => None,
+            //&Yaml::Boolean(value) => Some(value),
+            //&Yaml::Hash(nested_values) => Some(nested_values),
+            &Yaml::String(ref value) => value.clone(),
+            _ => panic!("can only take strings!"), // SM - TODO: need to change to return an error rather than panic but at least it builds for now
         })
-        .collect()
+        .collect()]
 }
