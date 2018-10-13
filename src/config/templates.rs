@@ -52,10 +52,12 @@ impl Templates {
     /// explicitly set to `null`.
     fn list_from_yaml(yaml: &yaml::Hash) -> Result<Option<PathBuf>, String> {
         let key = "list";
-        match yaml[&Yaml::from_str(key)] {
-            Yaml::Null => Ok(None),
-            Yaml::String(ref string) => Ok(Some(string.into())),
-            _ => Err(key_of_type(key, Required::No, yaml, "string")),
-        }
+        if yaml.contains_key(&Yaml::from_str(key)) {
+            match yaml[&Yaml::from_str(key)] {
+                Yaml::Null => Ok(None),
+                Yaml::String(ref string) => Ok(Some(string.into())),
+                _ => Err(key_of_type(key, Required::No, yaml, "string")),
+            }
+        } else { Ok(None) }
     }
 }

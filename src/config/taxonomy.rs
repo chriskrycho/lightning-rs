@@ -109,7 +109,7 @@ impl Taxonomy {
         const TYPE: &str = "type";
         const BOOLEAN: &str = "boolean";
         const SINGULAR: &str = "singular";
-        const TAGLIKE: &str = "multiple";
+        const TAGLIKE: &str = "taglike";
         const TEMPORAL: &str = "temporal";
 
         let name = String::from(name);
@@ -137,15 +137,17 @@ impl Taxonomy {
                 fields: Vec::new(),
             }),
 
-            TAGLIKE => Ok(Taxonomy::TagLike {
-                name: name,
-                templates: templates,
-                default: Self::default_value(hash)?,
-                hierarchical: Self::is_hierarchical(hash)?,
-                required: Self::required_field_value(hash)?,
-                limit: Self::limit(hash)?,
-                fields: Vec::new(),
-            }),
+            TAGLIKE => {
+                Ok(Taxonomy::TagLike {
+                    name: name,
+                    templates: templates,
+                    default: Self::default_value(hash)?,
+                    hierarchical: Self::is_hierarchical(hash)?,
+                    required: Self::required_field_value(hash)?,
+                    limit: Self::limit(hash)?,
+                    fields: Vec::new(),
+                })
+            },
 
             TEMPORAL => Ok(Taxonomy::Temporal {
                 name: name,
@@ -170,17 +172,25 @@ impl Taxonomy {
     }
 
     fn default_value(hash: &yaml::Hash) -> Result<Option<String>, String> {
-        let key = "default";
-        match hash[&Yaml::from_str(key)] {
-            Yaml::Null => Ok(None),
-            Yaml::String(ref string) => Ok(Some(string.clone())),
-            _ => Err(key_of_type(key, Required::No, hash, "string")),
+        let key = &Yaml::from_str("default");
+        if hash.contains_key(key) {
+            match hash[key] {
+                Yaml::Null => Ok(None),
+                Yaml::String(ref string) => Ok(Some(string.clone())),
+                _ => Err(key_of_type("default", Required::No, hash, "string")),
+            } 
+        } else {
+            Ok(None)
         }
     }
 
     fn is_hierarchical(hash: &yaml::Hash) -> Result<bool, String> {
         let key = "hierarchical";
-        match hash[&Yaml::from_str(key)] {
+        let yaml_key=&Yaml::from_str(key);
+        if !hash.contains_key(yaml_key) {
+            return Ok(false);
+        }
+        match hash[yaml_key] {
             Yaml::Boolean(boolean_value) => Ok(boolean_value),
             _ => Err(key_of_type(key, Required::Yes, hash, "bool")),
         }
@@ -188,7 +198,11 @@ impl Taxonomy {
 
     fn required_field_value(hash: &yaml::Hash) -> Result<bool, String> {
         let key = "required";
-        match hash[&Yaml::from_str(key)] {
+        let yaml_key=&Yaml::from_str(key);
+        if !hash.contains_key(yaml_key) {
+            return Ok(false);
+        }
+        match hash[yaml_key] {
             Yaml::Boolean(bool_value) => Ok(bool_value),
             _ => Err(key_of_type(key, Required::No, hash, "bool")),
         }
@@ -196,13 +210,20 @@ impl Taxonomy {
 
     fn limit(hash: &yaml::Hash) -> Result<Option<usize>, String> {
         let key = "limit";
-        let max = usize::max_value() as i64;
-        match hash[&Yaml::from_str(key)] {
+        let yaml_key=&Yaml::from_str(key);
+        const max:usize = usize::max_value();
+        if !hash.contains_key(yaml_key) {
+            return Ok(None);
+        }
+        match hash[yaml_key] {
             Yaml::Null => Ok(None),
-            Yaml::Integer(i) if i < 0 => Err(bad_value(i, key, hash)),
-            Yaml::Integer(i) if i == 0 => Ok(None),
-            Yaml::Integer(i) if i > 0 && i < max => Ok(Some(i as usize)),
-            Yaml::Integer(i) if i > max as i64 => Err(ridiculous_number(i, key, hash)),
+            Yaml::Integer(i) => {
+                match i as usize {
+                    0 => Ok(None),
+                    1 ... max => Ok(Some(i as usize)),
+                    _ => Err(key_of_type(key, Required::No, hash, "integer")),
+                }
+            },
             _ => Err(key_of_type(key, Required::No, hash, "integer")),
         }
     }

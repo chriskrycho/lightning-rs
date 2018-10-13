@@ -71,6 +71,9 @@ impl SiteInfo {
 
     fn parse_default_timezone(yaml: &yaml::Hash) -> Result<Tz, String> {
         let key = "default_timezone";
+        if !yaml.contains_key(&Yaml::from_str(key)) {
+            return Err(key_of_type(key, Required::Yes, yaml, "string (time zone)"));
+        }
         match yaml[&Yaml::from_str(key)] {
             Yaml::Null => Err(required_key(key, yaml)),
             Yaml::String(ref string) => Tz::from_str(&string),
@@ -90,6 +93,9 @@ impl SiteInfo {
     fn parse_metadata(yaml: &yaml::Hash) -> Result<HashMap<String, Yaml>, String> {
         let key = "metadata";
         let mut metadata = HashMap::new();
+        if !yaml.contains_key(&Yaml::from_str(key)) {
+            return Ok(metadata);
+        }
         // TODO: don't use `[...]` access here; go back to using `.get()`.
         match yaml[&Yaml::from_str(key)] {
             Yaml::Null => Ok(metadata),
@@ -142,6 +148,7 @@ mod tests {
     use std::collections::BTreeMap;
     use chrono_tz::UTC;
     use yaml_rust::YamlLoader;
+    use validated_types::Url;
 
     fn load_site_info(source: &str) -> BTreeMap<Yaml, Yaml> {
         let mut loaded = YamlLoader::load_from_str(source).unwrap();
@@ -153,16 +160,75 @@ mod tests {
     }
 
     #[test]
-    fn parses_title() {}
+    fn parses_title() {
+        let site_info_empty_metadata = "
+site_info:
+    title: lx (lightning)
+    url: https://lightning.rs
+    description: >
+        A ridiculously fast site generator and engine.
+    metadata: ~
+        ";
+
+        let site_info = load_site_info(site_info_empty_metadata);
+
+        assert_eq!(Ok("lx (lightning)".into()), SiteInfo::parse_title(&site_info));
+    }
 
     #[test]
-    fn parses_url() {}
+    fn parses_url() {
+        let site_info_empty_metadata = "
+site_info:
+    title: lx (lightning)
+    url: https://lightning.rs
+    description: >
+        A ridiculously fast site generator and engine.
+    metadata: ~
+        ";
+
+        let site_info = load_site_info(site_info_empty_metadata);
+
+        assert_eq!(Url::new("https://lightning.rs".into()), SiteInfo::parse_url(&site_info));
+    }
 
     #[test]
-    fn parses_metadata() {}
+    fn parses_metadata() {
+        let site_info = "\
+site_info:
+    title: lx (lightning)
+    url: https://lightning.rs
+    description: >
+        A ridiculously fast site generator and engine.
+    default_timezone: UTC
+    metadata:
+        foo: bar
+        quux: 2
+        ";
+
+        let mut metadata = HashMap::new();
+        metadata.insert("foo".into(), Yaml::from_str("bar"));
+        metadata.insert("quux".into(), Yaml::from_str("2"));
+
+        let site_info = load_site_info(site_info);
+        assert_eq!(Ok(metadata), SiteInfo::parse_metadata(&site_info));
+    }
 
     #[test]
-    fn parses_default_timezone() {}
+    fn parses_default_timezone() {
+        let site_info_empty_metadata = "
+site_info:
+    title: lx (lightning)
+    url: https://lightning.rs
+    description: >
+        A ridiculously fast site generator and engine.
+    default_timezone: UTC
+    metadata: ~
+        ";
+
+        let site_info = load_site_info(site_info_empty_metadata);
+
+        assert_eq!(Tz::from_str("UTC".into()), SiteInfo::parse_default_timezone(&site_info));
+    }
 
     #[test]
     fn parses_site_info() {
@@ -172,7 +238,7 @@ site_info:
     url: https://lightning.rs
     description: >
         A ridiculously fast site generator and engine.
-    default_timezone: Eastern
+    default_timezone: UTC
     metadata:
         foo: bar
         quux: 2
@@ -201,6 +267,7 @@ site_info:
     url: https://lightning.rs
     description: >
         A ridiculously fast site generator and engine.
+    default_timezone: UTC
     metadata: ~
         ";
 
@@ -213,6 +280,7 @@ site_info:
         };
 
         let site_info = load_site_info(site_info_empty_metadata);
+
         assert_eq!(Ok(expected), SiteInfo::from_yaml(&site_info));
     }
 }

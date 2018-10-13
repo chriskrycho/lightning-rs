@@ -3,7 +3,6 @@
 // Standard library
 use std::fmt;
 use std::ops;
-use std::u8;
 
 // Third party
 use yaml_rust::yaml::{Hash, Yaml};
@@ -94,13 +93,14 @@ pub fn bad_value<V: fmt::Debug, Y: fmt::Debug>(value: V, key: &str, context: &Y)
 pub fn ridiculous_number<V: fmt::Display + ops::Add>(
     value: V,
     key: &str,
+    max: usize,
     context: &Hash,
 ) -> String {
     format!(
         "Seriously? You set the value of `{}` to {}? (The max is {}.)\nContext: {:?}",
         key,
         value,
-        u8::MAX,
+        max,
         context
     )
 }

@@ -30,7 +30,9 @@ site_info:
   # [chrono_tz]: https://docs.rs/chrono-tz/
   #
   # If left blank, the *local* time where the site is generated will be used.
-  # default_timezone: Eastern
+  
+  # SM - you need to include a timezone or the hashmap panics
+  default_timezone: UTC
 
   # You may supply any other metadata you like, though only as key-value pairs.
   # Those pairs will be supplied to your templates as hashmaps. The default

@@ -79,6 +79,8 @@ impl Config {
         let layout = Self::get_layout(config_map)?;
         let rules = Self::get_rules(&layout)?;
 
+
+
         Ok(Config {
             site: Self::parse_site_meta(config_map)?,
             directories: Directories::from_yaml(config_map, &config_path, &layout)?,
@@ -152,7 +154,7 @@ impl Config {
                 .as_hash()
                 .ok_or(key_of_type(key, Required::Yes, taxonomies_yaml, "hash"))?;
             let taxonomy = Taxonomy::from_yaml(content, key)?;
-            if taxonomies.insert(key.into(), taxonomy).is_none() {
+            if !taxonomies.insert(key.into(), taxonomy).is_none() {
                 return Err(format!("duplicate key {}", key));
             }
         }
@@ -161,7 +163,24 @@ impl Config {
     }
 
     fn parse_rules(rules: &BTreeMap<Yaml, Yaml>) -> Result<Rules, String> {
-        unimplemented!()
+        const COMMAS_AS_LISTS:&str = "commas_as_lists";
+        let key=&Yaml::from_str(COMMAS_AS_LISTS);
+
+        match rules.get(key) {
+            None => {
+                Ok(Rules{
+                    commas_as_lists: false,
+                })
+            },
+            Some(value) => {
+                Ok(Rules{
+                    commas_as_lists: match value {
+                        Yaml::Boolean(value) => *value,
+                        _ => panic!("expected a bool and didn't get it"),
+                    },
+                })
+            },
+        }
     }
 }
 
@@ -169,9 +188,14 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use config::Config;
+    use std::path::{Path, PathBuf};
 
     #[test]
     fn parses_full_config() {
+        let site_directory = PathBuf::from(r"/Users/stevenmessenger/Documents/Programming/lightning-rs/tests/scenarios/pelican/");
+        let config = Config::load(&PathBuf::from(&site_directory)).unwrap();
+        println!("Config: {:?}", config);
         unimplemented!("Wouldn't it be nice to actualy have a test? 😬");
     }
 }
