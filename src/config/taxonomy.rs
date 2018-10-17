@@ -197,14 +197,10 @@ impl Taxonomy {
     }
 
     fn required_field_value(hash: &yaml::Hash) -> Result<bool, String> {
-        let key = "required";
-        let yaml_key=&Yaml::from_str(key);
-        if !hash.contains_key(yaml_key) {
-            return Ok(false);
-        }
-        match hash[yaml_key] {
-            Yaml::Boolean(bool_value) => Ok(bool_value),
-            _ => Err(key_of_type(key, Required::No, hash, "bool")),
+        match hash.get(&Yaml::from_str("required")) {
+            None => Ok(false),
+            Some(Yaml::Boolean(bool_value)) => Ok(*bool_value),
+            _ => Err(key_of_type("required", Required::No, hash, "bool")),
         }
     }
 
