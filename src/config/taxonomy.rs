@@ -184,7 +184,7 @@ impl Taxonomy {
         match hash.get(&Yaml::from_str("hierarchical")) {
             None => Ok(false),
             Some(Yaml::Boolean(boolean_value)) => Ok(*boolean_value),
-            _ => Err(key_of_type(key, Required::Yes, hash, "bool")),
+            _ => Err(key_of_type("hierarchical", Required::Yes, hash, "bool")),
         }
     }
 
