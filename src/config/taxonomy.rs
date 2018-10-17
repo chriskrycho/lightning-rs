@@ -215,7 +215,7 @@ impl Taxonomy {
             Some(Yaml::Integer(0)) => Ok(None),
             //SM - TODO: should check for negative numbers here
             Some(Yaml::Integer(i)) => Ok(Some(*i as usize)),
-            _ => Err(key_of_type(key, Required::No , hash, "integer")),
+            _ => Err(key_of_type("limit", Required::No , hash, "integer")),
         }
     }
 }
