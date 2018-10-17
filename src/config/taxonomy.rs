@@ -209,22 +209,13 @@ impl Taxonomy {
     }
 
     fn limit(hash: &yaml::Hash) -> Result<Option<usize>, String> {
-        let key = "limit";
-        let yaml_key=&Yaml::from_str(key);
-        const max:usize = usize::max_value();
-        if !hash.contains_key(yaml_key) {
-            return Ok(None);
-        }
-        match hash[yaml_key] {
-            Yaml::Null => Ok(None),
-            Yaml::Integer(i) => {
-                match i as usize {
-                    0 => Ok(None),
-                    1 ... max => Ok(Some(i as usize)),
-                    _ => Err(key_of_type(key, Required::No, hash, "integer")),
-                }
-            },
-            _ => Err(key_of_type(key, Required::No, hash, "integer")),
+        match hash.get(&Yaml::from_str("limit")) {
+            None => Ok(None),
+            Some(Yaml::Null) => Ok(None),
+            Some(Yaml::Integer(0)) => Ok(None),
+            //SM - TODO: should check for negative numbers here
+            Some(Yaml::Integer(i)) => Ok(Some(*i as usize)),
+            _ => Err(key_of_type(key, Required::No , hash, "integer")),
         }
     }
 }
