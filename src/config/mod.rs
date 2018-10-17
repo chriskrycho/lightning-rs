@@ -167,19 +167,9 @@ impl Config {
         let key=&Yaml::from_str(COMMAS_AS_LISTS);
 
         match rules.get(key) {
-            None => {
-                Ok(Rules{
-                    commas_as_lists: false,
-                })
-            },
-            Some(value) => {
-                Ok(Rules{
-                    commas_as_lists: match value {
-                        Yaml::Boolean(value) => *value,
-                        _ => panic!("expected a bool and didn't get it"),
-                    },
-                })
-            },
+            None => Ok(Rules{commas_as_lists: false,}),
+            Some(Yaml::Boolean(value))=>Ok(Rules{commas_as_lists: *value}),
+            _ => panic!("expected a bool and didn't get it"),
         }
     }
 }
@@ -189,7 +179,7 @@ impl Config {
 mod tests {
     use super::*;
     use config::Config;
-    use std::path::{Path, PathBuf};
+    use std::path::PathBuf;
 
     #[test]
     fn parses_full_config() {
