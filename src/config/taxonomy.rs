@@ -172,26 +172,18 @@ impl Taxonomy {
     }
 
     fn default_value(hash: &yaml::Hash) -> Result<Option<String>, String> {
-        let key = &Yaml::from_str("default");
-        if hash.contains_key(key) {
-            match hash[key] {
-                Yaml::Null => Ok(None),
-                Yaml::String(ref string) => Ok(Some(string.clone())),
-                _ => Err(key_of_type("default", Required::No, hash, "string")),
-            } 
-        } else {
-            Ok(None)
+        match hash.get(&Yaml::from_str("default")) {
+            None => Ok(None),
+            Some(Yaml::Null) => Ok(None),
+            Some(Yaml::String(ref string)) => Ok(Some(string.clone())),
+            _ => Err(key_of_type("default", Required::No, hash, "string")),
         }
     }
 
     fn is_hierarchical(hash: &yaml::Hash) -> Result<bool, String> {
-        let key = "hierarchical";
-        let yaml_key=&Yaml::from_str(key);
-        if !hash.contains_key(yaml_key) {
-            return Ok(false);
-        }
-        match hash[yaml_key] {
-            Yaml::Boolean(boolean_value) => Ok(boolean_value),
+        match hash.get(&Yaml::from_str("hierarchical")) {
+            None => Ok(false),
+            Some(Yaml::Boolean(boolean_value)) => Ok(*boolean_value),
             _ => Err(key_of_type(key, Required::Yes, hash, "bool")),
         }
     }
