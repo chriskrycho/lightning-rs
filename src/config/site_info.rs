@@ -52,40 +52,38 @@ impl SiteInfo {
     }
 
     fn parse_title(yaml: &yaml::Hash) -> Result<String, String> {
-        let key = "title";
-        match yaml[&Yaml::from_str(key)] {
-            Yaml::Null => Err(required_key(key, yaml)),
-            Yaml::String(ref string) => Ok(string.clone()),
-            _ => Err(key_of_type(key, Required::Yes, yaml, "string")),
+        match yaml.get(&Yaml::from_str("title")) {
+            Some(Yaml::String(ref string)) => Ok(string.clone()),
+            Some(_val) => Err(key_of_type("title", Required::Yes, yaml, "string")),
+            _ => Err(required_key("title", yaml)),
         }
     }
 
     fn parse_url(yaml: &yaml::Hash) -> Result<ValidatedUrl, String> {
-        let key = "url";
-        match yaml[&Yaml::from_str(key)] {
-            Yaml::Null => Err(required_key(key, yaml)),
-            Yaml::String(ref string) => ValidatedUrl::new(string),
-            _ => Err(key_of_type(key, Required::Yes, yaml, "string")),
+        match yaml.get(&Yaml::from_str("url")) {
+            Some(Yaml::String(ref string)) => ValidatedUrl::new(string),
+            Some(Yaml::Null) => Err(required_key("url", yaml)),
+            _ => Err(key_of_type("url", Required::Yes, yaml, "string")),
         }
     }
 
     fn parse_default_timezone(yaml: &yaml::Hash) -> Result<Tz, String> {
         let key = "default_timezone";
-        if !yaml.contains_key(&Yaml::from_str(key)) {
-            return Err(key_of_type(key, Required::Yes, yaml, "string (time zone)"));
-        }
-        match yaml[&Yaml::from_str(key)] {
-            Yaml::Null => Err(required_key(key, yaml)),
-            Yaml::String(ref string) => Tz::from_str(&string),
+        
+        match yaml.get(&Yaml::from_str(key)) {
+            None => unimplemented!("Figure out how to get the current system timezone"),
+            Some(Yaml::Null) => unimplemented!("Figure out how to get the current system timezone"), //SM: TODO - figure out how to get the current local timezone
+            Some(Yaml::String(ref string)) => Tz::from_str(&string),
             _ => Err(key_of_type(key, Required::Yes, yaml, "string (time zone)")),
         }
     }
 
     fn parse_description(yaml: &yaml::Hash) -> Result<Option<String>, String> {
         let key = "description";
-        match yaml[&Yaml::from_str(key)] {
-            Yaml::Null => Ok(None),
-            Yaml::String(ref string) => Ok(Some(string.clone())),
+        match yaml.get(&Yaml::from_str(key)) {
+            None => Ok(None),
+            Some(Yaml::Null) => Ok(None),
+            Some(Yaml::String(ref string)) => Ok(Some(string.clone())),
             _ => Err(key_of_type(key, Required::No, yaml, "string")),
         }
     }
@@ -93,13 +91,10 @@ impl SiteInfo {
     fn parse_metadata(yaml: &yaml::Hash) -> Result<HashMap<String, Yaml>, String> {
         let key = "metadata";
         let mut metadata = HashMap::new();
-        if !yaml.contains_key(&Yaml::from_str(key)) {
-            return Ok(metadata);
-        }
-        // TODO: don't use `[...]` access here; go back to using `.get()`.
-        match yaml[&Yaml::from_str(key)] {
-            Yaml::Null => Ok(metadata),
-            Yaml::Hash(ref hash) => {
+        match yaml.get(&Yaml::from_str(key)) {
+            None => Ok(metadata),
+            Some(Yaml::Null) => Ok(metadata),
+            Some(Yaml::Hash(ref hash)) => {
                 for hash_key in hash.keys() {
                     let hash_key_str = hash_key
                         .as_str()
