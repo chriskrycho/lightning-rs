@@ -24,7 +24,7 @@ pub struct SiteInfo {
     /// strings specified by [the `chrono_tz` crate][chrono_tz].
     ///
     /// [chrono_tz]: https://docs.rs/chrono-tz/
-    pub default_timezone: Tz,
+    pub default_timezone: Option<Tz>,
 
     /// The description of the site. Optional.
     pub description: Option<String>,
@@ -67,13 +67,13 @@ impl SiteInfo {
         }
     }
 
-    fn parse_default_timezone(yaml: &yaml::Hash) -> Result<Tz, String> {
+    fn parse_default_timezone(yaml: &yaml::Hash) -> Result<Option<Tz>, String> {
         let key = "default_timezone";
         
         match yaml.get(&Yaml::from_str(key)) {
-            None => unimplemented!("Figure out how to get the current system timezone"),
-            Some(Yaml::Null) => unimplemented!("Figure out how to get the current system timezone"), //SM: TODO - figure out how to get the current local timezone
-            Some(Yaml::String(ref string)) => Tz::from_str(&string),
+            None => Ok(None),
+            Some(Yaml::Null) => Ok(None),
+            Some(Yaml::String(ref string)) => Ok(Some(Tz::from_str(&string)?)),
             _ => Err(key_of_type(key, Required::Yes, yaml, "string (time zone)")),
         }
     }
@@ -222,7 +222,25 @@ site_info:
 
         let site_info = load_site_info(site_info_empty_metadata);
 
-        assert_eq!(Tz::from_str("UTC".into()), SiteInfo::parse_default_timezone(&site_info));
+        let expected = Ok(Some(Tz::from_str("UTC".into()).unwrap()));
+
+        assert_eq!(expected, SiteInfo::parse_default_timezone(&site_info));
+    }
+
+    #[test]
+    fn parses_default_timezone_empty() {
+        let site_info_empty_metadata = "
+site_info:
+    title: lx (lightning)
+    url: https://lightning.rs
+    description: >
+        A ridiculously fast site generator and engine.
+    metadata: ~
+        ";
+
+        let site_info = load_site_info(site_info_empty_metadata);
+
+        assert_eq!(Ok(None), SiteInfo::parse_default_timezone(&site_info));
     }
 
     #[test]
@@ -246,7 +264,7 @@ site_info:
             title: "lx (lightning)".into(),
             url: ValidatedUrl::new("https://lightning.rs").unwrap(),
             description: Some("A ridiculously fast site generator and engine.\n".into()),
-            default_timezone: UTC,
+            default_timezone: Some(UTC),
             metadata: metadata,
         };
 
@@ -270,7 +288,7 @@ site_info:
             title: "lx (lightning)".into(),
             url: ValidatedUrl::new("https://lightning.rs").unwrap(),
             description: Some("A ridiculously fast site generator and engine.\n".into()),
-            default_timezone: UTC,
+            default_timezone: Some(UTC),
             metadata: HashMap::new(),
         };
 
