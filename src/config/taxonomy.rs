@@ -137,17 +137,15 @@ impl Taxonomy {
                 fields: Vec::new(),
             }),
 
-            TAGLIKE => {
-                Ok(Taxonomy::TagLike {
-                    name: name,
-                    templates: templates,
-                    default: Self::default_value(hash)?,
-                    hierarchical: Self::is_hierarchical(hash)?,
-                    required: Self::required_field_value(hash)?,
-                    limit: Self::limit(hash)?,
-                    fields: Vec::new(),
-                })
-            },
+            TAGLIKE => Ok(Taxonomy::TagLike {
+                name: name,
+                templates: templates,
+                default: Self::default_value(hash)?,
+                hierarchical: Self::is_hierarchical(hash)?,
+                required: Self::required_field_value(hash)?,
+                limit: Self::limit(hash)?,
+                fields: Vec::new(),
+            }),
 
             TEMPORAL => Ok(Taxonomy::Temporal {
                 name: name,
@@ -197,11 +195,14 @@ impl Taxonomy {
     }
 
     fn limit(hash: &yaml::Hash) -> Result<Option<usize>, String> {
-        match hash.get(&Yaml::from_str("limit")) {
+        let key = "limit";
+        match hash.get(&Yaml::from_str(key)) {
             None => Ok(None),
             Some(Yaml::Null) => Ok(None),
             Some(Yaml::Integer(0)) => Ok(None),
-            //SM - TODO: should check for negative numbers here
+            Some(Yaml::Integer(1)) => Ok(Some(1)),
+            Some(Yaml::Integer(i)) if *i < 0 => Err(bad_value(i, key, hash)),
+            Some(Yaml::Integer(i)) if (*i as i32) > i32::max_value() => Err(ridiculous_number(*i, key, usize::max_value(), hash)),
             Some(Yaml::Integer(i)) => Ok(Some(*i as usize)),
             _ => Err(key_of_type("limit", Required::No , hash, "integer")),
         }

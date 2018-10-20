@@ -222,9 +222,9 @@ site_info:
 
         let site_info = load_site_info(site_info_empty_metadata);
 
-        let expected = Ok(Some(Tz::from_str("UTC".into()).unwrap()));
+        //let expected = Ok(Some(Tz::from_str("UTC".into()).unwrap()));
 
-        assert_eq!(expected, SiteInfo::parse_default_timezone(&site_info));
+        assert_eq!(Ok(Some(Tz::UTC)), SiteInfo::parse_default_timezone(&site_info));
     }
 
     #[test]
