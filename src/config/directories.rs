@@ -29,7 +29,7 @@ impl Directories {
 
         let content_directory_yaml = config_map
             .get(&Yaml::from_str(CONTENT_DIRECTORY))
-            .ok_or(required_key(CONTENT_DIRECTORY, config_map))?;
+            .ok_or_else(|| required_key(CONTENT_DIRECTORY, config_map))?;
 
         let content_directory = Directories::path_buf_from_yaml(
             &content_directory_yaml,
@@ -39,7 +39,7 @@ impl Directories {
 
         let output_directory_yaml = config_map
             .get(&Yaml::from_str(OUTPUT_DIRECTORY))
-            .ok_or(required_key(OUTPUT_DIRECTORY, config_map))?;
+            .ok_or_else(|| required_key(OUTPUT_DIRECTORY, config_map))?;
 
         let output_directory =
             Directories::path_buf_from_yaml(output_directory_yaml, OUTPUT_DIRECTORY, &config_path)?;

@@ -18,20 +18,14 @@ pub struct Templates {
 impl Templates {
     pub fn from_yaml(yaml: &yaml::Hash) -> Result<Templates, String> {
         let key = "templates";
-        let template_yaml = yaml[&Yaml::from_str(key)].as_hash().ok_or(key_of_type(
-            key,
-            Required::Yes,
-            yaml,
-            "hash",
-        ))?;
+        let template_yaml = yaml[&Yaml::from_str(key)]
+            .as_hash()
+            .ok_or_else(|| key_of_type(key, Required::Yes, yaml, "hash"))?;
 
         let item = Self::item_from_yaml(template_yaml)?;
         let list = Self::list_from_yaml(template_yaml)?;
 
-        Ok(Templates {
-            item: item,
-            list: list,
-        })
+        Ok(Templates { item, list })
     }
 
     /// Get the `item` value for a taxonomy's templates.
@@ -39,7 +33,7 @@ impl Templates {
         let key = "item";
         Ok(yaml[&Yaml::from_str(key)]
             .as_str()
-            .ok_or(key_of_type(key, Required::Yes, yaml, "string"))?
+            .ok_or_else(|| key_of_type(key, Required::Yes, yaml, "string"))?
             .into())
     }
 

@@ -64,7 +64,7 @@ pub fn cli() -> Command {
     }
 }
 
-fn site_directory<'m>(matches: &'m ArgMatches) -> PathBuf {
+fn site_directory(matches: &ArgMatches) -> PathBuf {
     match matches.value_of("site_directory") {
         Some(path_str) => PathBuf::from(path_str),
         None => env::current_dir().unwrap(),

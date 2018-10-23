@@ -115,19 +115,16 @@ impl Taxonomy {
         // Name can't collide with keyword `type`.
         let taxonomy_type = hash
             .get(&Yaml::from_str(TYPE))
-            .ok_or(key_of_type(TYPE, Required::Yes, hash, "string"))?
+            .ok_or_else(|| key_of_type(TYPE, Required::Yes, hash, "string"))?
             .as_str()
-            .ok_or(key_of_type(TYPE, Required::Yes, hash, "string"))?;
+            .ok_or_else(|| key_of_type(TYPE, Required::Yes, hash, "string"))?;
 
         match taxonomy_type {
-            BOOLEAN => Ok(Taxonomy::Boolean {
-                name: name,
-                templates: templates,
-            }),
+            BOOLEAN => Ok(Taxonomy::Boolean { name, templates }),
 
             SINGULAR => Ok(Taxonomy::TagLike {
-                name: name,
-                templates: templates,
+                name,
+                templates,
                 default: Self::default_value(hash)?,
                 hierarchical: Self::is_hierarchical(hash)?,
                 required: Self::required_field_value(hash)?,
@@ -136,8 +133,8 @@ impl Taxonomy {
             }),
 
             TAGLIKE => Ok(Taxonomy::TagLike {
-                name: name,
-                templates: templates,
+                name,
+                templates,
                 default: Self::default_value(hash)?,
                 hierarchical: Self::is_hierarchical(hash)?,
                 required: Self::required_field_value(hash)?,
@@ -146,8 +143,8 @@ impl Taxonomy {
             }),
 
             TEMPORAL => Ok(Taxonomy::Temporal {
-                name: name,
-                templates: templates,
+                name,
+                templates,
                 required: Self::required_field_value(hash)?,
             }),
 
@@ -159,10 +156,10 @@ impl Taxonomy {
     }
 
     pub fn is_required(&self) -> bool {
-        match self {
-            &Taxonomy::Boolean { .. } => false,
-            &Taxonomy::TagLike { required, .. } => required,
-            &Taxonomy::Temporal { required, .. } => required,
+        match *self {
+            Taxonomy::Boolean { .. } => false,
+            Taxonomy::TagLike { required, .. } => required,
+            Taxonomy::Temporal { required, .. } => required,
         }
     }
 

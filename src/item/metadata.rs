@@ -46,9 +46,9 @@ impl Metadata {
         tz: Option<FixedOffset>,
         config: &config::Config,
     ) -> Result<Metadata, String> {
-        let metadata = extract_metadata(&content).ok_or(format!(
-            "content passed to `Metadata::parse` has no metadata and no default"
-        ))?;
+        let metadata = extract_metadata(&content).ok_or_else(|| {
+            "content passed to `Metadata::parse` has no metadata and no default".to_string()
+        })?;
 
         let bad_yaml_message = |reason: &str| {
             format!(
@@ -63,16 +63,17 @@ impl Metadata {
         let yaml = yaml
             .into_iter()
             .next()
-            .ok_or(bad_yaml_message("empty metadata block"))?;
+            .ok_or_else(|| bad_yaml_message("empty metadata block"))?;
 
         let yaml = yaml
             .as_hash()
-            .ok_or(bad_yaml_message("could not parse item as metadata hash"))?;
+            .ok_or_else(|| bad_yaml_message("could not parse item as metadata hash"))?;
 
-        let slug =
-            case_insensitive_string("slug", yaml, Required::No)?.unwrap_or(defaults.slug.clone());
+        let slug = case_insensitive_string("slug", yaml, Required::No)?
+            .unwrap_or_else(|| defaults.slug.clone());
 
-        let title = case_insensitive_string("title", yaml, Required::No)?.unwrap_or("".into());
+        let title =
+            case_insensitive_string("title", yaml, Required::No)?.unwrap_or_else(|| "".into());
 
         // TODO: use taxonomy configs or fall back to defaults.
         let naive_date_time_result = case_insensitive_string("date", yaml, Required::No)?
@@ -89,7 +90,7 @@ impl Metadata {
                 } else {
                     let local = Local;
                     let local_offset = local.offset_from_local_datetime(&naive_date_time).single();
-                    local_offset.unwrap_or(FixedOffset::east(0))
+                    local_offset.unwrap_or_else(|| FixedOffset::east(0))
                 };
 
                 match offset.from_local_datetime(&naive_date_time) {

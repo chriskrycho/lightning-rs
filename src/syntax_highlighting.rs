@@ -89,8 +89,7 @@ impl<'e> From<&'e Event> for ParseEvent {
                     let maybe_class_attr = element
                         .attributes()
                         .map(|attr| attr.unwrap())
-                        .filter(|&(attr, _value)| attr == CLASS)
-                        .next();
+                        .find(|&(attr, _value)| attr == CLASS);
 
                     if let Some((_attr, value)) = maybe_class_attr {
                         match str::from_utf8(value) {

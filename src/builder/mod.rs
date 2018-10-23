@@ -22,12 +22,14 @@ use syntax_highlighting::syntax_highlight;
 fn glob_md_paths(site_directory: &PathBuf, config: &Config) -> Result<Paths, String> {
     let content_glob_str = format!(
         "{}/{}/**/*.md",
-        site_directory.to_str().ok_or(String::from("bad `site`"))?,
+        site_directory
+            .to_str()
+            .ok_or_else(|| String::from("bad `site`"))?,
         config
             .directories
             .content
             .to_str()
-            .ok_or(String::from("bad content directory"))?
+            .ok_or_else(|| String::from("bad content directory"))?
     );
 
     glob(&content_glob_str).map_err(|err| format!("{:?}", err))

@@ -88,18 +88,18 @@ impl Config {
         const LAYOUT: &str = "layout";
         config_map
             .get(&Yaml::from_str(LAYOUT))
-            .ok_or(required_key(LAYOUT, config_map))?
+            .ok_or_else(|| required_key(LAYOUT, config_map))?
             .as_hash()
-            .ok_or(key_of_type(LAYOUT, Required::Yes, config_map, "hash"))
+            .ok_or_else(|| key_of_type(LAYOUT, Required::Yes, config_map, "hash"))
     }
 
     fn get_rules<'l>(layout: &'l BTreeMap<Yaml, Yaml>) -> Result<&'l BTreeMap<Yaml, Yaml>, String> {
         const RULES: &str = "taxonomy_rules";
         layout
             .get(&Yaml::from_str(RULES))
-            .ok_or(required_key(RULES, layout))?
+            .ok_or_else(|| required_key(RULES, layout))?
             .as_hash()
-            .ok_or(key_of_type(RULES, Required::Yes, layout, "hash"))
+            .ok_or_else(|| key_of_type(RULES, Required::Yes, layout, "hash"))
     }
 
     /// Load the site data from the configuration file.
@@ -107,9 +107,9 @@ impl Config {
         const SITE_INFO: &str = "site_info";
         let site_info_yaml = config_map
             .get(&Yaml::from_str(SITE_INFO))
-            .ok_or(required_key(SITE_INFO, config_map))?
+            .ok_or_else(|| required_key(SITE_INFO, config_map))?
             .as_hash()
-            .ok_or(key_of_type(SITE_INFO, Required::Yes, config_map, "hash"))?;
+            .ok_or_else(|| key_of_type(SITE_INFO, Required::Yes, config_map, "hash"))?;
 
         SiteInfo::from_yaml(&site_info_yaml)
     }
@@ -123,15 +123,12 @@ impl Config {
 
         let taxonomies_yaml = structure
             .get(&Yaml::from_str(TAXONOMIES))
-            .ok_or(format!("No `{}` key in {:?}", TAXONOMIES, config_path))?
+            .ok_or_else(|| format!("No `{}` key in {:?}", TAXONOMIES, config_path))?
             .as_hash()
-            .ok_or(format!(
-                "`{}` is not a hash in {:?}",
-                TAXONOMIES, config_path
-            ))?;
+            .ok_or_else(|| format!("`{}` is not a hash in {:?}", TAXONOMIES, config_path))?;
 
         let mut taxonomies = Taxonomies::new();
-        if taxonomies_yaml.len() == 0 {
+        if taxonomies_yaml.is_empty() {
             return Ok(taxonomies);
         }
 
@@ -139,11 +136,11 @@ impl Config {
             let key = name.as_str().expect("If this isn't here, YAML is broken.");
             let content = taxonomies_yaml
                 .get(name)
-                .ok_or(required_key(key, taxonomies_yaml))?
+                .ok_or_else(|| required_key(key, taxonomies_yaml))?
                 .as_hash()
-                .ok_or(key_of_type(key, Required::Yes, taxonomies_yaml, "hash"))?;
+                .ok_or_else(|| key_of_type(key, Required::Yes, taxonomies_yaml, "hash"))?;
             let taxonomy = Taxonomy::from_yaml(content, key)?;
-            if !taxonomies.insert(key.into(), taxonomy).is_none() {
+            if taxonomies.insert(key.into(), taxonomy).is_some() {
                 return Err(format!("duplicate key {}", key));
             }
         }

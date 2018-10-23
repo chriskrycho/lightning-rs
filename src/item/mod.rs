@@ -38,7 +38,7 @@ impl Item {
             metadata: Metadata::from_content(
                 content,
                 defaults,
-                "%Y-%m-%d %H:%M".into(), // TODO: from config?
+                "%Y-%m-%d %H:%M", // TODO: from config?
                 Some(tz),
                 config,
             )?,
@@ -47,17 +47,21 @@ impl Item {
 }
 
 fn slug_from_file_name(file_name: &Path) -> Result<String, String> {
-    let stem = file_name.file_stem().ok_or(format!(
-        "file name `{}` passed to `Metadata::parse` has no stem",
-        file_name.to_string_lossy()
-    ))?;
+    let stem = file_name.file_stem().ok_or_else(|| {
+        format!(
+            "file name `{}` passed to `Metadata::parse` has no stem",
+            file_name.to_string_lossy()
+        )
+    })?;
 
     let slug = stem
         .to_str()
-        .ok_or(format!(
-            "file name `{}` passed to `Metadata::parse` has invalid UTF-8",
-            file_name.to_string_lossy()
-        ))?.into();
+        .ok_or_else(|| {
+            format!(
+                "file name `{}` passed to `Metadata::parse` has invalid UTF-8",
+                file_name.to_string_lossy()
+            )
+        })?.into();
 
     Ok(slug)
 }

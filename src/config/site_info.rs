@@ -40,11 +40,11 @@ impl SiteInfo {
         let default_timezone = SiteInfo::parse_default_timezone(yaml)?;
 
         Ok(SiteInfo {
-            title: title,
-            url: url,
-            description: description,
-            metadata: metadata,
-            default_timezone: default_timezone,
+            title,
+            url,
+            description,
+            metadata,
+            default_timezone,
         })
     }
 
@@ -90,12 +90,9 @@ impl SiteInfo {
             None | Some(Yaml::Null) => Ok(metadata),
             Some(Yaml::Hash(ref hash)) => {
                 for hash_key in hash.keys() {
-                    let hash_key_str = hash_key.as_str().ok_or(key_of_type(
-                        "key of hash map",
-                        Required::No,
-                        hash,
-                        "string",
-                    ))?;
+                    let hash_key_str = hash_key.as_str().ok_or_else(|| {
+                        key_of_type("key of hash map", Required::No, hash, "string")
+                    })?;
 
                     match hash.get(hash_key) {
                         None | Some(&Yaml::Null) => {

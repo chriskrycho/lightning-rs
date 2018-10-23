@@ -15,9 +15,9 @@ pub enum Required {
 
 impl fmt::Display for Required {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        match self {
-            &Required::Yes => write!(f, "Required"),
-            &Required::No => write!(f, "Optional"),
+        match *self {
+            Required::Yes => write!(f, "Required"),
+            Required::No => write!(f, "Optional"),
         }
     }
 }
@@ -48,7 +48,7 @@ pub fn case_insensitive_string(
     let upper_key = Yaml::from_str(&upper);
     let lower_key = Yaml::from_str(&lower);
 
-    match yaml.get(&upper_key).or(yaml.get(&lower_key)) {
+    match yaml.get(&upper_key).or_else(|| yaml.get(&lower_key)) {
         Some(&Yaml::String(ref value)) => Ok(Some(value.clone())),
         _ => match required {
             Required::No => Ok(None),
