@@ -74,19 +74,14 @@ pub fn key_of_type<Y: fmt::Debug>(
 ) -> String {
     format!(
         "{} key `{}` in {:?} must be a {}",
-        required,
-        key,
-        yaml,
-        required_type
+        required, key, yaml, required_type
     )
 }
 
 pub fn bad_value<V: fmt::Debug, Y: fmt::Debug>(value: V, key: &str, context: &Y) -> String {
     format!(
         "Invalid value {:?} for key `{}` in hash {:?}",
-        value,
-        key,
-        context
+        value, key, context
     )
 }
 
@@ -98,13 +93,9 @@ pub fn ridiculous_number<V: fmt::Display + ops::Add>(
 ) -> String {
     format!(
         "Seriously? You set the value of `{}` to {}? (The max is {}.)\nContext: {:?}",
-        key,
-        value,
-        max,
-        context
+        key, value, max, context
     )
 }
-
 
 #[cfg(test)]
 mod tests {

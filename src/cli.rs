@@ -8,19 +8,21 @@ use std::path::PathBuf;
 // Third party
 use clap::{App, ArgMatches};
 
-
 const INIT: &str = "init";
 const BUILD: &str = "build";
 const CREATE: &str = "create";
 const SERVE: &str = "serve";
 
-
 /// Commands which can be called, mapped from strings of the same name.
 pub enum Command {
     /// Create a new site.
-    Init { site: PathBuf },
+    Init {
+        site: PathBuf,
+    },
     /// Generate the site at `site`.
-    Build { site: PathBuf },
+    Build {
+        site: PathBuf,
+    },
     Create,
     Serve,
 }
@@ -35,7 +37,6 @@ impl fmt::Display for Command {
         }
     }
 }
-
 
 // TODO: figure out a way, eventually, to customize arguments based on whatever
 //       external tools are supplied---without requiring a rebuild. (Compare
@@ -62,7 +63,6 @@ pub fn cli() -> Command {
         _ => panic!("ERROR: `clap.rs` is configured wrong somehow, kids."),
     }
 }
-
 
 fn site_directory<'m>(matches: &'m ArgMatches) -> PathBuf {
     match matches.value_of("site_directory") {

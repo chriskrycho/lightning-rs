@@ -8,13 +8,15 @@ use std::path::{Path, PathBuf};
 // Third party
 use chrono::FixedOffset;
 use glob::{glob, Paths};
-use pandoc::{InputFormat, InputKind, OutputFormat, OutputKind, Pandoc, PandocOption, PandocOutput};
+use pandoc::{
+    InputFormat, InputKind, OutputFormat, OutputKind, Pandoc, PandocOption, PandocOutput,
+};
 use syntect::highlighting::ThemeSet;
 
 // First party
 use config::Config;
-use syntax_highlighting::syntax_highlight;
 use item;
+use syntax_highlighting::syntax_highlight;
 
 /// Load the `Paths` for all markdown files in the specified content directory.
 fn glob_md_paths(site_directory: &PathBuf, config: &Config) -> Result<Paths, String> {
@@ -31,12 +33,10 @@ fn glob_md_paths(site_directory: &PathBuf, config: &Config) -> Result<Paths, Str
     glob(&content_glob_str).map_err(|err| format!("{:?}", err))
 }
 
-
 /// Load the templates associated with each taxonomy.
 fn load_templates(site_directory: &PathBuf, config: &Config) -> Result<Paths, String> {
     unimplemented!()
 }
-
 
 /// Generate content from a configuration.
 pub fn build(site_directory: PathBuf) -> Result<(), String> {
@@ -103,7 +103,6 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
     Ok(())
 }
 
-
 fn load_file(path: &Path) -> Result<String, String> {
     let mut file = File::open(&path).map_err(|err| format!("{:?}", err.kind()))?;
     let mut contents = String::new();
@@ -111,7 +110,6 @@ fn load_file(path: &Path) -> Result<String, String> {
         .map_err(|err| format!("{:?}", err.kind()))?;
     Ok(contents)
 }
-
 
 fn write_file(output_dir: &Path, slug: &str, contents: &str) -> Result<(), String> {
     let path = output_dir.join(slug).with_extension("html");

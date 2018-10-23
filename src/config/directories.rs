@@ -10,14 +10,12 @@ use yaml_rust::Yaml;
 // First party
 use yaml_util::*;
 
-
 #[derive(Debug, PartialEq)]
 pub struct Directories {
     pub content: PathBuf,
     pub output: PathBuf,
     pub template: PathBuf,
 }
-
 
 impl Directories {
     pub fn from_yaml(
@@ -70,9 +68,7 @@ impl Directories {
     ) -> Result<PathBuf, String> {
         match yaml {
             &Yaml::String(ref path_str) => Ok(PathBuf::from(path_str)),
-            value => Err(
-                bad_value(value, key, yaml) + &format!(" in {:?}", config_path),
-            ),
+            value => Err(bad_value(value, key, yaml) + &format!(" in {:?}", config_path)),
         }
     }
 }

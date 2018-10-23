@@ -1,20 +1,18 @@
 //! Process individual content items (pages, posts, etc.).
 
-
 // First-party
 use std::collections::HashMap;
 use std::error::Error;
 
 // Third-party
-use chrono::{DateTime, FixedOffset, Local, LocalResult, TimeZone};
 use chrono::NaiveDateTime;
+use chrono::{DateTime, FixedOffset, Local, LocalResult, TimeZone};
 use yaml_rust::YamlLoader;
 
 // First-party
-use yaml_util::*;
 use config;
 use item;
-
+use yaml_util::*;
 
 pub type OtherMetadata = HashMap<String, OtherMetadatum>;
 
@@ -55,19 +53,20 @@ impl Metadata {
         let bad_yaml_message = |reason: &str| {
             format!(
                 "content passed to `Metadata::parse` had invalid metadata: {}\n{}",
-                metadata,
-                reason
+                metadata, reason
             )
         };
 
         let yaml = YamlLoader::load_from_str(&metadata)
             .map_err(|reason| bad_yaml_message(&reason.description()))?;
 
-        let yaml = yaml.into_iter()
+        let yaml = yaml
+            .into_iter()
             .next()
             .ok_or(bad_yaml_message("empty metadata block"))?;
 
-        let yaml = yaml.as_hash()
+        let yaml = yaml
+            .as_hash()
             .ok_or(bad_yaml_message("could not parse item as metadata hash"))?;
 
         let slug =
@@ -76,9 +75,8 @@ impl Metadata {
         let title = case_insensitive_string("title", yaml, Required::No)?.unwrap_or("".into());
 
         // TODO: use taxonomy configs or fall back to defaults.
-        let naive_date_time_result = case_insensitive_string("date", yaml, Required::No)?.map(
-            |supplied_value| NaiveDateTime::parse_from_str(&supplied_value, date_format),
-        );
+        let naive_date_time_result = case_insensitive_string("date", yaml, Required::No)?
+            .map(|supplied_value| NaiveDateTime::parse_from_str(&supplied_value, date_format));
 
         // TODO: extract into function; this is gross.
         let date = match naive_date_time_result {
@@ -155,7 +153,6 @@ fn extract_metadata<'c>(content: &'c str) -> Option<String> {
 
     Some(metadata)
 }
-
 
 #[cfg(test)]
 mod tests {

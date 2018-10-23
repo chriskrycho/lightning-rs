@@ -1,13 +1,11 @@
-
 // Standard library
 
 // Third party
 use yaml_rust::{yaml, Yaml};
 
 // First party
-use yaml_util::*;
 use config::templates::Templates;
-
+use yaml_util::*;
 
 /// A `config::Taxonomy` represents a way of *defining* taxonomies for a site.
 ///
@@ -103,7 +101,6 @@ pub enum Taxonomy {
     },
 }
 
-
 impl Taxonomy {
     pub fn from_yaml(hash: &yaml::Hash, name: &str) -> Result<Taxonomy, String> {
         const TYPE: &str = "type";
@@ -116,7 +113,8 @@ impl Taxonomy {
         let templates = Templates::from_yaml(hash)?;
 
         // Name can't collide with keyword `type`.
-        let taxonomy_type = hash.get(&Yaml::from_str(TYPE))
+        let taxonomy_type = hash
+            .get(&Yaml::from_str(TYPE))
             .ok_or(key_of_type(TYPE, Required::Yes, hash, "string"))?
             .as_str()
             .ok_or(key_of_type(TYPE, Required::Yes, hash, "string"))?;
@@ -155,8 +153,7 @@ impl Taxonomy {
 
             _ => Err(format!(
                 "Invalid taxonomy type `{:?}` in {:?}",
-                taxonomy_type,
-                hash
+                taxonomy_type, hash
             )),
         }
     }
@@ -202,18 +199,19 @@ impl Taxonomy {
             Some(Yaml::Integer(0)) => Ok(None),
             Some(Yaml::Integer(1)) => Ok(Some(1)),
             Some(Yaml::Integer(i)) if *i < 0 => Err(bad_value(i, key, hash)),
-            Some(Yaml::Integer(i)) if (*i as i32) > i32::max_value() => Err(ridiculous_number(*i, key, usize::max_value(), hash)),
+            Some(Yaml::Integer(i)) if (*i as i32) > i32::max_value() => {
+                Err(ridiculous_number(*i, key, usize::max_value(), hash))
+            }
             Some(Yaml::Integer(i)) => Ok(Some(*i as usize)),
-            _ => Err(key_of_type("limit", Required::No , hash, "integer")),
+            _ => Err(key_of_type("limit", Required::No, hash, "integer")),
         }
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use::config::taxonomy::Taxonomy;
+    use config::taxonomy::Taxonomy;
     use std::collections::BTreeMap;
     use yaml_rust::YamlLoader;
 

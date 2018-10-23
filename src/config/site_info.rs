@@ -1,4 +1,3 @@
-
 // Standard library
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -10,7 +9,6 @@ use yaml_rust::{yaml, Yaml};
 // First party
 pub use validated_types::Url as ValidatedUrl;
 use yaml_util::*;
-
 
 #[derive(Debug, PartialEq)]
 pub struct SiteInfo {
@@ -32,7 +30,6 @@ pub struct SiteInfo {
     /// Arbitrary metadata associated with the site. Optional.
     pub metadata: HashMap<String, Yaml>,
 }
-
 
 impl SiteInfo {
     pub fn from_yaml(yaml: &yaml::Hash) -> Result<SiteInfo, String> {
@@ -69,7 +66,7 @@ impl SiteInfo {
 
     fn parse_default_timezone(yaml: &yaml::Hash) -> Result<Option<Tz>, String> {
         let key = "default_timezone";
-        
+
         match yaml.get(&Yaml::from_str(key)) {
             None => Ok(None),
             Some(Yaml::Null) => Ok(None),
@@ -96,18 +93,21 @@ impl SiteInfo {
             Some(Yaml::Null) => Ok(metadata),
             Some(Yaml::Hash(ref hash)) => {
                 for hash_key in hash.keys() {
-                    let hash_key_str = hash_key
-                        .as_str()
-                        .ok_or(key_of_type("key of hash map", Required::No, hash, "string"))?;
+                    let hash_key_str = hash_key.as_str().ok_or(key_of_type(
+                        "key of hash map",
+                        Required::No,
+                        hash,
+                        "string",
+                    ))?;
 
                     match hash.get(hash_key) {
                         None | Some(&Yaml::Null) => {
                             return Err(key_of_type(hash_key_str, Required::No, hash, "hash"));
                         }
-                        Some(inner_yaml @ &Yaml::String(..)) |
-                        Some(inner_yaml @ &Yaml::Boolean(..)) |
-                        Some(inner_yaml @ &Yaml::Integer(..)) |
-                        Some(inner_yaml @ &Yaml::Real(..)) => {
+                        Some(inner_yaml @ &Yaml::String(..))
+                        | Some(inner_yaml @ &Yaml::Boolean(..))
+                        | Some(inner_yaml @ &Yaml::Integer(..))
+                        | Some(inner_yaml @ &Yaml::Real(..)) => {
                             let result =
                                 metadata.insert(String::from(hash_key_str), inner_yaml.clone());
                             if result.is_some() {
@@ -140,10 +140,10 @@ impl SiteInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::BTreeMap;
     use chrono_tz::UTC;
-    use yaml_rust::YamlLoader;
+    use std::collections::BTreeMap;
     use validated_types::Url;
+    use yaml_rust::YamlLoader;
 
     fn load_site_info(source: &str) -> BTreeMap<Yaml, Yaml> {
         let mut loaded = YamlLoader::load_from_str(source).unwrap();
@@ -167,7 +167,10 @@ site_info:
 
         let site_info = load_site_info(site_info_empty_metadata);
 
-        assert_eq!(Ok("lx (lightning)".into()), SiteInfo::parse_title(&site_info));
+        assert_eq!(
+            Ok("lx (lightning)".into()),
+            SiteInfo::parse_title(&site_info)
+        );
     }
 
     #[test]
@@ -183,7 +186,10 @@ site_info:
 
         let site_info = load_site_info(site_info_empty_metadata);
 
-        assert_eq!(Url::new("https://lightning.rs".into()), SiteInfo::parse_url(&site_info));
+        assert_eq!(
+            Url::new("https://lightning.rs".into()),
+            SiteInfo::parse_url(&site_info)
+        );
     }
 
     #[test]
@@ -224,7 +230,10 @@ site_info:
 
         //let expected = Ok(Some(Tz::from_str("UTC".into()).unwrap()));
 
-        assert_eq!(Ok(Some(Tz::UTC)), SiteInfo::parse_default_timezone(&site_info));
+        assert_eq!(
+            Ok(Some(Tz::UTC)),
+            SiteInfo::parse_default_timezone(&site_info)
+        );
     }
 
     #[test]

@@ -7,8 +7,8 @@ use std::path::Path;
 
 use chrono::FixedOffset;
 
-use config::Config;
 pub use self::metadata::{Defaults, Metadata};
+use config::Config;
 
 /// A page or post or other such *item* of content.
 pub enum Item {
@@ -46,19 +46,18 @@ impl Item {
     }
 }
 
-
 fn slug_from_file_name(file_name: &Path) -> Result<String, String> {
     let stem = file_name.file_stem().ok_or(format!(
         "file name `{}` passed to `Metadata::parse` has no stem",
         file_name.to_string_lossy()
     ))?;
 
-    let slug = stem.to_str()
+    let slug = stem
+        .to_str()
         .ok_or(format!(
             "file name `{}` passed to `Metadata::parse` has invalid UTF-8",
             file_name.to_string_lossy()
-        ))?
-        .into();
+        ))?.into();
 
     Ok(slug)
 }

@@ -9,8 +9,8 @@ pub mod templates;
 use std::collections::{BTreeMap, HashMap};
 use std::convert::From;
 use std::error::Error;
-use std::io::Read;
 use std::fs::File;
+use std::io::Read;
 use std::path::PathBuf;
 
 // Third-party
@@ -26,16 +26,13 @@ use self::taxonomy::*;
 
 const CONFIG_FILE_NAME: &str = "lightning.yaml";
 
-
 pub type Name = String;
 pub type Taxonomies = HashMap<Name, Taxonomy>;
-
 
 #[derive(Debug, PartialEq)]
 pub struct Rules {
     pub commas_as_lists: bool,
 }
-
 
 #[derive(Debug, PartialEq)]
 pub struct Config {
@@ -44,7 +41,6 @@ pub struct Config {
     pub taxonomies: Taxonomies,
     pub rules: Rules,
 }
-
 
 impl Config {
     pub fn load(directory: &PathBuf) -> Result<Config, String> {
@@ -56,9 +52,8 @@ impl Config {
             ));
         }
 
-        let mut file = File::open(&config_path).map_err(|reason| {
-            format!("Error reading {:?}: {:?}", config_path, reason)
-        })?;
+        let mut file = File::open(&config_path)
+            .map_err(|reason| format!("Error reading {:?}: {:?}", config_path, reason))?;
 
         let mut contents = String::new();
         match file.read_to_string(&mut contents) {
@@ -79,8 +74,6 @@ impl Config {
         let layout = Self::get_layout(config_map)?;
         let rules = Self::get_rules(&layout)?;
 
-
-
         Ok(Config {
             site: Self::parse_site_meta(config_map)?,
             directories: Directories::from_yaml(config_map, &config_path, &layout)?,
@@ -100,7 +93,6 @@ impl Config {
             .ok_or(key_of_type(LAYOUT, Required::Yes, config_map, "hash"))
     }
 
-
     fn get_rules<'l>(layout: &'l BTreeMap<Yaml, Yaml>) -> Result<&'l BTreeMap<Yaml, Yaml>, String> {
         const RULES: &str = "taxonomy_rules";
         layout
@@ -109,7 +101,6 @@ impl Config {
             .as_hash()
             .ok_or(key_of_type(RULES, Required::Yes, layout, "hash"))
     }
-
 
     /// Load the site data from the configuration file.
     fn parse_site_meta(config_map: &BTreeMap<Yaml, Yaml>) -> Result<SiteInfo, String> {
@@ -122,7 +113,6 @@ impl Config {
 
         SiteInfo::from_yaml(&site_info_yaml)
     }
-
 
     /// Load the taxonomies from the configuration file.
     fn parse_taxonomies(
@@ -137,8 +127,7 @@ impl Config {
             .as_hash()
             .ok_or(format!(
                 "`{}` is not a hash in {:?}",
-                TAXONOMIES,
-                config_path
+                TAXONOMIES, config_path
             ))?;
 
         let mut taxonomies = Taxonomies::new();
@@ -163,17 +152,20 @@ impl Config {
     }
 
     fn parse_rules(rules: &BTreeMap<Yaml, Yaml>) -> Result<Rules, String> {
-        const COMMAS_AS_LISTS:&str = "commas_as_lists";
-        let key=&Yaml::from_str(COMMAS_AS_LISTS);
+        const COMMAS_AS_LISTS: &str = "commas_as_lists";
+        let key = &Yaml::from_str(COMMAS_AS_LISTS);
 
         match rules.get(key) {
-            None => Ok(Rules{commas_as_lists: false,}),
-            Some(Yaml::Boolean(value))=>Ok(Rules{commas_as_lists: *value}),
+            None => Ok(Rules {
+                commas_as_lists: false,
+            }),
+            Some(Yaml::Boolean(value)) => Ok(Rules {
+                commas_as_lists: *value,
+            }),
             _ => panic!("expected a bool and didn't get it"),
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -183,7 +175,9 @@ mod tests {
 
     #[test]
     fn parses_full_config() {
-        let site_directory = PathBuf::from(r"/Users/stevenmessenger/Documents/Programming/lightning-rs/tests/scenarios/pelican/");
+        let site_directory = PathBuf::from(
+            r"/Users/stevenmessenger/Documents/Programming/lightning-rs/tests/scenarios/pelican/",
+        );
         let config = Config::load(&PathBuf::from(&site_directory)).unwrap();
         println!("Config: {:?}", config);
         unimplemented!("Wouldn't it be nice to actualy have a test? 😬");

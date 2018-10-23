@@ -3,20 +3,18 @@
 //! [Syntect]: https://docs.rs/syntect/1.0.0/syntect/
 
 // Standard library
-use std::default::Default;
 use std::collections::HashMap;
+use std::default::Default;
 use std::str;
 
 // Third party
 use quick_xml::{Element, Event, XmlReader, XmlWriter};
-use syntect::html::highlighted_snippet_for_string;
 use syntect::highlighting::Theme;
+use syntect::html::highlighted_snippet_for_string;
 use syntect::parsing::{SyntaxDefinition, SyntaxSet};
-
 
 /// A `Language` is a `String` representing a code highlighting language.
 type Language = String;
-
 
 /// Define XML parsing states of interest for highlighting.
 ///
@@ -34,7 +32,6 @@ enum ParseState {
     /// In a code block; use the content for highlighting.
     InCodeBlock(Language),
 }
-
 
 /// Define XML parsing events of interest for highlighting.
 ///
@@ -54,12 +51,11 @@ enum ParseEvent {
     Other,
 }
 
-
 impl ParseState {
     /// Get the next `ParseState` given current `ParseState` and a `ParseEvent`.
     fn next(self, event: ParseEvent) -> ParseState {
-        use self::ParseState::*;
         use self::ParseEvent::*;
+        use self::ParseState::*;
 
         match (self, event) {
             (NotInBlock, StartPre(Some(language))) => MaybeStartBlock(language),
@@ -74,13 +70,11 @@ impl ParseState {
     }
 }
 
-
 impl Default for ParseState {
     fn default() -> ParseState {
         ParseState::NotInBlock
     }
 }
-
 
 impl<'e> From<&'e Event> for ParseEvent {
     fn from(event: &'e Event) -> ParseEvent {
@@ -122,7 +116,6 @@ impl<'e> From<&'e Event> for ParseEvent {
         }
     }
 }
-
 
 /// Highlight all code blocks in a block of HTML.
 ///
@@ -188,14 +181,13 @@ pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
     String::from_utf8(writer.into_inner()).unwrap_or(html_string)
 }
 
-
 #[cfg(test)]
 mod tests {
 
     #[test]
     fn parse_state() {
-        use super::ParseState;
         use super::ParseEvent;
+        use super::ParseState;
 
         let lang = "rust";
 

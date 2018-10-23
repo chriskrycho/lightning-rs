@@ -1,5 +1,4 @@
 ///
-
 // Standard library
 use std::collections::HashMap;
 
@@ -18,12 +17,18 @@ pub type PathSegments = Vec<String>; // SM - TagLike already includes the Vec so
 
 /// An `item::taxonomy::Taxonomy` is a taxonomy *value* for an item.
 pub enum Taxonomy {
-    Boolean { name: String, value: bool },
+    Boolean {
+        name: String,
+        value: bool,
+    },
     TagLike {
         name: String,
         values: Vec<PathSegments>,
     },
-    Temporal { name: String, value: String }, // TODO: `String` is wrong for Temporal
+    Temporal {
+        name: String,
+        value: String,
+    }, // TODO: `String` is wrong for Temporal
 }
 
 impl Taxonomy {
@@ -147,7 +152,6 @@ impl Taxonomy {
     }
 }
 
-
 fn get_taxonomy_values(taxonomy_string: &str, commas_as_lists: bool) -> Vec<String> {
     if commas_as_lists {
         taxonomy_string.split(',').map(String::from).collect()
@@ -155,7 +159,6 @@ fn get_taxonomy_values(taxonomy_string: &str, commas_as_lists: bool) -> Vec<Stri
         vec![taxonomy_string.into()]
     }
 }
-
 
 fn get_split_taxonomy_values(
     taxonomy_values: &Vec<String>,
@@ -170,7 +173,6 @@ fn get_split_taxonomy_values(
         vec![taxonomy_values.clone()]
     }
 }
-
 
 fn all_of_same_yaml_type(values: &Vec<yaml::Yaml>) -> bool {
     if values.len() == 0 {
@@ -194,14 +196,14 @@ fn all_of_same_yaml_type(values: &Vec<yaml::Yaml>) -> bool {
 
 // TODO: is this even *possible*? I don't think so...
 // SM - it may be possible but the type of T has to be known at compile time. If the type can't be known then we would have to use a enum.
-// SM - I think this should just be a list of 
+// SM - I think this should just be a list of
 //fn extract_values<T>(values: &Vec<yaml::Yaml>) -> Result<Vec<T>, String> {
 fn extract_values(values: &Vec<yaml::Yaml>) -> Vec<PathSegments> {
-// SM - don't need this bit, it's done before calling the function
-//    if !all_of_same_yaml_type(values) {
-//        //return Err("not all values were of the same type".into());
-//        panic!("not all values were of the same type");
-//    }
+    // SM - don't need this bit, it's done before calling the function
+    //    if !all_of_same_yaml_type(values) {
+    //        //return Err("not all values were of the same type".into());
+    //        panic!("not all values were of the same type");
+    //    }
 
     vec![values
         .iter()
