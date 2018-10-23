@@ -168,13 +168,14 @@ impl Config {
 mod tests {
     use super::*;
     use config::Config;
+    use std::env;
     use std::path::PathBuf;
 
     #[test]
     fn parses_full_config() {
-        let site_directory = PathBuf::from(
-            r"/Users/stevenmessenger/Documents/Programming/lightning-rs/tests/scenarios/pelican/",
-        );
+        let mut site_directory: PathBuf = env::current_dir().unwrap();
+        site_directory.push(r"tests/scenarios/pelican/");
+
         let config = Config::load(&PathBuf::from(&site_directory)).unwrap();
         println!("Config: {:?}", config);
         unimplemented!("Wouldn't it be nice to actualy have a test? 😬");
