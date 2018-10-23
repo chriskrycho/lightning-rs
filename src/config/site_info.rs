@@ -68,8 +68,7 @@ impl SiteInfo {
         let key = "default_timezone";
 
         match yaml.get(&Yaml::from_str(key)) {
-            None => Ok(None),
-            Some(Yaml::Null) => Ok(None),
+            None | Some(Yaml::Null) => Ok(None),
             Some(Yaml::String(ref string)) => Ok(Some(Tz::from_str(&string)?)),
             _ => Err(key_of_type(key, Required::Yes, yaml, "string (time zone)")),
         }
@@ -78,8 +77,7 @@ impl SiteInfo {
     fn parse_description(yaml: &yaml::Hash) -> Result<Option<String>, String> {
         let key = "description";
         match yaml.get(&Yaml::from_str(key)) {
-            None => Ok(None),
-            Some(Yaml::Null) => Ok(None),
+            None | Some(Yaml::Null) => Ok(None),
             Some(Yaml::String(ref string)) => Ok(Some(string.clone())),
             _ => Err(key_of_type(key, Required::No, yaml, "string")),
         }
@@ -89,8 +87,7 @@ impl SiteInfo {
         let key = "metadata";
         let mut metadata = HashMap::new();
         match yaml.get(&Yaml::from_str(key)) {
-            None => Ok(metadata),
-            Some(Yaml::Null) => Ok(metadata),
+            None | Some(Yaml::Null) => Ok(metadata),
             Some(Yaml::Hash(ref hash)) => {
                 for hash_key in hash.keys() {
                     let hash_key_str = hash_key.as_str().ok_or(key_of_type(

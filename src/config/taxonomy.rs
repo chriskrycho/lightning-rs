@@ -168,8 +168,7 @@ impl Taxonomy {
 
     fn default_value(hash: &yaml::Hash) -> Result<Option<String>, String> {
         match hash.get(&Yaml::from_str("default")) {
-            None => Ok(None),
-            Some(Yaml::Null) => Ok(None),
+            None | Some(Yaml::Null) => Ok(None),
             Some(Yaml::String(ref string)) => Ok(Some(string.clone())),
             _ => Err(key_of_type("default", Required::No, hash, "string")),
         }
@@ -194,8 +193,7 @@ impl Taxonomy {
     fn limit(hash: &yaml::Hash) -> Result<Option<usize>, String> {
         let key = "limit";
         match hash.get(&Yaml::from_str(key)) {
-            None => Ok(None),
-            Some(Yaml::Null) => Ok(None),
+            None | Some(Yaml::Null) => Ok(None),
             Some(Yaml::Integer(0)) => Ok(None),
             Some(Yaml::Integer(1)) => Ok(Some(1)),
             Some(Yaml::Integer(i)) if *i < 0 => Err(bad_value(i, key, hash)),
