@@ -166,9 +166,9 @@ impl Config {
 
 #[cfg(test)]
 mod tests {
+    use self::templates::Templates;
     use super::*;
     use config::Config;
-    use self::templates::Templates;
     use std::env;
     use std::path::PathBuf;
 
@@ -269,7 +269,6 @@ mod tests {
         };
         taxonomies.insert("series".into(), tax_series);
 
-        
         let expected = Config {
             site,
             directories,
@@ -279,6 +278,6 @@ mod tests {
             },
         };
 
-        assert_eq!(expected,config);
+        assert_eq!(expected, config);
     }
 }
