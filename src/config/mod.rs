@@ -168,6 +168,7 @@ impl Config {
 mod tests {
     use super::*;
     use config::Config;
+    use self::templates::Templates;
     use std::env;
     use std::path::PathBuf;
 
@@ -177,7 +178,107 @@ mod tests {
         site_directory.push(r"tests/scenarios/pelican/");
 
         let config = Config::load(&PathBuf::from(&site_directory)).unwrap();
-        println!("Config: {:?}", config);
-        unimplemented!("Wouldn't it be nice to actualy have a test? 😬");
+
+        let site = SiteInfo {
+            title: "lx (lightning)".into(),
+            url: ValidatedUrl::new("https://lightning.rs").unwrap(),
+            description: Some("A ridiculously fast site generator and engine.\n".into()),
+            default_timezone: None,
+            metadata: HashMap::new(),
+        };
+
+        let directories = Directories {
+            content: PathBuf::from("content"),
+            output: PathBuf::from("output"),
+            template: PathBuf::from("layout"),
+        };
+
+        let mut taxonomies = HashMap::new();
+        let tax_author = Taxonomy::TagLike {
+            name: "author".into(),
+            default: None,
+            limit: None,
+            required: true,
+            hierarchical: false,
+            fields: Vec::new(),
+            templates: Templates {
+                item: "author.html".into(),
+                list: Some("authors.html".into()),
+            },
+        };
+        taxonomies.insert("author".into(), tax_author);
+
+        let tax_category = Taxonomy::TagLike {
+            name: "category".into(),
+            default: Some("Blog".into()),
+            limit: Some(1),
+            required: false,
+            hierarchical: false,
+            fields: Vec::new(),
+            templates: Templates {
+                item: "category.html".into(),
+                list: Some("categories.html".into()),
+            },
+        };
+        taxonomies.insert("category".into(), tax_category);
+
+        let tax_tag = Taxonomy::TagLike {
+            name: "tag".into(),
+            default: None,
+            limit: None,
+            required: false,
+            hierarchical: false,
+            fields: Vec::new(),
+            templates: Templates {
+                item: "tag.html".into(),
+                list: Some("tags.html".into()),
+            },
+        };
+        taxonomies.insert("tag".into(), tax_tag);
+
+        let tax_date = Taxonomy::Temporal {
+            name: "date".into(),
+            required: false,
+            templates: Templates {
+                item: "archives.html".into(),
+                list: Some("period_archives.html".into()),
+            },
+        };
+        taxonomies.insert("date".into(), tax_date);
+
+        let tax_page = Taxonomy::Boolean {
+            name: "page".into(),
+            templates: Templates {
+                item: "page.html".into(),
+                list: None,
+            },
+        };
+        taxonomies.insert("page".into(), tax_page);
+
+        let tax_series = Taxonomy::TagLike {
+            name: "series".into(),
+            default: None,
+            limit: Some(1),
+            required: false,
+            hierarchical: false,
+            fields: Vec::new(),
+            templates: Templates {
+                item: "series.html".into(),
+                list: Some("series-list.html".into()),
+            },
+        };
+        taxonomies.insert("series".into(), tax_series);
+
+        
+        let expected = Config {
+            site,
+            directories,
+            taxonomies,
+            rules: Rules {
+                commas_as_lists: true,
+            },
+        };
+
+        assert_eq!(expected,config);
     }
 }
