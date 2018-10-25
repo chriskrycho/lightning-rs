@@ -52,7 +52,8 @@ pub enum Taxonomy {
         /// `fields` may be `required` (the item will fail to build and an error
         /// will be logged if the taxonomy is specified but not all its required
         /// fields are set) or `optional` (the item will build fine).
-        fields: Vec<String>,
+        fields_req: Vec<String>,
+        fields_opt: Vec<String>,
 
         /// The templates to use in generating this taxonomy.
         templates: Templates,
@@ -129,7 +130,8 @@ impl Taxonomy {
                 hierarchical: Self::is_hierarchical(hash)?,
                 required: Self::required_field_value(hash)?,
                 limit: Some(1),
-                fields: Vec::new(),
+                fields_req: Self::get_fields_req(hash)?,
+                fields_opt: Self::get_fields_opt(hash)?,
             }),
 
             TAGLIKE => Ok(Taxonomy::TagLike {
@@ -139,7 +141,8 @@ impl Taxonomy {
                 hierarchical: Self::is_hierarchical(hash)?,
                 required: Self::required_field_value(hash)?,
                 limit: Self::limit(hash)?,
-                fields: Vec::new(),
+                fields_req: Self::get_fields_req(hash)?,
+                fields_opt: Self::get_fields_opt(hash)?,
             }),
 
             TEMPORAL => Ok(Taxonomy::Temporal {
@@ -201,6 +204,64 @@ impl Taxonomy {
             _ => Err(key_of_type("limit", Required::No, hash, "integer")),
         }
     }
+
+    fn get_fields_req(hash: &yaml::Hash) -> Result<Vec<String>, String> {
+        match hash.get(&Yaml::from_str("fields")) {
+            None => Ok(Vec::new()),
+            Some(Yaml::Hash(field_hash)) => {
+                match field_hash.get(&Yaml::from_str("required")) {
+                    None | Some(Yaml::Null) => Ok(Vec::new()),
+                    Some(Yaml::String(ref name)) => {
+                        let mut field_vec = Vec::new();
+                        field_vec.push(name.clone());
+                        Ok(field_vec)
+                    }
+                    Some(Yaml::Array(values)) => {
+                        Ok(values.iter().map(|v| match *v {
+                            Yaml::String(ref value) => value.clone(),
+                            _ => panic!("can only take strings!"), // SM - TODO: need to change to return an error rather than panic but at least it builds for now
+                        }).collect())
+                    }
+                    _ => Err(key_of_type(
+                        "Fields/Required",
+                        Required::No,
+                        field_hash,
+                        "Array or String",
+                    )),
+                }
+            }
+            _ => Err(key_of_type("fields", Required::No, hash, "hash")),
+        }
+    }
+
+    fn get_fields_opt(hash: &yaml::Hash) -> Result<Vec<String>, String> {
+        match hash.get(&Yaml::from_str("fields")) {
+            None => Ok(Vec::new()),
+            Some(Yaml::Hash(field_hash)) => {
+                match field_hash.get(&Yaml::from_str("optional")) {
+                    None | Some(Yaml::Null) => Ok(Vec::new()),
+                    Some(Yaml::String(ref name)) => {
+                        let mut field_vec = Vec::new();
+                        field_vec.push(name.clone());
+                        Ok(field_vec)
+                    }
+                    Some(Yaml::Array(values)) => {
+                        Ok(values.iter().map(|v| match *v {
+                            Yaml::String(ref value) => value.clone(),
+                            _ => panic!("can only take strings!"), // SM - TODO: need to change to return an error rather than panic but at least it builds for now
+                        }).collect())
+                    }
+                    _ => Err(key_of_type(
+                        "Fields/Optional",
+                        Required::No,
+                        field_hash,
+                        "Array or String",
+                    )),
+                }
+            }
+            _ => Err(key_of_type("fields", Required::No, hash, "hash")),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -241,7 +302,8 @@ mod tests {
             limit: None,
             required: true,
             hierarchical: false,
-            fields: Vec::new(),
+            fields_req: Vec::new(),
+            fields_opt: Vec::new(),
             templates: Templates {
                 item: "author.html".into(),
                 list: Some("authors.html".into()),
@@ -279,7 +341,8 @@ mod tests {
             limit: Some(1),
             required: false,
             hierarchical: false,
-            fields: Vec::new(),
+            fields_req: Vec::new(),
+            fields_opt: Vec::new(),
             templates: Templates {
                 item: "category.html".into(),
                 list: Some("categories.html".into()),
@@ -316,7 +379,8 @@ mod tests {
             limit: None,
             required: false,
             hierarchical: false,
-            fields: Vec::new(),
+            fields_req: Vec::new(),
+            fields_opt: Vec::new(),
             templates: Templates {
                 item: "tag.html".into(),
                 list: Some("tags.html".into()),

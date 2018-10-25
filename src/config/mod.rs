@@ -200,7 +200,8 @@ mod tests {
             limit: None,
             required: true,
             hierarchical: false,
-            fields: Vec::new(),
+            fields_req: Vec::new(),
+            fields_opt: Vec::new(),
             templates: Templates {
                 item: "author.html".into(),
                 list: Some("authors.html".into()),
@@ -214,7 +215,8 @@ mod tests {
             limit: Some(1),
             required: false,
             hierarchical: false,
-            fields: Vec::new(),
+            fields_req: Vec::new(),
+            fields_opt: Vec::new(),
             templates: Templates {
                 item: "category.html".into(),
                 list: Some("categories.html".into()),
@@ -228,7 +230,8 @@ mod tests {
             limit: None,
             required: false,
             hierarchical: false,
-            fields: Vec::new(),
+            fields_req: Vec::new(),
+            fields_opt: Vec::new(),
             templates: Templates {
                 item: "tag.html".into(),
                 list: Some("tags.html".into()),
@@ -261,7 +264,8 @@ mod tests {
             limit: Some(1),
             required: false,
             hierarchical: false,
-            fields: Vec::new(),
+            fields_req: vec!["name".into(), "part".into()],
+            fields_opt: Vec::new(),
             templates: Templates {
                 item: "series.html".into(),
                 list: Some("series-list.html".into()),
