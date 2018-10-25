@@ -4,6 +4,7 @@ rust:
 - stable
 - beta
 - nightly
+
 branches:
   only:
   - master
