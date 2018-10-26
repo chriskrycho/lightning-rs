@@ -99,6 +99,8 @@ pub enum Taxonomy {
         /// all pieces of content (e.g. on many sites, "author" might be
         /// required).
         required: bool,
+
+        date_format: String, 
     },
 }
 
@@ -149,6 +151,7 @@ impl Taxonomy {
                 name,
                 templates,
                 required: Self::required_field_value(hash)?,
+                date_format: Self::date_format_value(hash)?,
             }),
 
             _ => Err(format!(
@@ -260,6 +263,19 @@ impl Taxonomy {
                 }
             }
             _ => Err(key_of_type("fields", Required::No, hash, "hash")),
+        }
+    }
+
+    fn date_format_value(hash: &yaml::Hash) -> Result<String, String> {
+        match hash.get(&Yaml::from_str("format")) {
+            None | Some(Yaml::Null) => Ok("%Y-%m-%d %H:%M %P".into()), //default
+            Some(Yaml::String(ref value)) => Ok(value.clone()), //should this be validated somehow or just leave it until it fails when building a page?
+            _ => Err(key_of_type(
+                        "Date/Format",
+                        Required::No,
+                        hash,
+                        "String",
+            )),
         }
     }
 }
@@ -416,6 +432,7 @@ mod tests {
                 item: "archives.html".into(),
                 list: Some("period_archives.html".into()),
             },
+            date_format: "%Y-%m-%d %H:%M %P".into(),
         };
 
         let taxonomy_yaml = load_taxonomy_at_key(&taxonomy, taxonomy_name);

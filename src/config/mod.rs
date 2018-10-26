@@ -246,6 +246,7 @@ mod tests {
                 item: "archives.html".into(),
                 list: Some("period_archives.html".into()),
             },
+            date_format: "%Y-%m-%d %H:%M %P".into(),
         };
         taxonomies.insert("date".into(), tax_date);
 
