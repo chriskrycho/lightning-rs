@@ -100,7 +100,7 @@ pub enum Taxonomy {
         /// required).
         required: bool,
 
-        date_format: String, 
+        date_format: String,
     },
 }
 
@@ -270,12 +270,7 @@ impl Taxonomy {
         match hash.get(&Yaml::from_str("format")) {
             None | Some(Yaml::Null) => Ok("%Y-%m-%d %H:%M %P".into()), //default
             Some(Yaml::String(ref value)) => Ok(value.clone()), //should this be validated somehow or just leave it until it fails when building a page?
-            _ => Err(key_of_type(
-                        "Date/Format",
-                        Required::No,
-                        hash,
-                        "String",
-            )),
+            _ => Err(key_of_type("Date/Format", Required::No, hash, "String")),
         }
     }
 }
