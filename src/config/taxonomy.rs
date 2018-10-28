@@ -132,8 +132,8 @@ impl Taxonomy {
                 hierarchical: Self::is_hierarchical(hash)?,
                 required: Self::required_field_value(hash)?,
                 limit: Some(1),
-                fields_req: Self::get_fields_req(hash)?,
-                fields_opt: Self::get_fields_opt(hash)?,
+                fields_req: Self::get_fields("required".into(), hash)?,
+                fields_opt: Self::get_fields("optional".into(), hash)?,
             }),
 
             TAGLIKE => Ok(Taxonomy::TagLike {
@@ -143,8 +143,8 @@ impl Taxonomy {
                 hierarchical: Self::is_hierarchical(hash)?,
                 required: Self::required_field_value(hash)?,
                 limit: Self::limit(hash)?,
-                fields_req: Self::get_fields_req(hash)?,
-                fields_opt: Self::get_fields_opt(hash)?,
+                fields_req: Self::get_fields("required".into(), hash)?,
+                fields_opt: Self::get_fields("optional".into(), hash)?,
             }),
 
             TEMPORAL => Ok(Taxonomy::Temporal {
@@ -208,11 +208,11 @@ impl Taxonomy {
         }
     }
 
-    fn get_fields_req(hash: &yaml::Hash) -> Result<Vec<String>, String> {
+    fn get_fields(req: String, hash: &yaml::Hash) -> Result<Vec<String>, String> {
         match hash.get(&Yaml::from_str("fields")) {
             None => Ok(Vec::new()),
             Some(Yaml::Hash(field_hash)) => {
-                match field_hash.get(&Yaml::from_str("required")) {
+                match field_hash.get(&Yaml::from_str(&req)) {
                     None | Some(Yaml::Null) => Ok(Vec::new()),
                     Some(Yaml::String(ref name)) => {
                         let mut field_vec = Vec::new();
@@ -220,42 +220,15 @@ impl Taxonomy {
                         Ok(field_vec)
                     }
                     Some(Yaml::Array(values)) => {
-                        Ok(values.iter().map(|v| match *v {
-                            Yaml::String(ref value) => value.clone(),
-                            _ => panic!("can only take strings!"), // SM - TODO: need to change to return an error rather than panic but at least it builds for now
-                        }).collect())
+                        Ok(values
+                            .iter()
+                            .map(|v| match *v {
+                                Yaml::String(ref value) => value.clone(),
+                                _ => panic!("can only take strings!"), // SM - TODO: need to change to return an error rather than panic but at least it builds for now
+                            }).collect())
                     }
                     _ => Err(key_of_type(
-                        "Fields/Required",
-                        Required::No,
-                        field_hash,
-                        "Array or String",
-                    )),
-                }
-            }
-            _ => Err(key_of_type("fields", Required::No, hash, "hash")),
-        }
-    }
-
-    fn get_fields_opt(hash: &yaml::Hash) -> Result<Vec<String>, String> {
-        match hash.get(&Yaml::from_str("fields")) {
-            None => Ok(Vec::new()),
-            Some(Yaml::Hash(field_hash)) => {
-                match field_hash.get(&Yaml::from_str("optional")) {
-                    None | Some(Yaml::Null) => Ok(Vec::new()),
-                    Some(Yaml::String(ref name)) => {
-                        let mut field_vec = Vec::new();
-                        field_vec.push(name.clone());
-                        Ok(field_vec)
-                    }
-                    Some(Yaml::Array(values)) => {
-                        Ok(values.iter().map(|v| match *v {
-                            Yaml::String(ref value) => value.clone(),
-                            _ => panic!("can only take strings!"), // SM - TODO: need to change to return an error rather than panic but at least it builds for now
-                        }).collect())
-                    }
-                    _ => Err(key_of_type(
-                        "Fields/Optional",
+                        "Fields",
                         Required::No,
                         field_hash,
                         "Array or String",

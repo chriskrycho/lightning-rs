@@ -147,10 +147,12 @@ fn extract_metadata<'c>(content: &'c str) -> Option<String> {
     }
 
     let metadata = lines_of_interest(content)
-        .skip(1)  // the initial "---"
-        .take_while(|line| !is_terminal_delimiter(&line))  // until "---" or "..."
-        .fold(Vec::new(), |mut vec, line| { vec.push(line); vec })
-        .join("\n");
+        .skip(1) // the initial "---"
+        .take_while(|line| !is_terminal_delimiter(&line)) // until "---" or "..."
+        .fold(Vec::new(), |mut vec, line| {
+            vec.push(line);
+            vec
+        }).join("\n");
 
     Some(metadata)
 }

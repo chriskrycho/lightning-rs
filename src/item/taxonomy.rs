@@ -205,16 +205,17 @@ fn extract_values(values: &[yaml::Yaml]) -> Vec<PathSegments> {
     //        panic!("not all values were of the same type");
     //    }
 
-    vec![values
-        .iter()
-        .map(|v| match *v {
-            //&Yaml::Alias(..) => None,
-            //&Yaml::Array(nested_values) => Some(nested_values),
-            //&Yaml::BadValue => None,
-            //&Yaml::Boolean(value) => Some(value),
-            //&Yaml::Hash(nested_values) => Some(nested_values),
-            Yaml::String(ref value) => value.clone(),
-            _ => panic!("can only take strings!"), // SM - TODO: need to change to return an error rather than panic but at least it builds for now
-        })
-        .collect()]
+    vec![
+        values
+            .iter()
+            .map(|v| match *v {
+                //&Yaml::Alias(..) => None,
+                //&Yaml::Array(nested_values) => Some(nested_values),
+                //&Yaml::BadValue => None,
+                //&Yaml::Boolean(value) => Some(value),
+                //&Yaml::Hash(nested_values) => Some(nested_values),
+                Yaml::String(ref value) => value.clone(),
+                _ => panic!("can only take strings!"), // SM - TODO: need to change to return an error rather than panic but at least it builds for now
+            }).collect(),
+    ]
 }
