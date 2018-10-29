@@ -71,8 +71,9 @@ impl Config {
             .ok_or("Empty configuration file")?;
         let config_map = yaml_config.as_hash().ok_or("Configuration is not a map")?;
 
-        let layout = Self::get_layout(config_map)?;
-        let rules = Self::get_rules(&layout)?;
+        let layout = Self::get_hash("layout", config_map)?;
+        let templates = Self::get_hash("templates", &layout)?;
+        let rules = Self::get_hash("taxonomy_rules", &layout)?;
 
         Ok(Config {
             site: Self::parse_site_meta(config_map)?,
@@ -82,35 +83,21 @@ impl Config {
         })
     }
 
-    fn get_layout<'map>(
-        config_map: &'map BTreeMap<Yaml, Yaml>,
-    ) -> Result<&'map BTreeMap<Yaml, Yaml>, String> {
-        const LAYOUT: &str = "layout";
-        config_map
-            .get(&Yaml::from_str(LAYOUT))
-            .ok_or_else(|| required_key(LAYOUT, config_map))?
+    //SM - TODO: consider this into yaml_util
+    fn get_hash<'l>(
+        key: &str,
+        map: &'l BTreeMap<Yaml, Yaml>,
+    ) -> Result<&'l BTreeMap<Yaml, Yaml>, String> {
+        map.get(&Yaml::from_str(key))
+            .ok_or_else(|| required_key(key, map))?
             .as_hash()
-            .ok_or_else(|| key_of_type(LAYOUT, Required::Yes, config_map, "hash"))
-    }
-
-    fn get_rules<'l>(layout: &'l BTreeMap<Yaml, Yaml>) -> Result<&'l BTreeMap<Yaml, Yaml>, String> {
-        const RULES: &str = "taxonomy_rules";
-        layout
-            .get(&Yaml::from_str(RULES))
-            .ok_or_else(|| required_key(RULES, layout))?
-            .as_hash()
-            .ok_or_else(|| key_of_type(RULES, Required::Yes, layout, "hash"))
+            .ok_or_else(|| key_of_type(key, Required::Yes, map, "hash"))
     }
 
     /// Load the site data from the configuration file.
     fn parse_site_meta(config_map: &BTreeMap<Yaml, Yaml>) -> Result<SiteInfo, String> {
         const SITE_INFO: &str = "site_info";
-        let site_info_yaml = config_map
-            .get(&Yaml::from_str(SITE_INFO))
-            .ok_or_else(|| required_key(SITE_INFO, config_map))?
-            .as_hash()
-            .ok_or_else(|| key_of_type(SITE_INFO, Required::Yes, config_map, "hash"))?;
-
+        let site_info_yaml = Self::get_hash(SITE_INFO, config_map)?;
         SiteInfo::from_yaml(&site_info_yaml)
     }
 
@@ -191,6 +178,8 @@ mod tests {
             content: PathBuf::from("content"),
             output: PathBuf::from("output"),
             template: PathBuf::from("layout"),
+            index: PathBuf::from("index.html"),
+            item: PathBuf::from("item.html"),
         };
 
         let mut taxonomies = HashMap::new();

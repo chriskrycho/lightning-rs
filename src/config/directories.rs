@@ -15,6 +15,8 @@ pub struct Directories {
     pub content: PathBuf,
     pub output: PathBuf,
     pub template: PathBuf,
+    pub index: PathBuf,
+    pub item: PathBuf,
 }
 
 impl Directories {
@@ -26,6 +28,9 @@ impl Directories {
         const CONTENT_DIRECTORY: &str = "content_directory";
         const OUTPUT_DIRECTORY: &str = "output_directory";
         const TEMPLATE_DIRECTORY: &str = "directory";
+        const INDEX: &str = "index";
+        const TEMPLATES: &str = "templates";
+        const ITEM: &str = "item";
 
         let content_directory_yaml = config_map
             .get(&Yaml::from_str(CONTENT_DIRECTORY))
@@ -54,10 +59,28 @@ impl Directories {
             &config_path,
         )?;
 
+        let templates_yaml = structure
+            .get(&Yaml::from_str(TEMPLATES))
+            .ok_or_else(|| required_key(TEMPLATES, structure))?
+            .as_hash()
+            .ok_or_else(|| key_of_type(TEMPLATES, Required::Yes, structure, "hash"))?;
+
+        let index_yaml = templates_yaml
+            .get(&Yaml::from_str(INDEX))
+            .ok_or_else(|| required_key(INDEX, templates_yaml))?;
+        let index = Directories::path_buf_from_yaml(&index_yaml, "index", &config_path)?;
+
+        let item_yaml = templates_yaml
+            .get(&Yaml::from_str(ITEM))
+            .ok_or_else(|| required_key(ITEM, templates_yaml))?;
+        let item = Directories::path_buf_from_yaml(&item_yaml, "index", &config_path)?;
+
         Ok(Directories {
             content: content_directory,
             output: output_directory,
             template: template_directory,
+            index,
+            item,
         })
     }
 
