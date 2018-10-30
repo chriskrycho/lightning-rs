@@ -6,6 +6,7 @@ pub mod taxonomy;
 pub mod templates;
 
 // First-party
+use yaml_util::get_hash;
 use std::collections::{BTreeMap, HashMap};
 use std::convert::From;
 use std::error::Error;
@@ -81,9 +82,9 @@ impl Config {
             .ok_or("Empty configuration file")?;
         let config_map = yaml_config.as_hash().ok_or("Configuration is not a map")?;
 
-        let layout = Self::get_hash("layout", config_map)?;
-        let templates_yaml = Self::get_hash("templates", &layout)?;
-        let rules = Self::get_hash("taxonomy_rules", &layout)?;
+        let layout = get_hash("layout", config_map)?;
+        let templates_yaml = get_hash("templates", &layout)?;
+        let rules = get_hash("taxonomy_rules", &layout)?;
 
         let index_yaml = templates_yaml
             .get(&Yaml::from_str(INDEX))
@@ -107,21 +108,10 @@ impl Config {
         })
     }
 
-    //SM - TODO: consider this into yaml_util
-    fn get_hash<'l>(
-        key: &str,
-        map: &'l BTreeMap<Yaml, Yaml>,
-    ) -> Result<&'l BTreeMap<Yaml, Yaml>, String> {
-        map.get(&Yaml::from_str(key))
-            .ok_or_else(|| required_key(key, map))?
-            .as_hash()
-            .ok_or_else(|| key_of_type(key, Required::Yes, map, "hash"))
-    }
-
     /// Load the site data from the configuration file.
     fn parse_site_meta(config_map: &BTreeMap<Yaml, Yaml>) -> Result<SiteInfo, String> {
         const SITE_INFO: &str = "site_info";
-        let site_info_yaml = Self::get_hash(SITE_INFO, config_map)?;
+        let site_info_yaml = get_hash(SITE_INFO, config_map)?;
         SiteInfo::from_yaml(&site_info_yaml)
     }
 

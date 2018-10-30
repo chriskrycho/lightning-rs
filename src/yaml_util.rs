@@ -3,6 +3,7 @@
 // Standard library
 use std::fmt;
 use std::ops;
+use std::collections::BTreeMap;
 
 // Third party
 use yaml_rust::yaml::{Hash, Yaml};
@@ -95,6 +96,16 @@ pub fn ridiculous_number<V: fmt::Display + ops::Add>(
         "Seriously? You set the value of `{}` to {}? (The max is {}.)\nContext: {:?}",
         key, value, max, context
     )
+}
+
+pub fn get_hash<'l>(
+    key: &str,
+    map: &'l BTreeMap<Yaml, Yaml>,
+) -> Result<&'l BTreeMap<Yaml, Yaml>, String> {
+    map.get(&Yaml::from_str(key))
+        .ok_or_else(|| required_key(key, map))?
+        .as_hash()
+        .ok_or_else(|| key_of_type(key, Required::Yes, map, "hash"))
 }
 
 #[cfg(test)]
