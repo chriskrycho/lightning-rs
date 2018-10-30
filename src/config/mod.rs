@@ -30,6 +30,12 @@ pub type Name = String;
 pub type Taxonomies = HashMap<Name, Taxonomy>;
 
 #[derive(Debug, PartialEq)]
+pub struct IndexTemplates {
+    pub index: PathBuf,
+    pub item: PathBuf,
+}
+
+#[derive(Debug, PartialEq)]
 pub struct Rules {
     pub commas_as_lists: bool,
 }
@@ -39,11 +45,15 @@ pub struct Config {
     pub site: SiteInfo,
     pub directories: Directories,
     pub taxonomies: Taxonomies,
+    pub templates: IndexTemplates,
     pub rules: Rules,
 }
 
 impl Config {
     pub fn load(directory: &PathBuf) -> Result<Config, String> {
+        const INDEX: &str = "index";
+        const ITEM: &str = "item";
+
         let config_path = directory.join(CONFIG_FILE_NAME);
         if !config_path.exists() {
             return Err(format!(
@@ -72,13 +82,27 @@ impl Config {
         let config_map = yaml_config.as_hash().ok_or("Configuration is not a map")?;
 
         let layout = Self::get_hash("layout", config_map)?;
-        let templates = Self::get_hash("templates", &layout)?;
+        let templates_yaml = Self::get_hash("templates", &layout)?;
         let rules = Self::get_hash("taxonomy_rules", &layout)?;
+
+        let index_yaml = templates_yaml
+            .get(&Yaml::from_str(INDEX))
+            .ok_or_else(|| required_key(INDEX, templates_yaml))?;
+
+        let item_yaml = templates_yaml
+            .get(&Yaml::from_str(ITEM))
+            .ok_or_else(|| required_key(ITEM, templates_yaml))?;
+
+        let templates = IndexTemplates {
+            index: Directories::path_buf_from_yaml(&index_yaml, "index", &config_path)?,
+            item: Directories::path_buf_from_yaml(&item_yaml, "index", &config_path)?,
+        };
 
         Ok(Config {
             site: Self::parse_site_meta(config_map)?,
             directories: Directories::from_yaml(config_map, &config_path, &layout)?,
             taxonomies: Self::parse_taxonomies(&layout, &config_path)?,
+            templates,
             rules: Self::parse_rules(&rules)?,
         })
     }
@@ -178,8 +202,6 @@ mod tests {
             content: PathBuf::from("content"),
             output: PathBuf::from("output"),
             template: PathBuf::from("layout"),
-            index: PathBuf::from("index.html"),
-            item: PathBuf::from("item.html"),
         };
 
         let mut taxonomies = HashMap::new();
@@ -263,10 +285,16 @@ mod tests {
         };
         taxonomies.insert("series".into(), tax_series);
 
+        let templates = IndexTemplates {
+            index: PathBuf::from("index.html"),
+            item: PathBuf::from("item.html"),
+        };
+
         let expected = Config {
             site,
             directories,
             taxonomies,
+            templates,
             rules: Rules {
                 commas_as_lists: true,
             },
