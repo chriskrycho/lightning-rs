@@ -6,13 +6,13 @@ pub mod taxonomy;
 pub mod templates;
 
 // First-party
-use yaml_util::get_hash;
 use std::collections::{BTreeMap, HashMap};
 use std::convert::From;
 use std::error::Error;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
+use yaml_util::get_hash;
 
 // Third-party
 use yaml_rust::{Yaml, YamlLoader};
@@ -122,11 +122,7 @@ impl Config {
     ) -> Result<Taxonomies, String> {
         const TAXONOMIES: &str = "taxonomies";
 
-        let taxonomies_yaml = structure
-            .get(&Yaml::from_str(TAXONOMIES))
-            .ok_or_else(|| format!("No `{}` key in {:?}", TAXONOMIES, config_path))?
-            .as_hash()
-            .ok_or_else(|| format!("`{}` is not a hash in {:?}", TAXONOMIES, config_path))?;
+        let taxonomies_yaml = get_hash(TAXONOMIES, structure)?;
 
         let mut taxonomies = Taxonomies::new();
         if taxonomies_yaml.is_empty() {
@@ -135,11 +131,8 @@ impl Config {
 
         for name in taxonomies_yaml.keys() {
             let key = name.as_str().expect("If this isn't here, YAML is broken.");
-            let content = taxonomies_yaml
-                .get(name)
-                .ok_or_else(|| required_key(key, taxonomies_yaml))?
-                .as_hash()
-                .ok_or_else(|| key_of_type(key, Required::Yes, taxonomies_yaml, "hash"))?;
+            let content = get_hash(key, taxonomies_yaml)?;
+
             let taxonomy = Taxonomy::from_yaml(content, key)?;
             if taxonomies.insert(key.into(), taxonomy).is_some() {
                 return Err(format!("duplicate key {}", key));

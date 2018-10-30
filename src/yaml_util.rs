@@ -1,9 +1,9 @@
 //! Utilities for dealing with common YAML-processing tasks.
 
 // Standard library
+use std::collections::BTreeMap;
 use std::fmt;
 use std::ops;
-use std::collections::BTreeMap;
 
 // Third party
 use yaml_rust::yaml::{Hash, Yaml};
