@@ -152,7 +152,11 @@ layout:
   # Every taxonomy must have at least an `item` template key defined; it may
   # also have a `list` template key defined. The `list` template will receive
   # all variants of the taxonomy, with all items associated with that taxonomy.
-  # The `item` template will receive
+  # The `item` template will receive TODO.
+  # SM - To generate a feed for a taxonomy, specify a feed_item template for a
+  # seperate feed for each item in the taxonomy and a feed_list template for a
+  # single feed for everything with that tag.
+  # 
   taxonomies:
 
     # Note that simply by leaving off the `limit` key, this taxonomy is
@@ -167,6 +171,8 @@ layout:
       templates:
         list: authors.html  # All authors
         item: author.html  # Everything authored by me
+        feed_list: feed_template.rss # RSS feed of all the authors
+        feed_item: feed_template.rss # Generate an RSS feed for each author
 
     # `singular` taxonomies allow only a single entry in the taxonomy for any
     # specific item.
@@ -181,6 +187,8 @@ layout:
       templates:
         list: categories.html  # All categories
         item: category.html  # E.g. things categorized as "Tech"
+        feed_list: feed_template.rss # RSS feed of all the categories
+        feed_item: feed_template.rss # E.g. a feed for things categorized as "Tech"
 
     # `multiple` taxonomies are identical with `singular` taxonomies except that
     # they allow more than of the taxonomy item to appear. This is useful if,
@@ -266,45 +274,14 @@ layout:
         item: series.html  # the template for each individual series
 
   feeds:
-    # If all engines are commented out or removed, no feeds will be generated.
-    # If it is included, a full feed of every time-categorized item on the site
-    # will be generated. (NOTE: If there are no `temporal` taxonomies, feed
-    # items will not be generated.) The default configuration generates [RSS],
-    # [Atom], and [JSON] feeds.
-    #
-    # [RSS]: http://cyber.harvard.edu/rss/rss.html
-    # [Atom]: https://tools.ietf.org/html/rfc4287
-    # [JSON]: https://jsonfeed.org
-    engines:
-      - RSS
-      # - Atom
-      - JSON
-
-    # Specify additional feeds to be generated.
-    additional:
-
-      # The 'taxonomies' block allows you to specify taxonomies for which you
-      # wish to generate feeds for every variant. So in this setup, we will be
-      # generating feeds for each category and tag on the site. The generated
-      # feeds will be <name of taxonomy item> - <site name>. For example, that
-      # might be 'Tech - Chris Krycho' if it were for the "Tech" category on
-      # my personal website.
-      taxonomies:
-        - category
-        - tag
-        - series
-
-      # TODO: Something like this---
-      custom:
-        Art and Tech:
-          taxonomies:
-            - category: art
-            - category: tech
-        Family Poetry:
-          taxonomies:
-            - tag: family
-            - tag: poetry
-
+    # SM - This is just for feeds for a combination of things. Normal feeds get 
+    # generated from the templates section of each taxonomy
+    Art and Tech:
+      - category: art
+      - category: tech
+    Family Poetry:
+      - tag: family
+      - tag: poetry
 
   # Define rules for other content to include or exclude.
   other_content:

@@ -13,6 +13,8 @@ use yaml_util::*;
 pub struct Templates {
     pub item: PathBuf,
     pub list: Option<PathBuf>,
+    pub feed_item: Option<PathBuf>,
+    pub feed_list: Option<PathBuf>,
 }
 
 impl Templates {
@@ -23,9 +25,16 @@ impl Templates {
             .ok_or_else(|| key_of_type(key, Required::Yes, yaml, "hash"))?;
 
         let item = Self::item_from_yaml(template_yaml)?;
-        let list = Self::list_from_yaml(template_yaml)?;
+        let list = Self::object_from_yaml("list", template_yaml)?;
+        let feed_list = Self::object_from_yaml("feed_list", template_yaml)?;
+        let feed_item = Self::object_from_yaml("feed_item", template_yaml)?;
 
-        Ok(Templates { item, list })
+        Ok(Templates {
+            item,
+            list,
+            feed_item,
+            feed_list,
+        })
     }
 
     /// Get the `item` value for a taxonomy's templates.
@@ -37,14 +46,13 @@ impl Templates {
             .into())
     }
 
-    /// Get the `list` value for a taxonomy's templates.
+    /// Get a value for a taxonomy's templates.
     ///
-    /// This return type isn't as crazy as it looks. A `list` entry is allowed
+    /// This return type isn't as crazy as it looks. An entry is allowed
     /// to be explicitly `null`/`~` or simply unset, but if the key is
     /// included, it is not allowed to be anything other than a `string` or
     /// explicitly set to `null`.
-    fn list_from_yaml(yaml: &yaml::Hash) -> Result<Option<PathBuf>, String> {
-        let key = "list";
+    fn object_from_yaml(key: &str, yaml: &yaml::Hash) -> Result<Option<PathBuf>, String> {
         if yaml.contains_key(&Yaml::from_str(key)) {
             match yaml[&Yaml::from_str(key)] {
                 Yaml::Null => Ok(None),

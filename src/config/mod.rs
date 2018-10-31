@@ -132,7 +132,6 @@ impl Config {
         for name in taxonomies_yaml.keys() {
             let key = name.as_str().expect("If this isn't here, YAML is broken.");
             let content = get_hash(key, taxonomies_yaml)?;
-
             let taxonomy = Taxonomy::from_yaml(content, key)?;
             if taxonomies.insert(key.into(), taxonomy).is_some() {
                 return Err(format!("duplicate key {}", key));
@@ -199,6 +198,8 @@ mod tests {
             templates: Templates {
                 item: "author.html".into(),
                 list: Some("authors.html".into()),
+                feed_item: Some("feed_template.rss".into()),
+                feed_list: Some("feed_template.rss".into()),
             },
         };
         taxonomies.insert("author".into(), tax_author);
@@ -214,6 +215,8 @@ mod tests {
             templates: Templates {
                 item: "category.html".into(),
                 list: Some("categories.html".into()),
+                feed_item: Some("feed_template.rss".into()),
+                feed_list: Some("feed_template.rss".into()),
             },
         };
         taxonomies.insert("category".into(), tax_category);
@@ -229,6 +232,8 @@ mod tests {
             templates: Templates {
                 item: "tag.html".into(),
                 list: Some("tags.html".into()),
+                feed_item: None,
+                feed_list: None,
             },
         };
         taxonomies.insert("tag".into(), tax_tag);
@@ -239,6 +244,8 @@ mod tests {
             templates: Templates {
                 item: "archives.html".into(),
                 list: Some("period_archives.html".into()),
+                feed_item: None,
+                feed_list: None,
             },
             date_format: "%Y-%m-%d %H:%M %P".into(),
         };
@@ -249,6 +256,8 @@ mod tests {
             templates: Templates {
                 item: "page.html".into(),
                 list: None,
+                feed_item: None,
+                feed_list: None,
             },
         };
         taxonomies.insert("page".into(), tax_page);
@@ -264,6 +273,8 @@ mod tests {
             templates: Templates {
                 item: "series.html".into(),
                 list: Some("series-list.html".into()),
+                feed_item: None,
+                feed_list: None,
             },
         };
         taxonomies.insert("series".into(), tax_series);

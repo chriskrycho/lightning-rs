@@ -291,6 +291,8 @@ mod tests {
             templates: Templates {
                 item: "author.html".into(),
                 list: Some("authors.html".into()),
+                feed_item: None,
+                feed_list: None,
             },
         };
 
@@ -330,6 +332,8 @@ mod tests {
             templates: Templates {
                 item: "category.html".into(),
                 list: Some("categories.html".into()),
+                feed_item: None,
+                feed_list: None,
             },
         };
 
@@ -368,6 +372,8 @@ mod tests {
             templates: Templates {
                 item: "tag.html".into(),
                 list: Some("tags.html".into()),
+                feed_item: None,
+                feed_list: None,
             },
         };
 
@@ -399,6 +405,8 @@ mod tests {
             templates: Templates {
                 item: "archives.html".into(),
                 list: Some("period_archives.html".into()),
+                feed_item: None,
+                feed_list: None,
             },
             date_format: "%Y-%m-%d %H:%M %P".into(),
         };
@@ -429,6 +437,8 @@ mod tests {
             templates: Templates {
                 item: "page.html".into(),
                 list: None,
+                feed_item: None,
+                feed_list: None,
             },
         };
 
