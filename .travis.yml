@@ -13,6 +13,7 @@ matrix:
     - rust: beta
 before_script:
 - rustup component add rustfmt-preview
+
 script:
 - cargo fmt --all -- --check
 - cargo test
