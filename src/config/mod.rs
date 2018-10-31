@@ -40,6 +40,11 @@ pub struct IndexTemplates {
 pub struct Rules {
     pub commas_as_lists: bool,
 }
+#[derive(Debug, PartialEq)]
+pub struct Other_Content {
+    pub copy_paths: Vec<PathBuf>,
+    pub exclude: Vec<PathBuf>,
+}
 
 #[derive(Debug, PartialEq)]
 pub struct Config {
@@ -48,6 +53,7 @@ pub struct Config {
     pub taxonomies: Taxonomies,
     pub templates: IndexTemplates,
     pub rules: Rules,
+    pub other_content: Other_Content,
 }
 
 impl Config {
@@ -99,13 +105,33 @@ impl Config {
             item: Directories::path_buf_from_yaml(&item_yaml, "index", &config_path)?,
         };
 
+        let other_content_yaml = get_hash("other_content", &layout)?;
+
+        let other_content = Other_Content {
+            copy_paths: Self::get_other_content("copy", &other_content_yaml)?,
+            exclude: Self::get_other_content("exclude", &other_content_yaml)?,
+        };
+
         Ok(Config {
             site: Self::parse_site_meta(config_map)?,
             directories: Directories::from_yaml(config_map, &config_path, &layout)?,
             taxonomies: Self::parse_taxonomies(&layout, &config_path)?,
             templates,
             rules: Self::parse_rules(&rules)?,
+            other_content,
         })
+    }
+
+    fn get_other_content(key: &str, map: &BTreeMap<Yaml, Yaml>) -> Result<Vec<PathBuf>, String> {
+        match map.get(&Yaml::from_str(key)) {
+            None | Some(Yaml::Null) => Ok(Vec::new()),
+            Some(Yaml::String(ref value)) => Ok(vec![value.into()]),
+            Some(Yaml::Array(value)) => Ok(value
+                .iter()
+                .map(|v| PathBuf::from(v.as_str().unwrap()))
+                .collect()),
+            _ => Err(key_of_type(key, Required::No, map, "string")),
+        }
     }
 
     /// Load the site data from the configuration file.
@@ -284,6 +310,11 @@ mod tests {
             item: PathBuf::from("item.html"),
         };
 
+        let other_content = Other_Content {
+            copy_paths: vec!["static".into(), "extra".into()],
+            exclude: Vec::new(),
+        };
+
         let expected = Config {
             site,
             directories,
@@ -292,6 +323,7 @@ mod tests {
             rules: Rules {
                 commas_as_lists: true,
             },
+            other_content,
         };
 
         assert_eq!(expected, config);
