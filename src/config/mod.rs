@@ -41,7 +41,7 @@ pub struct Rules {
     pub commas_as_lists: bool,
 }
 #[derive(Debug, PartialEq)]
-pub struct Other_Content {
+pub struct OtherContent {
     pub copy_paths: Vec<PathBuf>,
     pub exclude: Vec<PathBuf>,
 }
@@ -53,7 +53,7 @@ pub struct Config {
     pub taxonomies: Taxonomies,
     pub templates: IndexTemplates,
     pub rules: Rules,
-    pub other_content: Other_Content,
+    pub other_content: OtherContent,
 }
 
 impl Config {
@@ -107,7 +107,7 @@ impl Config {
 
         let other_content_yaml = get_hash("other_content", &layout)?;
 
-        let other_content = Other_Content {
+        let other_content = OtherContent {
             copy_paths: Self::get_other_content("copy", &other_content_yaml)?,
             exclude: Self::get_other_content("exclude", &other_content_yaml)?,
         };
@@ -310,7 +310,7 @@ mod tests {
             item: PathBuf::from("item.html"),
         };
 
-        let other_content = Other_Content {
+        let other_content = OtherContent {
             copy_paths: vec!["static".into(), "extra".into()],
             exclude: Vec::new(),
         };

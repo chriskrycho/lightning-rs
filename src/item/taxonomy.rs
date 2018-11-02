@@ -16,14 +16,16 @@ use config::Config;
 pub type PathSegments = Vec<String>; // SM - TagLike already includes the Vec so it isn't needed here?
 
 /// An `item::taxonomy::Taxonomy` is a taxonomy *value* for an item.
+#[derive(Debug, PartialEq)]
 pub enum Taxonomy {
     Boolean {
-        name: String,
+        name: String, // SM - Do we need all these names? They are in the hash already.
         value: bool,
     },
     TagLike {
         name: String,
         values: Vec<PathSegments>,
+        fields: Vec<(String, String)>,
     },
     Temporal {
         name: String,
@@ -102,11 +104,13 @@ impl Taxonomy {
                 required,
                 hierarchical,
                 limit: maybe_limit,
+                ref fields_req,
+                ref fields_opt,
                 ..
             } => match *entry {
                 Yaml::String(ref taxonomy_string) => {
                     let taxonomy_values = get_taxonomy_values(taxonomy_string, commas_as_lists);
-
+                    println!("Got entry: {:?}", entry);
                     match maybe_limit {
                         Some(limit) if taxonomy_values.len() > limit => {
                             Err(format!("only {} values allowed", limit))
@@ -114,6 +118,7 @@ impl Taxonomy {
                         Some(..) | None => Ok(Some(Taxonomy::TagLike {
                             name: name.into(),
                             values: get_split_taxonomy_values(&taxonomy_values, hierarchical),
+                            fields: Vec::new(),
                         })),
                     }
                 }
@@ -122,15 +127,58 @@ impl Taxonomy {
                 Yaml::Hash(ref hash) => {
                     // TODO: Do fields match? If they don't match, how to handle
                     // them: ignore, or error, or warn?
-                    unimplemented!()
+                    let mut fields: Vec<(String, String)> = Vec::new();
+
+                    //check required fields
+                    for field in fields_req {
+                        match hash.get(&Yaml::from_str(&field)) {
+                            None | Some(Yaml::Null) => {
+                                return Err(format!(
+                                    "Required field {:?} not found or empty.",
+                                    field
+                                ))
+                            }
+                            Some(Yaml::String(value)) => {
+                                fields.push((field.to_string(), value.to_string()))
+                            }
+                            _ => {
+                                return Err(format!(
+                                    "Expected a string for {:?} and didn't find one.",
+                                    field
+                                ))
+                            }
+                        }
+                    }
+
+                    //check for optional fields
+                    for field in fields_opt {
+                        match hash.get(&Yaml::from_str(&field)) {
+                            None | Some(Yaml::Null) => continue,
+                            Some(Yaml::String(value)) => {
+                                fields.push((field.to_string(), value.to_string()))
+                            }
+                            _ => {
+                                return Err(format!(
+                                    "Expected a string for {:?} and didn't find one.",
+                                    field
+                                ))
+                            }
+                        }
+                    }
+
+                    Ok(Some(Taxonomy::TagLike {
+                        name: name.into(),
+                        values: Vec::new(),
+                        fields,
+                    }))
                 }
 
                 Yaml::Array(ref values) => {
                     if all_of_same_yaml_type(values) {
                         Ok(Some(Taxonomy::TagLike {
                             name: name.into(),
-                            //values: values.clone(), // TODO: actually extract them!
                             values: extract_values(values),
+                            fields: Vec::new(),
                         }))
                     } else {
                         Err("not all values were of the same type".into())
@@ -194,28 +242,51 @@ fn all_of_same_yaml_type(values: &[yaml::Yaml]) -> bool {
     values.iter().all(|v| is_same_variant(v))
 }
 
-// TODO: is this even *possible*? I don't think so...
-// SM - it may be possible but the type of T has to be known at compile time. If the type can't be known then we would have to use a enum.
-// SM - I think this should just be a list of
-//fn extract_values<T>(values: &Vec<yaml::Yaml>) -> Result<Vec<T>, String> {
 fn extract_values(values: &[yaml::Yaml]) -> Vec<PathSegments> {
-    // SM - don't need this bit, it's done before calling the function
-    //    if !all_of_same_yaml_type(values) {
-    //        //return Err("not all values were of the same type".into());
-    //        panic!("not all values were of the same type");
-    //    }
-
     vec![
         values
             .iter()
             .map(|v| match *v {
-                //&Yaml::Alias(..) => None,
-                //&Yaml::Array(nested_values) => Some(nested_values),
-                //&Yaml::BadValue => None,
-                //&Yaml::Boolean(value) => Some(value),
-                //&Yaml::Hash(nested_values) => Some(nested_values),
                 Yaml::String(ref value) => value.clone(),
                 _ => panic!("can only take strings!"), // SM - TODO: need to change to return an error rather than panic but at least it builds for now
             }).collect(),
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use config::Config;
+    use item::taxonomy::Taxonomy;
+    use std::collections::HashMap;
+    use std::env;
+    use std::path::PathBuf;
+    use yaml_rust::YamlLoader;
+
+    #[test]
+    fn parses_metadata_from_post() {
+        let mut site_directory: PathBuf = env::current_dir().unwrap();
+        site_directory.push(r"tests/scenarios/pelican/");
+
+        let config = Config::load(&PathBuf::from(&site_directory)).unwrap();
+
+        let yaml_str = "
+author: Steven, Chris
+category: 
+  - Test1
+  - Test2
+#date: 2017-01-01 12:01 am
+series:
+    name: Testing
+    part: One
+";
+
+        let yaml = YamlLoader::load_from_str(&yaml_str).unwrap();
+        let yaml = yaml.into_iter().next().unwrap();
+        let yaml = yaml.as_hash().unwrap();
+
+        let taxonomy = Taxonomy::from_yaml_hash(yaml, &config);
+
+        let expected = Ok(HashMap::new());
+        assert_eq!(expected, taxonomy);
+    }
 }
