@@ -1,11 +1,5 @@
 //! Generate web sites from Markdown content and YAML configuration.
 
-extern crate glob;
-extern crate pandoc;
-extern crate quick_xml;
-extern crate syntect;
-extern crate yaml_rust;
-
 mod builder;
 mod config;
 mod creator;

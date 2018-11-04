@@ -6,7 +6,7 @@ use std::fmt;
 use std::path::PathBuf;
 
 // Third party
-use clap::{App, ArgMatches};
+use clap::{load_yaml, App, ArgMatches};
 
 const INIT: &'static str = "init";
 const BUILD: &'static str = "build";

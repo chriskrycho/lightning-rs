@@ -1,7 +1,4 @@
 //! Run the static site generator.
-#[macro_use]
-extern crate clap;
-extern crate lightning;
 
 mod cli;
 
