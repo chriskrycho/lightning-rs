@@ -27,32 +27,35 @@ pub fn required_key<Y: fmt::Debug>(key: &str, yaml: &Y) -> String {
     format!("Required key `{}` missing from {:?}", key, yaml)
 }
 
-pub fn key_of_type<Y: fmt::Debug>(key: &str,
-                                  required: Required,
-                                  yaml: Y,
-                                  required_type: &str)
-                                  -> String {
-    format!("{} key `{}` in {:?} must be a {}",
-            required,
-            key,
-            yaml,
-            required_type)
+pub fn key_of_type<Y: fmt::Debug>(
+    key: &str,
+    required: Required,
+    yaml: Y,
+    required_type: &str,
+) -> String {
+    format!(
+        "{} key `{}` in {:?} must be a {}",
+        required, key, yaml, required_type
+    )
 }
 
 pub fn bad_value<V: fmt::Debug, Y: fmt::Debug>(value: V, key: &str, context: &Y) -> String {
-    format!("Invalid value {:?} for key `{}` in hash {:?}",
-            value,
-            key,
-            context)
+    format!(
+        "Invalid value {:?} for key `{}` in hash {:?}",
+        value, key, context
+    )
 }
 
-pub fn ridiculous_number<V: fmt::Display + ops::Add>(value: V,
-                                                     key: &str,
-                                                     context: &yaml::Hash)
-                                                     -> String {
-    format!("Seriously? You set the value of `{}` to {}? (The max is {}.)\nContext: {:?}",
-            key,
-            value,
-            u8::MAX,
-            context)
+pub fn ridiculous_number<V: fmt::Display + ops::Add>(
+    value: V,
+    key: &str,
+    context: &yaml::Hash,
+) -> String {
+    format!(
+        "Seriously? You set the value of `{}` to {}? (The max is {}.)\nContext: {:?}",
+        key,
+        value,
+        u8::MAX,
+        context
+    )
 }

@@ -15,7 +15,7 @@ mod syntax_highlighting;
 mod validated_types;
 mod yaml_util;
 
-pub use initializer::init;
 pub use builder::build;
 pub use creator::create;
+pub use initializer::init;
 pub use server::serve;
