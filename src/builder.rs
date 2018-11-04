@@ -11,8 +11,8 @@ use pandoc::{InputFormat, OutputFormat, OutputKind, Pandoc, PandocOption, Pandoc
 use syntect::highlighting::ThemeSet;
 
 // First party
-use config::Config;
-use syntax_highlighting::syntax_highlight;
+use crate::config::Config;
+use crate::syntax_highlighting::syntax_highlight;
 
 /// Load the `Paths` for all markdown files in the specified content directory.
 fn glob_md_paths(site_directory: &PathBuf, config: &Config) -> Result<Paths, String> {
@@ -30,7 +30,7 @@ fn glob_md_paths(site_directory: &PathBuf, config: &Config) -> Result<Paths, Str
 }
 
 /// Load the templates associated with each taxonomy.
-fn load_templates(site_directory: &PathBuf, config: &Config) -> Result<Paths, String> {
+fn load_templates(_site_directory: &PathBuf, _config: &Config) -> Result<Paths, String> {
     unimplemented!()
 }
 

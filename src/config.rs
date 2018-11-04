@@ -13,8 +13,8 @@ use std::u8;
 use yaml_rust::{yaml, Yaml, YamlLoader};
 
 // First-party
-pub use validated_types::Url as ValidatedUrl;
-use yaml_util::*;
+pub use crate::validated_types::Url as ValidatedUrl;
+use crate::yaml_util::*;
 
 const CONFIG_FILE_NAME: &'static str = "lightning.yaml";
 

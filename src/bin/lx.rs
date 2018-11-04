@@ -9,7 +9,7 @@ mod cli;
 use std::io::prelude::*;
 
 // First party
-use cli::{cli, Command};
+use crate::cli::{cli, Command};
 
 fn main() {
     if let Err(reason) = run() {

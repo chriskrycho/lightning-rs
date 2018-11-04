@@ -2,6 +2,7 @@
 name = "lightning"
 version = "0.1.0"
 authors = ["Chris Krycho <chris@chriskrycho.com>"]
+edition = "2018"
 
 [[bin]]
 name = "lx"
