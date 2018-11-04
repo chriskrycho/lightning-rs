@@ -26,7 +26,7 @@ pub enum Taxonomy {
     /// or *not*.
     ///
     /// Boolean taxonomies do not have multiple variants; so e.g. in this setup
-    /// an item is a "page" or it is not---unlike a `Multiple` taxonomy, where
+    /// an item is a "page" or it is not---unlike a `TagLike` taxonomy, where
     /// an item does not belong to e.g. the "category" taxonomy so much as to
     /// one of the variants *within* the taxonomy.
     Boolean { name: String, templates: Templates },
@@ -247,7 +247,7 @@ mod tests {
             taxonomy_name
         );
 
-        let expected = Taxonomy::Multiple {
+        let expected = Taxonomy::TagLike {
             name: "author".into(),
             default: None,
             limit: None,
@@ -285,7 +285,7 @@ mod tests {
             taxonomy_name
         );
 
-        let expected = Taxonomy::Multiple {
+        let expected = Taxonomy::TagLike {
             name: "category".into(),
             default: Some("Blog".into()),
             limit: Some(1),
@@ -322,7 +322,7 @@ mod tests {
             taxonomy_name
         );
 
-        let expected = Taxonomy::Multiple {
+        let expected = Taxonomy::TagLike {
             name: "tag".into(),
             default: None,
             limit: None,

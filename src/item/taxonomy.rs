@@ -120,16 +120,14 @@ impl Taxonomy {
                     unimplemented!()
                 }
 
-                &Yaml::Array(ref values) => {
-                    if all_of_same_yaml_type(values) {
-                        Ok(Some(Taxonomy::TagLike {
-                            name: name.into(),
-                            values: values.clone(), // TODO: actually extract them!
-                        }))
-                    } else {
-                        Err("not all values were of the same type".into())
-                    }
-                }
+                &Yaml::Array(ref values) => if all_of_same_yaml_type(values) {
+                    Ok(Some(Taxonomy::TagLike {
+                        name: name.into(),
+                        values: split_tags(values),
+                    }))
+                } else {
+                    Err("not all values were of the same type".into())
+                },
 
                 &Yaml::Null => if required {
                     Err("is required".into())
@@ -191,21 +189,72 @@ fn all_of_same_yaml_type(values: &Vec<yaml::Yaml>) -> bool {
     values.iter().all(|v| is_same_variant(v))
 }
 
-// TODO: is this even *possible*? I don't think so...
-fn extract_values<T>(values: &Vec<yaml::Yaml>) -> Result<Vec<T>, String> {
-    if !all_of_same_yaml_type(values) {
-        return Err("not all values were of the same type".into());
+/// Split a
+/// - `values` is a
+fn split_tags(values: &Vec<yaml::Yaml>) -> Vec<PathSegments> {
+    let result = values
+        .into_iter()
+        .map(|yaml_entry| match yaml_entry {
+            &Yaml::String(ref s) => vec![s.clone()],
+            &Yaml::Hash(ref _h) => panic!("hash"),
+            &Yaml::Array(ref _a) => panic!("array"),
+            _ => vec!["".into()],
+        })
+        .collect();
+
+    result
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn split_tags_single_level() {
+        let alpha = "alpha";
+        let beta = "beta";
+        let charlie = "charlie";
+
+        let the_yaml = vec![
+            Yaml::from_str(alpha),
+            Yaml::from_str(beta),
+            Yaml::from_str(charlie),
+        ];
+
+        let tags = split_tags(&the_yaml);
+        let expected: Vec<PathSegments> =
+            vec![vec![alpha.into()], vec![beta.into()], vec![charlie.into()]];
+
+        assert_eq!(tags, expected);
     }
 
-    values
-        .iter()
-        .map(|v| match v {
-            &Yaml::Alias(..) => None,
-            &Yaml::Array(nested_values) => Some(nested_values),
-            &Yaml::BadValue => None,
-            &Yaml::Boolean(value) => Some(value),
-            &Yaml::Hash(nested_values) => Some(nested_values),
-            _ => None,
-        })
-        .collect()
+    #[test]
+    fn split_tags_nested() {
+        let alpha = "alpha";
+        let beta = "beta";
+        let charlie = "charlie";
+
+        let the_yaml = Yaml::from_str(&format!(
+            "
+- {}:
+  - {}
+  - {}
+            ",
+            alpha,
+            beta,
+            charlie
+        ));
+
+        let the_yaml = the_yaml.as_vec().expect("badly formed test data");
+        let expected: Vec<PathSegments> = vec![
+            vec![
+                alpha.into(),
+                format!("{}/{}", alpha, beta),
+                format!("{}/{}", alpha, charlie),
+            ],
+        ];
+
+        assert_eq!(split_tags(&the_yaml), expected);
+    }
 }
