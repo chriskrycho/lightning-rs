@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 // Third party
 use yaml_rust::{yaml, Yaml};
+use chrono::prelude::*;
 
 // First party
 use config;
@@ -29,7 +30,7 @@ pub enum Taxonomy {
     },
     Temporal {
         name: String,
-        value: String,
+        value: DateTime<Utc>,
     }, // TODO: `String` is wrong for Temporal
 }
 
@@ -110,7 +111,6 @@ impl Taxonomy {
             } => match *entry {
                 Yaml::String(ref taxonomy_string) => {
                     let taxonomy_values = get_taxonomy_values(taxonomy_string, commas_as_lists);
-                    println!("Got entry: {:?}", entry);
                     match maybe_limit {
                         Some(limit) if taxonomy_values.len() > limit => {
                             Err(format!("only {} values allowed", limit))
@@ -123,13 +123,10 @@ impl Taxonomy {
                     }
                 }
 
-                // TODO: e.g. series with fields.
                 Yaml::Hash(ref hash) => {
-                    // TODO: Do fields match? If they don't match, how to handle
-                    // them: ignore, or error, or warn?
                     let mut fields: Vec<(String, String)> = Vec::new();
 
-                    //check required fields
+                    //check required fields - This seems a bit inside out, we should be checking that the required fields exist even if there isn't a Yaml::Hash
                     for field in fields_req {
                         match hash.get(&Yaml::from_str(&field)) {
                             None | Some(Yaml::Null) => {
@@ -193,9 +190,13 @@ impl Taxonomy {
                 _ => Err("".into()),
             },
 
-            config::taxonomy::Taxonomy::Temporal { required, .. } => {
-                unimplemented!("can't yet parse Temporal item configs")
-            }
+            config::taxonomy::Taxonomy::Temporal { required, .. } =>  match *entry {
+                Yaml::String(ref value) => Ok(Some(Taxonomy::Temporal {
+                    name: name.into(),
+                    value: Utc.datetime_from_str(value, "%Y-%m-%d %H:%M:%S").unwrap(),
+                })),
+                _ => Err("must be `true`, `false`, or left off entirely".to_string()),
+            },
         }
     }
 }
@@ -248,7 +249,7 @@ fn extract_values(values: &[yaml::Yaml]) -> Vec<PathSegments> {
             .iter()
             .map(|v| match *v {
                 Yaml::String(ref value) => value.clone(),
-                _ => panic!("can only take strings!"), // SM - TODO: need to change to return an error rather than panic but at least it builds for now
+                _ => panic!("can only take strings!"),
             }).collect(),
     ]
 }
@@ -274,7 +275,7 @@ author: Steven, Chris
 category: 
   - Test1
   - Test2
-#date: 2017-01-01 12:01 am
+date: 2017-01-01 12:01 am
 series:
     name: Testing
     part: One
