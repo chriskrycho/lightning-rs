@@ -1,6 +1,8 @@
 //! Define types which validate their inputs for use throughout the app.
 
-#[derive(Debug, PartialEq)]
+use serde_derive::Deserialize;
+
+#[derive(Debug, PartialEq, Deserialize)]
 pub struct Url(String);
 
 impl Url {

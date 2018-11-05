@@ -26,25 +26,26 @@ site_info:
 
   # You may supply any other metadata you like, though only as key-value pairs.
   # Those pairs will be supplied to your templates as hashmaps. The default
-  # value is null/`~` since no other metadata are assumed.
-#  metadata: ~
+  # value is blank or `~` (null) since no other metadata are assumed.
+  #  metadata: ~
   metadata:
     foo: bar
     quux: 42
     baz: 13.3
 
-# Specify the source for the content. It can be any folder at all; relative
-# paths are resolved from the location of this configuration file.
-content_directory: content
+directories:
+  # Specify the source for the content. It can be any folder at all; relative
+  # paths are resolved from the location of this configuration file.
+  content: content
 
-# Specify the destination for the generated site. As with the source directory,
-# it can be any folder, and relative paths are resolved from the location of
-# this configuration file.
-#
-# Tip: if you are using this with [GitHub Pages](https://pages.github.com), you
-# may find it convenient to set this to "docs" so that you don't have to bother
-# with `gh-pages` branch.
-output_directory: output
+  # Specify the destination for the generated site. As with the source directory,
+  # it can be any folder, and relative paths are resolved from the location of
+  # this configuration file.
+  #
+  # Tip: if you are using this with [GitHub Pages](https://pages.github.com), you
+  # may find it convenient to set this to "docs" so that you don't have to bother
+  # with `gh-pages` branch.
+  output: output
 
 # Define the structure of the site, by supplying the location of a set of
 # templates to use in generating the site and a set of "taxonomies" which define
@@ -125,61 +126,62 @@ structure:
     # number of authors for each post. Since there is no default tag, items
     # without tags set explicitly will not be associated with any tag. (You
     # could also specify this explicitly by setting `default: ~`.)
-    - author:
-        type: multiple
-        required: true
-        hierarchical: false
-        templates:
-          list: authors.html  # All authors
-          item: author.html  # Everything authored by me
+    - name: author
+      type: multiple
+      required: true
+      hierarchical: false
+      templates:
+        list: authors.html  # All authors
+        item: author.html  # Everything authored by me
 
     # If we set a `limit` explicitly, the taxonomy allow only that many
     # variants per item. So in this case, an item may be in at most 1 category.
     # Here, we also set a default category of "Blog", so any item which does not
     # specify a category will automatically be included in the "Blog" category.
-    - category:
-        type: multiple
-        default: Blog
-        limit: 1
-        required: false
-        hierarchical: false
-        templates:
-          list: categories.html  # All categories
-          item: category.html  # Things categorized as "Tech"
+    - name: category
+      type: multiple
+      default: Blog
+      limit: 1
+      required: false
+      hierarchical: false
+      templates:
+        list: categories.html  # All categories
+        item: category.html  # Things categorized as "Tech"
 
     # You can also make an unlimited taxonomy explicitly, by setting the
     # `limit` to `~`, which is "null" in YAML. So here, a post may have as many
     # tags as you like.
-    - tag:
-        type: multiple
-        limit: ~
-        required: false
-        hierarchical: false
-        templates:
-          list: tags.html  # All tags
-          item: tag.html  # Things tagged "rust"
+    - name: tag
+      type: multiple
+      limit: ~
+      required: false
+      hierarchical: false
+      templates:
+        list: tags.html  # All tags
+        item: tag.html  # Things tagged "rust"
 
     # Note: the `date` taxonomy is normally implicit, and automatically
     # associated with any piece of content stamped with a `date` field. You
     # only need to define it explicitly if you want to customize the associated
     # templates, or if you want to use something besides `date` to specify the
     # time stamp for a given item. The `limit` field here is *always* ignored.
-    - date:  # TODO: these might be wrong re:Pelican, so confirm
-        type: temporal
-        required: false
-        templates:
-          list: period_archives.html
-          item: archives.html
+    - name: date  # TODO: these might be wrong re:Pelican, so confirm
+      type: temporal
+      required: false
+      templates:
+        list: period_archives.html
+        item: archives.html
 
     # It is easy to define a page-style taxonomy: simply use `type: binary` and
     # then on a piece of content set e.g. `page: true`. If you want all items
-    # to belong to a taxonomy by default and to opt, you may set `default: true`.
-    - page:
-        type: binary
-        hierarchical: true
-        templates:
-          # list: pages.html  # If I wanted a page where I listed all pages...
-          item: page.html
+    # to belong to a taxonomy by default and to opt, you may set
+    # `default: true`.
+    - name: page
+      type: binary
+      hierarchical: true
+      templates:
+        # list: pages.html  # If I wanted a page where I listed all pages...
+        item: page.html
 
   feeds:
     # If engine is commented out or removed, no feeds will be generated. If it

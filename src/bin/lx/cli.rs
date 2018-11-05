@@ -6,21 +6,23 @@ use std::fmt;
 use std::path::PathBuf;
 
 // Third party
-use clap::{App, ArgMatches};
-
+use clap::{load_yaml, App, ArgMatches};
 
 const INIT: &'static str = "init";
 const BUILD: &'static str = "build";
 const CREATE: &'static str = "create";
 const SERVE: &'static str = "serve";
 
-
 /// Commands which can be called, mapped from strings of the same name.
 pub enum Command {
     /// Create a new site.
-    Init { site: PathBuf },
+    Init {
+        site: PathBuf,
+    },
     /// Generate the site at `site`.
-    Build { site: PathBuf },
+    Build {
+        site: PathBuf,
+    },
     Create,
     Serve,
 }
@@ -36,7 +38,6 @@ impl fmt::Display for Command {
     }
 }
 
-
 // TODO: figure out a way, eventually, to customize arguments based on whatever
 //       external tools are supplied---without requiring a rebuild. (Compare
 //       what Cargo does.)
@@ -51,14 +52,17 @@ pub fn cli() -> Command {
     // likely, our *configuration* of clap's) fault. In any case... `unwrap()`
     // at will, commander!
     match matches.subcommand_name().unwrap() {
-        INIT => Init { site: site_directory(matches.subcommand_matches(INIT).unwrap()) },
-        BUILD => Build { site: site_directory(matches.subcommand_matches(BUILD).unwrap()) },
+        INIT => Init {
+            site: site_directory(matches.subcommand_matches(INIT).unwrap()),
+        },
+        BUILD => Build {
+            site: site_directory(matches.subcommand_matches(BUILD).unwrap()),
+        },
         CREATE => Create,
         SERVE => Serve,
         _ => panic!("ERROR: `clap.rs` is configured wrong somehow, kids."),
     }
 }
-
 
 fn site_directory<'m>(matches: &'m ArgMatches) -> PathBuf {
     match matches.value_of("site_directory") {

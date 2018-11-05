@@ -1,7 +1,4 @@
 //! Run the static site generator.
-#[macro_use]
-extern crate clap;
-extern crate lightning;
 
 mod cli;
 
@@ -9,8 +6,7 @@ mod cli;
 use std::io::prelude::*;
 
 // First party
-use cli::{cli, Command};
-
+use crate::cli::{cli, Command};
 
 fn main() {
     if let Err(reason) = run() {
@@ -19,7 +15,6 @@ fn main() {
         std::process::exit(1);
     }
 }
-
 
 /// Define a `Result`-returning function to run the app.
 ///
