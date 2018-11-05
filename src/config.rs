@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use std::u8;
 
 // Third-party
+use serde;
 use serde_derive::Deserialize;
 use serde_yaml;
 
@@ -109,7 +110,16 @@ pub struct SiteInfo {
     pub description: Option<String>,
 
     /// Arbitrary metadata associated with the site. Optional.
-    pub metadata: Option<serde_yaml::Mapping>,
+    #[serde(deserialize_with = "parse_metadata")]
+    pub metadata: serde_yaml::Mapping,
+}
+
+fn parse_metadata<'de, D>(d: D) -> Result<serde_yaml::Mapping, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    serde::Deserialize::deserialize(d)
+        .map(|value: Option<_>| value.unwrap_or(serde_yaml::Mapping::new()))
 }
 
 #[derive(Debug, PartialEq, Deserialize)]
@@ -248,7 +258,7 @@ metadata:
         title: "lx (lightning)".into(),
         url: String::from("https://lightning.rs"),
         description: Some("A ridiculously fast site generator and engine.\n".into()),
-        metadata: Some(metadata),
+        metadata: metadata,
     };
 
     let loaded: SiteInfo = serde_yaml::from_str(SITE_INFO).expect("bad test data: SITE_INFO");
@@ -269,7 +279,7 @@ metadata: ~
         title: "lx (lightning)".into(),
         url: String::from("https://lightning.rs"),
         description: Some("A ridiculously fast site generator and engine.\n".into()),
-        metadata: None,
+        metadata: serde_yaml::Mapping::new(),
     };
 
     let loaded: SiteInfo = serde_yaml::from_str(SITE_INFO_EMPTY_METADATA)

@@ -26,8 +26,8 @@ site_info:
 
   # You may supply any other metadata you like, though only as key-value pairs.
   # Those pairs will be supplied to your templates as hashmaps. The default
-  # value is null/`~` since no other metadata are assumed.
-#  metadata: ~
+  # value is blank or `~` (null) since no other metadata are assumed.
+  #  metadata: ~
   metadata:
     foo: bar
     quux: 42
