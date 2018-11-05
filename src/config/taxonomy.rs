@@ -24,7 +24,7 @@ pub enum Taxonomy {
     /// or *not*.
     ///
     /// Boolean taxonomies do not have multiple variants; so e.g. in this setup
-    /// an item is a "page" or it is not---unlike a `Multiple` taxonomy, where
+    /// an item is a "page" or it is not---unlike a `TagLike` taxonomy, where
     /// an item does not belong to e.g. the "category" taxonomy so much as to
     /// one of the variants *within* the taxonomy.
     Boolean { name: String, templates: Templates },
@@ -257,10 +257,17 @@ mod tests {
 
     fn load_taxonomy_at_key(taxonomy: &str, key: &str) -> BTreeMap<Yaml, Yaml> {
         let mut loaded = YamlLoader::load_from_str(&taxonomy).unwrap();
-        let first = loaded.pop().unwrap();
-        first.as_hash().unwrap()[&Yaml::from_str(key)]
+        let first = loaded
+            .pop()
+            .expect("empty taxonomy – probably malformed data");
+
+        first
             .as_hash()
-            .unwrap()
+            .expect("failed to read taxonomy item as a hash – probably malformed data")
+            .get(&Yaml::from_str(key))
+            .expect("couldn't get a value from taxonomy – probably malformed data")
+            .as_hash()
+            .expect("failed to generate a hash – probably malformed data")
             .clone()
     }
 

@@ -3,8 +3,8 @@
 use std::collections::HashMap;
 
 // Third party
-use yaml_rust::{yaml, Yaml};
 use chrono::prelude::*;
+use yaml_rust::{yaml, Yaml};
 
 // First party
 use config;
@@ -190,7 +190,7 @@ impl Taxonomy {
                 _ => Err("".into()),
             },
 
-            config::taxonomy::Taxonomy::Temporal { required, .. } =>  match *entry {
+            config::taxonomy::Taxonomy::Temporal { required, .. } => match *entry {
                 Yaml::String(ref value) => Ok(Some(Taxonomy::Temporal {
                     name: name.into(),
                     value: Utc.datetime_from_str(value, "%Y-%m-%d %H:%M:%S").unwrap(),
@@ -264,8 +264,7 @@ fn split_tags(values: &Vec<yaml::Yaml>) -> Vec<PathSegments> {
             &Yaml::Hash(ref _h) => panic!("hash"),
             &Yaml::Array(ref _a) => panic!("array"),
             _ => vec!["".into()],
-        })
-        .collect();
+        }).collect();
 
     result
 }
@@ -311,24 +310,20 @@ mod tests {
   - {}
   - {}
             ",
-            alpha,
-            beta,
-            charlie
+            alpha, beta, charlie
         ));
 
         let the_yaml = the_yaml.as_vec().expect("badly formed test data");
-        let expected: Vec<PathSegments> = vec![
-            vec![
-                alpha.into(),
-                format!("{}/{}", alpha, beta),
-                format!("{}/{}", alpha, charlie),
-            ],
-        ];
+        let expected: Vec<PathSegments> = vec![vec![
+            alpha.into(),
+            format!("{}/{}", alpha, beta),
+            format!("{}/{}", alpha, charlie),
+        ]];
 
         assert_eq!(split_tags(&the_yaml), expected);
     }
 
-        #[test]
+    #[test]
     fn parses_metadata_from_post() {
         let mut site_directory: PathBuf = env::current_dir().unwrap();
         site_directory.push(r"tests/scenarios/pelican/");
