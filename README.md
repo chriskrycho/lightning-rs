@@ -8,12 +8,13 @@ Yet another static site generator—but this one's written in Rust. (And therefo
 
 ## Status
 
-This currently ***does not work***. If you need a site generator that does, I can point you to [Hugo], which is great, speedy, and pretty well-documented. If you want one specifically in Rust, check out [Cobalt], which is young but already works, and looks to be fairly compatible with Jekyll sites right out of the box. ([Why am I building something else if Cobalt already exists?](#why))
+This currently ***does not work***. If you need a site generator that does, I can point you to [Hugo], which is great, speedy, and pretty well-documented. If you want one specifically in Rust, check out [Cobalt] or [Gutenberg]. ([Why am I building something else if Cobalt and Gutenberg already exist?](#why))
 
 Today, Lightning *builds*, passes the tests I've written, and even correctly loads the configuration file. But running `lx build` will *not* do what you expect: it'll convert all the Markdown in a config-specified directory, but it won't render it into templates in any way. Keep your expectations low on how fast this will develop, and you won't be disappointed.
 
 [Hugo]: https://gohugo.io
-[Cobalt]: http://cobalt-org.github.io
+[Cobalt]: https://cobalt-org.github.io
+[Gutenberg]: https://www.getgutenberg.io
 
 ### Goals
 
@@ -44,7 +45,7 @@ N.b. the below is my overall set of goals. For the 1.0 roadmap, see the [milesto
             - [x] hierarchical *and exclusive*, i.e. if something is in the category `Tech` it *cannot* be in the category `Art`. I don't actually want or need this, but other users almost certainly will.
 
     - [ ] Support importing content from other generators' basic setups.
-        
+
         This really means, make sure the configuration can support the configuration patterns for popular generators. This is not so much a *formal support* issue (though being able to `lx create --from-jekyll` would be cool) as it is a *make sure this is well-covered by the implementation* issue. Other generators to cover, in order:
 
         - [x] from [Pelican] – a must for the obvious reason that I want to be able to import my existing sites.
@@ -65,7 +66,7 @@ N.b. the below is my overall set of goals. For the 1.0 roadmap, see the [milesto
 
     - [x] optionally using [Syntect] for syntax highlighting
 
-- [ ] Templating 
+- [ ] Templating
 
     - [ ] Taxonomy-specific views
 
@@ -87,7 +88,7 @@ N.b. the below is my overall set of goals. For the 1.0 roadmap, see the [milesto
 
     - [ ] Via threading?
 
-    - [ ] Via [futures-cpupool] or similar? 
+    - [ ] Via [futures-cpupool] or similar?
 
 - [ ] Extensibility
 
@@ -137,4 +138,3 @@ What else should be on this list?
 [POSSE]: https://indieweb.org/POSSE
 [Pandoc]: http://pandoc.org
 [Metalsmith]: http://www.metalsmith.io
-[Hugo]: https://github.com/spf13/hugo
