@@ -254,8 +254,25 @@ fn extract_values(values: &[yaml::Yaml]) -> Vec<PathSegments> {
     ]
 }
 
+/// Split a
+/// - `values` is a
+fn split_tags(values: &Vec<yaml::Yaml>) -> Vec<PathSegments> {
+    let result = values
+        .into_iter()
+        .map(|yaml_entry| match yaml_entry {
+            &Yaml::String(ref s) => vec![s.clone()],
+            &Yaml::Hash(ref _h) => panic!("hash"),
+            &Yaml::Array(ref _a) => panic!("array"),
+            _ => vec!["".into()],
+        })
+        .collect();
+
+    result
+}
+
 #[cfg(test)]
 mod tests {
+    use super::*;
     use config::Config;
     use item::taxonomy::Taxonomy;
     use std::collections::HashMap;
@@ -264,6 +281,54 @@ mod tests {
     use yaml_rust::YamlLoader;
 
     #[test]
+    fn split_tags_single_level() {
+        let alpha = "alpha";
+        let beta = "beta";
+        let charlie = "charlie";
+
+        let the_yaml = vec![
+            Yaml::from_str(alpha),
+            Yaml::from_str(beta),
+            Yaml::from_str(charlie),
+        ];
+
+        let tags = split_tags(&the_yaml);
+        let expected: Vec<PathSegments> =
+            vec![vec![alpha.into()], vec![beta.into()], vec![charlie.into()]];
+
+        assert_eq!(tags, expected);
+    }
+
+    #[test]
+    fn split_tags_nested() {
+        let alpha = "alpha";
+        let beta = "beta";
+        let charlie = "charlie";
+
+        let the_yaml = Yaml::from_str(&format!(
+            "
+- {}:
+  - {}
+  - {}
+            ",
+            alpha,
+            beta,
+            charlie
+        ));
+
+        let the_yaml = the_yaml.as_vec().expect("badly formed test data");
+        let expected: Vec<PathSegments> = vec![
+            vec![
+                alpha.into(),
+                format!("{}/{}", alpha, beta),
+                format!("{}/{}", alpha, charlie),
+            ],
+        ];
+
+        assert_eq!(split_tags(&the_yaml), expected);
+    }
+
+        #[test]
     fn parses_metadata_from_post() {
         let mut site_directory: PathBuf = env::current_dir().unwrap();
         site_directory.push(r"tests/scenarios/pelican/");
