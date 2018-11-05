@@ -145,6 +145,8 @@ fn parses_valid_taxonomies() {
     templates:
         list: authors.html
         item: author.html
+    feeds:
+        - RSS
 -   name: category
     type: multiple
     default: Blog
@@ -154,6 +156,8 @@ fn parses_valid_taxonomies() {
     templates:
         list: categories.html
         item: category.html
+    feeds:
+        - Atom
 -   name: tag
     type: multiple
     limit: ~
@@ -162,12 +166,18 @@ fn parses_valid_taxonomies() {
     templates:
         list: tags.html
         item: tag.html
+    feeds:
+        - JSON
 -   name: date
     type: temporal
     required: false
     templates:
         list: period_archives.html
         item: archives.html
+    feeds:
+        - RSS
+        - Atom
+        - JSON
 -   name: page
     type: binary
     hierarchical: true
@@ -186,7 +196,7 @@ fn parses_valid_taxonomies() {
                 item: "author.html".into(),
                 list: Some("authors.html".into()),
             },
-            feeds: vec![],
+            feeds: vec![Feed::RSS],
         },
         Taxonomy::Multiple {
             name: "category".into(),
@@ -198,7 +208,7 @@ fn parses_valid_taxonomies() {
                 item: "category.html".into(),
                 list: Some("categories.html".into()),
             },
-            feeds: vec![],
+            feeds: vec![Feed::Atom],
         },
         Taxonomy::Multiple {
             name: "tag".into(),
@@ -210,7 +220,7 @@ fn parses_valid_taxonomies() {
                 item: "tag.html".into(),
                 list: Some("tags.html".into()),
             },
-            feeds: vec![],
+            feeds: vec![Feed::JSON],
         },
         Taxonomy::Temporal {
             name: "date".into(),
@@ -219,7 +229,7 @@ fn parses_valid_taxonomies() {
                 item: "archives.html".into(),
                 list: Some("period_archives.html".into()),
             },
-            feeds: vec![],
+            feeds: vec![Feed::RSS, Feed::Atom, Feed::JSON],
         },
         Taxonomy::Binary {
             name: "page".into(),
