@@ -1,11 +1,12 @@
 site_info:
   title: lx (lightning)
-  URL: https://lightning.rs
+  url: https://lightning.rs
   description: >
     A ridiculously fast site generator and engine.
   metadata: ~
-content_directory: content
-output_directory: output
+directories:
+  content: content
+  output: output
 structure:
   directory: layout
   index: index.html
@@ -17,21 +18,17 @@ structure:
       templates:
         list: authors.html
         item: author.html
-      feeds:
-        - RSS
-        - JSON
+      generate_feeds: false
     - name: category
       type: multiple
       default: Blog
-      limit: 1
+      limit: ~
       required: false
       hierarchical: false
       templates:
         list: categories.html
         item: category.html
-      feeds:
-        - RSS
-        - JSON
+      generate_feeds: false
     - name: tag
       type: multiple
       limit: ~
@@ -40,36 +37,40 @@ structure:
       templates:
         list: tags.html
         item: tag.html
-      feeds:
-        - RSS
-        - JSON
+      generate_feeds: false
     - name: date
       type: temporal
       required: false
-      template:
+      templates:
         list: period_archives.html
         item: archives.html
-      feeds:
-        - RSS
-        - JSON
+      generate_feeds: false
     - name: page
       type: binary
       hierarchical: true
       templates:
-        item: tag.html
+        item: page.html
+      generate_feeds: false
   feeds:
     engines:
       - RSS
       - JSON
     additional:
-      - Art and Tech:
-          taxonomies:
-            - category: art
-            - category: tech
-      - Family Poetry:
-          taxonomies:
-            - tag: family
-            - tag: poetry
+      - name: Art and Tech
+        taxonomies:
+          - taxonomy: categories
+            terms:
+              - tech
+              - art
+      - name: 2018 Family Poetry # TODO: do I want to make this a thing?
+        taxonomies:
+          - taxonomy: date
+            terms:
+              - 2018 # TODO: parse as year/month/etc.?
+          - taxonomy: tags
+            terms:
+              - family
+              - poetry
   other_content:
     copy:
       - static

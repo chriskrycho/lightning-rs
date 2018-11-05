@@ -33,18 +33,19 @@ site_info:
     quux: 42
     baz: 13.3
 
-# Specify the source for the content. It can be any folder at all; relative
-# paths are resolved from the location of this configuration file.
-content_directory: content
+directories:
+  # Specify the source for the content. It can be any folder at all; relative
+  # paths are resolved from the location of this configuration file.
+  content: content
 
-# Specify the destination for the generated site. As with the source directory,
-# it can be any folder, and relative paths are resolved from the location of
-# this configuration file.
-#
-# Tip: if you are using this with [GitHub Pages](https://pages.github.com), you
-# may find it convenient to set this to "docs" so that you don't have to bother
-# with `gh-pages` branch.
-output_directory: output
+  # Specify the destination for the generated site. As with the source directory,
+  # it can be any folder, and relative paths are resolved from the location of
+  # this configuration file.
+  #
+  # Tip: if you are using this with [GitHub Pages](https://pages.github.com), you
+  # may find it convenient to set this to "docs" so that you don't have to bother
+  # with `gh-pages` branch.
+  output: output
 
 # Define the structure of the site, by supplying the location of a set of
 # templates to use in generating the site and a set of "taxonomies" which define
@@ -173,7 +174,8 @@ structure:
 
     # It is easy to define a page-style taxonomy: simply use `type: binary` and
     # then on a piece of content set e.g. `page: true`. If you want all items
-    # to belong to a taxonomy by default and to opt, you may set `default: true`.
+    # to belong to a taxonomy by default and to opt, you may set
+    # `default: true`.
     - name: page
       type: binary
       hierarchical: true

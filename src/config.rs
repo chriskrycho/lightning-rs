@@ -1,6 +1,7 @@
 //! Process configurations for Lightning sites.
 
 // First-party
+use std::collections::BTreeMap;
 use std::convert::From;
 use std::error::Error;
 use std::fs::File;
@@ -20,9 +21,10 @@ const CONFIG_FILE_NAME: &'static str = "lightning.yaml";
 
 #[derive(Debug, PartialEq, Deserialize)]
 pub struct Config {
+    #[serde(rename = "site_info")]
     pub site: SiteInfo,
     pub directories: Directories,
-    pub taxonomies: Vec<Taxonomy>,
+    pub structure: Structure,
 }
 
 impl Config {
@@ -55,7 +57,6 @@ impl Config {
 pub struct Directories {
     pub content: PathBuf,
     pub output: PathBuf,
-    pub template: PathBuf,
 }
 
 #[derive(Debug, PartialEq, Deserialize)]
@@ -63,38 +64,60 @@ pub struct Directories {
 pub enum Taxonomy {
     #[serde(rename = "binary")]
     Binary {
+        /// The name of the taxonomy.
         name: String,
+
+        /// Configuration of the templates for this taxonomy.
         templates: Templates,
+
+        /// Whether taxonomy terms can be nested.
         hierarchical: bool,
 
-        /// The feed types associated with the taxonomy
+        /// Specify whether this taxonomy should generate feeds.
         #[serde(default)]
-        feeds: Vec<Feed>,
+        generate_feeds: bool,
     },
 
     #[serde(rename = "multiple")]
     Multiple {
+        /// The name of the taxonomy.
         name: String,
+
+        /// Configuration of the templates for this taxonomy.
         templates: Templates,
         default: Option<String>,
+
+        /// Whether an item may be in more than one of this taxonomy term at a
+        /// time, e.g. whether a blog post may belong to multiple categories.
         limit: Option<u8>,
+
+        /// Specify whether this taxonomy is required to exist on every item.
+        #[serde(default)]
         required: bool,
+
+        /// Whether taxonomy terms can be nested.
         hierarchical: bool,
 
-        /// The feed types associated with the taxonomy
+        /// Specify whether this taxonomy should generate feeds.
         #[serde(default)]
-        feeds: Vec<Feed>,
+        generate_feeds: bool,
     },
 
     #[serde(rename = "temporal")]
     Temporal {
+        /// The name of the taxonomy.
         name: String,
+
+        /// Configuration of the templates for this taxonomy.
         templates: Templates,
+
+        /// Specify whether this taxonomy is required to exist on every item.
+        #[serde(default)]
         required: bool,
 
-        /// The feed types associated with the taxonomy
+        /// Specify whether this taxonomy should generate feeds.
         #[serde(default)]
-        feeds: Vec<Feed>,
+        generate_feeds: bool,
     },
 }
 
@@ -129,10 +152,59 @@ pub struct Templates {
 }
 
 #[derive(Debug, PartialEq, Deserialize)]
-pub enum Feed {
+pub enum FeedEngine {
     Atom,
     RSS,
     JSON,
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+pub struct Structure {
+    directory: PathBuf,
+    index: String,
+    taxonomies: Vec<Taxonomy>,
+    feeds: Feeds,
+    other_content: OtherContent,
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+pub struct Feeds {
+    engines: Vec<FeedEngine>,
+    additional: Vec<AdditionalFeed>,
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+pub struct AdditionalFeed {
+    name: String,
+    taxonomies: Vec<TaxonomySubset>,
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+pub struct TaxonomySubset {
+    taxonomy: String,
+    terms: Vec<TaxonomyTerm>,
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(untagged)]
+pub enum TaxonomyTerm {
+    String(String),
+    Number(u32), // TODO: this is wrong, should be parsed as a year!
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+pub struct OtherContent {
+    copy: Vec<PathBuf>,
+
+    #[serde(deserialize_with = "parse_exclude")]
+    exclude: Vec<PathBuf>,
+}
+
+fn parse_exclude<'de, D>(d: D) -> Result<Vec<PathBuf>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    serde::Deserialize::deserialize(d).map(|value: Option<_>| value.unwrap_or(Vec::new()))
 }
 
 #[test]
@@ -145,8 +217,7 @@ fn parses_valid_taxonomies() {
     templates:
         list: authors.html
         item: author.html
-    feeds:
-        - RSS
+    generate_feeds: true
 -   name: category
     type: multiple
     default: Blog
@@ -156,8 +227,7 @@ fn parses_valid_taxonomies() {
     templates:
         list: categories.html
         item: category.html
-    feeds:
-        - Atom
+    generate_feeds: false
 -   name: tag
     type: multiple
     limit: ~
@@ -166,18 +236,12 @@ fn parses_valid_taxonomies() {
     templates:
         list: tags.html
         item: tag.html
-    feeds:
-        - JSON
 -   name: date
     type: temporal
     required: false
     templates:
         list: period_archives.html
         item: archives.html
-    feeds:
-        - RSS
-        - Atom
-        - JSON
 -   name: page
     type: binary
     hierarchical: true
@@ -196,7 +260,7 @@ fn parses_valid_taxonomies() {
                 item: "author.html".into(),
                 list: Some("authors.html".into()),
             },
-            feeds: vec![Feed::RSS],
+            generate_feeds: true,
         },
         Taxonomy::Multiple {
             name: "category".into(),
@@ -208,7 +272,7 @@ fn parses_valid_taxonomies() {
                 item: "category.html".into(),
                 list: Some("categories.html".into()),
             },
-            feeds: vec![Feed::Atom],
+            generate_feeds: false,
         },
         Taxonomy::Multiple {
             name: "tag".into(),
@@ -220,7 +284,7 @@ fn parses_valid_taxonomies() {
                 item: "tag.html".into(),
                 list: Some("tags.html".into()),
             },
-            feeds: vec![Feed::JSON],
+            generate_feeds: false,
         },
         Taxonomy::Temporal {
             name: "date".into(),
@@ -229,7 +293,7 @@ fn parses_valid_taxonomies() {
                 item: "archives.html".into(),
                 list: Some("period_archives.html".into()),
             },
-            feeds: vec![Feed::RSS, Feed::Atom, Feed::JSON],
+            generate_feeds: false,
         },
         Taxonomy::Binary {
             name: "page".into(),
@@ -238,7 +302,7 @@ fn parses_valid_taxonomies() {
                 item: "page.html".into(),
                 list: None,
             },
-            feeds: vec![],
+            generate_feeds: false,
         },
     ];
 
@@ -296,4 +360,120 @@ metadata: ~
         .expect("bad test data: SITE_INFO_EMPTY_METADATA");
 
     assert_eq!(expected, loaded);
+}
+
+#[test]
+fn parses_default_config() {
+    static DEFAULT_CONFIG: &'static str = include_str!("../tests/pure-config.yaml");
+
+    let expected = Config {
+        site: SiteInfo {
+            title: "lx (lightning)".into(),
+            url: "https://lightning.rs".into(),
+            description: Some("A ridiculously fast site generator and engine.\n".into()),
+            metadata: serde_yaml::Mapping::new(),
+        },
+        directories: Directories {
+            content: "content".into(),
+            output: "output".into(),
+        },
+        structure: Structure {
+            directory: "layout".into(),
+            index: "index.html".into(),
+            taxonomies: vec![
+                Taxonomy::Multiple {
+                    name: "author".into(),
+                    required: false,
+                    hierarchical: false,
+                    templates: Templates {
+                        item: "author.html".into(),
+                        list: Some("authors.html".into()),
+                    },
+                    generate_feeds: false,
+                    limit: None,
+                    default: None,
+                },
+                Taxonomy::Multiple {
+                    name: "category".into(),
+                    default: Some("Blog".into()),
+                    limit: None,
+                    required: false,
+                    hierarchical: false,
+                    templates: Templates {
+                        item: "category.html".into(),
+                        list: Some("categories.html".into()),
+                    },
+                    generate_feeds: false,
+                },
+                Taxonomy::Multiple {
+                    name: "tag".into(),
+                    limit: None,
+                    hierarchical: false,
+                    templates: Templates {
+                        item: "tag.html".into(),
+                        list: Some("tags.html".into()),
+                    },
+                    generate_feeds: false,
+                    required: false,
+                    default: None,
+                },
+                Taxonomy::Temporal {
+                    name: "date".into(),
+                    required: false,
+                    templates: Templates {
+                        item: "archives.html".into(),
+                        list: Some("period_archives.html".into()),
+                    },
+                    generate_feeds: false,
+                },
+                Taxonomy::Binary {
+                    name: "page".into(),
+                    templates: Templates {
+                        item: "page.html".into(),
+                        list: None,
+                    },
+                    hierarchical: true,
+                    generate_feeds: false,
+                },
+            ],
+            feeds: Feeds {
+                engines: vec![FeedEngine::RSS, FeedEngine::JSON],
+                additional: vec![
+                    AdditionalFeed {
+                        name: "Art and Tech".into(),
+                        taxonomies: vec![TaxonomySubset {
+                            taxonomy: "categories".into(),
+                            terms: vec![
+                                TaxonomyTerm::String("tech".into()),
+                                TaxonomyTerm::String("art".into()),
+                            ],
+                        }],
+                    },
+                    AdditionalFeed {
+                        name: "2018 Family Poetry".into(),
+                        taxonomies: vec![
+                            TaxonomySubset {
+                                taxonomy: "date".into(),
+                                terms: vec![TaxonomyTerm::Number(2018)],
+                            },
+                            TaxonomySubset {
+                                taxonomy: "tags".into(),
+                                terms: vec![
+                                    TaxonomyTerm::String("family".into()),
+                                    TaxonomyTerm::String("poetry".into()),
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+            other_content: OtherContent {
+                copy: vec!["static".into(), "extra".into()],
+                exclude: Vec::new(),
+            },
+        },
+    };
+
+    let config: Config = serde_yaml::from_str(DEFAULT_CONFIG).unwrap();
+    assert_eq!(expected, config, "successfully deserialized basic config");
 }
