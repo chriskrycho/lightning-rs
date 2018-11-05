@@ -1,7 +1,6 @@
 //! Process configurations for Lightning sites.
 
 // First-party
-use std::collections::{BTreeMap, HashMap};
 use std::convert::From;
 use std::error::Error;
 use std::fs::File;
@@ -10,15 +9,15 @@ use std::path::PathBuf;
 use std::u8;
 
 // Third-party
-use yaml_rust::{yaml, Yaml, YamlLoader};
+use serde_derive::Deserialize;
+use serde_yaml;
 
 // First-party
 pub use crate::validated_types::Url as ValidatedUrl;
-use crate::yaml_util::*;
 
 const CONFIG_FILE_NAME: &'static str = "lightning.yaml";
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Deserialize)]
 pub struct Config {
     pub site: SiteInfo,
     pub directories: Directories,
@@ -26,183 +25,53 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn load(directory: &PathBuf) -> Result<Config, String> {
+    pub fn from_file(directory: &PathBuf) -> Result<Config, String> {
         let config_path = directory.join(CONFIG_FILE_NAME);
         if !config_path.exists() {
             return Err(format!(
-                "The specified configuration path {:?} does not exist.",
+                "The specified configuration path {:} does not exist.",
                 config_path.to_string_lossy()
             ));
         }
 
-        let mut file = File::open(&config_path)
-            .map_err(|reason| format!("Error reading {:?}: {:?}", config_path, reason))?;
-
         let mut contents = String::new();
-        match file.read_to_string(&mut contents) {
-            Ok(_) => (),
-            Err(err) => return Err(String::from(err.description())),
-        };
+        File::open(&config_path)
+            .map_err(|reason| format!("Error reading {:?}: {:?}", config_path, reason))?
+            .read_to_string(&mut contents)
+            .map_err(|reason| String::from(reason.description()))?;
 
-        // We need all these intermediate bindings because the temporaries created
-        // along the way don't live long enough otherwise.
-        let load_result = YamlLoader::load_from_str(&contents)
-            .map_err(|err| format!("{} ({:?})", err, &config_path))?;
-        let yaml_config = load_result
-            .into_iter()
-            .next()
-            .ok_or("Empty configuration file")?;
-        let config_map = yaml_config.as_hash().ok_or("Configuration is not a map")?;
-
-        let structure = Self::get_structure(config_map)?;
-
-        Ok(Config {
-            site: Self::parse_site_meta(config_map)?,
-            directories: Directories::from_yaml(config_map, &config_path, &structure)?,
-            taxonomies: Self::parse_taxonomies(&structure, &config_path)?,
-        })
+        Config::parse(&contents)
     }
 
-    fn get_structure<'map>(
-        config_map: &'map BTreeMap<Yaml, Yaml>,
-    ) -> Result<&'map BTreeMap<Yaml, Yaml>, String> {
-        const STRUCTURE: &'static str = "structure";
-        config_map
-            .get(&Yaml::from_str(STRUCTURE))
-            .ok_or(required_key(STRUCTURE, config_map))?
-            .as_hash()
-            .ok_or(key_of_type(STRUCTURE, Required::Yes, config_map, "hash"))
-    }
-
-    /// Load the site data from the configuration file.
-    fn parse_site_meta(config_map: &BTreeMap<Yaml, Yaml>) -> Result<SiteInfo, String> {
-        const SITE_INFO: &'static str = "site_info";
-        let site_info_yaml = config_map
-            .get(&Yaml::from_str(SITE_INFO))
-            .ok_or(required_key(SITE_INFO, config_map))?
-            .as_hash()
-            .ok_or(key_of_type(SITE_INFO, Required::Yes, config_map, "hash"))?;
-
-        SiteInfo::from_yaml(&site_info_yaml)
-    }
-
-    /// Load the taxonomies from the configuration file.
-    fn parse_taxonomies(
-        structure: &BTreeMap<Yaml, Yaml>,
-        config_path: &PathBuf,
-    ) -> Result<Vec<Taxonomy>, String> {
-        const TAXONOMIES: &'static str = "taxonomies";
-
-        let taxonomies_yaml = structure
-            .get(&Yaml::from_str(TAXONOMIES))
-            .ok_or(format!("No `{}` key in {:?}", TAXONOMIES, config_path))?
-            .as_vec()
-            .ok_or(format!(
-                "`{}` is not an array in {:?}",
-                TAXONOMIES, config_path
-            ))?;
-
-        let mut taxonomies = Vec::new();
-        if taxonomies_yaml.len() == 0 {
-            return Ok(taxonomies);
-        }
-
-        for taxonomy_yaml in taxonomies_yaml {
-            let wrapper = taxonomy_yaml.as_hash().ok_or(key_of_type(
-                TAXONOMIES,
-                Required::Yes,
-                taxonomy_yaml,
-                "hash",
-            ))?;
-            let key = wrapper.keys().next().ok_or(key_of_type(
-                "first key",
-                Required::Yes,
-                wrapper,
-                "hash",
-            ))?;
-            let key_string = key.as_str().ok_or(key_of_type(
-                "first key name",
-                Required::Yes,
-                wrapper,
-                "string",
-            ))?;
-            let content = wrapper
-                .get(key)
-                .ok_or(required_key(key_string, wrapper))?
-                .as_hash()
-                .ok_or(key_of_type(key_string, Required::Yes, wrapper, "hash"))?;
-            let taxonomy = Taxonomy::from_yaml(content, key_string)?;
-            taxonomies.push(taxonomy);
-        }
-
-        Ok(taxonomies)
+    fn parse(source: &str) -> Result<Config, String> {
+        let config = serde_yaml::from_str(&source).map_err(|e| format!("{:}", e));
+        // TODO: add some basic validation here
+        config
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Deserialize)]
 pub struct Directories {
     pub content: PathBuf,
     pub output: PathBuf,
     pub template: PathBuf,
 }
 
-impl Directories {
-    fn from_yaml(
-        config_map: &BTreeMap<Yaml, Yaml>,
-        config_path: &PathBuf,
-        structure: &BTreeMap<Yaml, Yaml>,
-    ) -> Result<Directories, String> {
-        const CONTENT_DIRECTORY: &'static str = "content_directory";
-        const OUTPUT_DIRECTORY: &'static str = "output_directory";
-        const TEMPLATE_DIRECTORY: &'static str = "directory";
-
-        let content_directory_yaml = config_map
-            .get(&Yaml::from_str(CONTENT_DIRECTORY))
-            .ok_or(required_key(CONTENT_DIRECTORY, config_map))?;
-
-        let content_directory =
-            Self::path_buf_from_yaml(&content_directory_yaml, CONTENT_DIRECTORY, &config_path)?;
-
-        let output_directory_yaml = config_map
-            .get(&Yaml::from_str(OUTPUT_DIRECTORY))
-            .ok_or(required_key(OUTPUT_DIRECTORY, config_map))?;
-
-        let output_directory =
-            Self::path_buf_from_yaml(output_directory_yaml, OUTPUT_DIRECTORY, &config_path)?;
-
-        let template_directory_yaml = structure.get(&Yaml::from_str(TEMPLATE_DIRECTORY)).ok_or(
-            required_key(TEMPLATE_DIRECTORY, structure) + &format!(" in {:?}", config_path),
-        )?;
-
-        let template_directory =
-            Self::path_buf_from_yaml(&template_directory_yaml, TEMPLATE_DIRECTORY, &config_path)?;
-
-        Ok(Directories {
-            content: content_directory,
-            output: output_directory,
-            template: template_directory,
-        })
-    }
-
-    fn path_buf_from_yaml(
-        yaml: &Yaml,
-        key: &str,
-        config_path: &PathBuf,
-    ) -> Result<PathBuf, String> {
-        match yaml {
-            &Yaml::String(ref path_str) => Ok(PathBuf::from(path_str)),
-            value => Err(bad_value(value, key, yaml) + &format!(" in {:?}", config_path)),
-        }
-    }
-}
-
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(tag = "type")]
 pub enum Taxonomy {
+    #[serde(rename = "binary")]
     Binary {
         name: String,
         templates: Templates,
         hierarchical: bool,
+
+        /// The feed types associated with the taxonomy
+        #[serde(default)]
+        feeds: Vec<Feed>,
     },
+
+    #[serde(rename = "multiple")]
     Multiple {
         name: String,
         templates: Templates,
@@ -210,304 +79,90 @@ pub enum Taxonomy {
         limit: Option<u8>,
         required: bool,
         hierarchical: bool,
+
+        /// The feed types associated with the taxonomy
+        #[serde(default)]
+        feeds: Vec<Feed>,
     },
+
+    #[serde(rename = "temporal")]
     Temporal {
         name: String,
         templates: Templates,
         required: bool,
+
+        /// The feed types associated with the taxonomy
+        #[serde(default)]
+        feeds: Vec<Feed>,
     },
 }
 
-impl Taxonomy {
-    fn from_yaml(hash: &yaml::Hash, name: &str) -> Result<Taxonomy, String> {
-        const TYPE: &'static str = "type";
-        const BINARY: &'static str = "binary";
-        const MULTIPLE: &'static str = "multiple";
-        const TEMPORAL: &'static str = "temporal";
-
-        let name = String::from(name);
-        let templates = Templates::from_yaml(hash)?;
-
-        // Name can't collide with keyword `type`.
-        let taxonomy_type = hash
-            .get(&Yaml::from_str(TYPE))
-            .ok_or(required_key(TYPE, hash))?
-            .as_str()
-            .ok_or(key_of_type(TYPE, Required::Yes, hash, "string"))?;
-
-        match taxonomy_type {
-            BINARY => Ok(Taxonomy::Binary {
-                name: name,
-                templates: templates,
-                hierarchical: Self::is_hierarchical(hash)?,
-            }),
-            MULTIPLE => Ok(Taxonomy::Multiple {
-                name: name,
-                templates: templates,
-                default: Self::default_value(hash)?,
-                hierarchical: Self::is_hierarchical(hash)?,
-                required: Self::is_required(hash)?,
-                limit: Self::limit(hash)?,
-            }),
-            TEMPORAL => Ok(Taxonomy::Temporal {
-                name: name,
-                templates: templates,
-                required: Self::is_required(hash)?,
-            }),
-            _ => Err(format!(
-                "Invalid taxonomy type `{:?}` in {:?}",
-                taxonomy_type, hash
-            )),
-        }
-    }
-
-    fn default_value(hash: &yaml::Hash) -> Result<Option<String>, String> {
-        const DEFAULT: &'static str = "default";
-
-        match hash.get(&Yaml::from_str(DEFAULT)) {
-            None | Some(&Yaml::Null) => Ok(None),
-            Some(&Yaml::String(ref string)) => Ok(Some(string.clone())),
-            _ => Err(key_of_type(DEFAULT, Required::No, hash, "string")),
-        }
-    }
-
-    fn is_hierarchical(hash: &yaml::Hash) -> Result<bool, String> {
-        const HIERARCHICAL: &'static str = "hierarchical";
-
-        match hash.get(&Yaml::from_str(HIERARCHICAL)) {
-            None | Some(&Yaml::Boolean(false)) => Ok(false),
-            Some(&Yaml::Boolean(true)) => Ok(true),
-            _ => Err(key_of_type(HIERARCHICAL, Required::Yes, hash, "bool")),
-        }
-    }
-
-    fn is_required(hash: &yaml::Hash) -> Result<bool, String> {
-        const REQUIRED: &'static str = "required";
-
-        match hash.get(&Yaml::from_str(REQUIRED)) {
-            None | Some(&Yaml::Boolean(false)) => Ok(false),
-            Some(&Yaml::Boolean(true)) => Ok(true),
-            _ => Err(key_of_type(REQUIRED, Required::No, hash, "bool")),
-        }
-    }
-
-    fn limit(hash: &yaml::Hash) -> Result<Option<u8>, String> {
-        const LIMIT: &'static str = "limit";
-        let max = u8::MAX as i64;
-
-        match hash.get(&Yaml::from_str(LIMIT)) {
-            None | Some(&Yaml::Null) => Ok(None),
-            Some(&Yaml::Integer(i)) if i < 0 => Err(bad_value(i, LIMIT, hash)),
-            Some(&Yaml::Integer(i)) if i == 0 => Ok(None),
-            Some(&Yaml::Integer(i)) if i > 0 && i < max => Ok(Some(i as u8)),
-            Some(&Yaml::Integer(i)) if i > max as i64 => Err(ridiculous_number(i, LIMIT, hash)),
-            _ => Err(key_of_type(LIMIT, Required::No, hash, "integer")),
-        }
-    }
-}
-
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Deserialize)]
 pub struct SiteInfo {
     /// The name of the site. Required.
     pub title: String,
 
     /// The canonical URL for the root of the site. Required.
-    pub url: ValidatedUrl,
+    pub url: String,
 
     /// The description of the site. Optional.
     pub description: Option<String>,
 
     /// Arbitrary metadata associated with the site. Optional.
-    pub metadata: HashMap<String, Yaml>,
+    pub metadata: Option<serde_yaml::Mapping>,
 }
 
-impl SiteInfo {
-    fn from_yaml(yaml: &yaml::Hash) -> Result<SiteInfo, String> {
-        let title = Self::parse_title(yaml)?;
-        let url = Self::parse_url(yaml)?;
-        let description = Self::parse_description(yaml)?;
-        let metadata = Self::parse_metadata(yaml)?;
-        Ok(SiteInfo {
-            title: title,
-            url: url,
-            description: description,
-            metadata: metadata,
-        })
-    }
-
-    fn parse_title(yaml: &yaml::Hash) -> Result<String, String> {
-        const TITLE: &'static str = "title";
-
-        match yaml.get(&Yaml::from_str(TITLE)) {
-            None | Some(&Yaml::Null) => Err(required_key(TITLE, yaml)),
-            Some(&Yaml::String(ref string)) => Ok(string.clone()),
-            _ => Err(key_of_type(TITLE, Required::Yes, yaml, "string")),
-        }
-    }
-
-    fn parse_url(yaml: &yaml::Hash) -> Result<ValidatedUrl, String> {
-        const URL: &'static str = "url";
-        match yaml.get(&Yaml::from_str(URL)) {
-            None | Some(&Yaml::Null) => Err(required_key(URL, yaml)),
-            Some(&Yaml::String(ref string)) => ValidatedUrl::new(&string),
-            _ => Err(key_of_type(URL, Required::Yes, yaml, "string")),
-        }
-    }
-
-    fn parse_description(yaml: &yaml::Hash) -> Result<Option<String>, String> {
-        const DESCRIPTION: &'static str = "description";
-        match yaml.get(&Yaml::from_str(DESCRIPTION)) {
-            None | Some(&Yaml::Null) => Ok(None),
-            Some(&Yaml::String(ref string)) => Ok(Some(string.clone())),
-            _ => Err(key_of_type(DESCRIPTION, Required::No, yaml, "string")),
-        }
-    }
-
-    fn parse_metadata(yaml: &yaml::Hash) -> Result<HashMap<String, Yaml>, String> {
-        const METADATA: &'static str = "metadata";
-        let mut metadata = HashMap::new();
-        match yaml.get(&Yaml::from_str(METADATA)) {
-            None | Some(&Yaml::Null) => Ok(metadata),
-            Some(&Yaml::Hash(ref hash)) => {
-                for key in hash.keys() {
-                    println!("Key: {:?}\n", key);
-                    let key_str = key.as_str().ok_or(key_of_type(
-                        "key of hash map",
-                        Required::No,
-                        hash,
-                        "string",
-                    ))?;
-
-                    match hash.get(key) {
-                        None | Some(&Yaml::Null) => {
-                            return Err(key_of_type(key_str, Required::No, hash, "hash"));
-                        }
-                        Some(inner_yaml @ &Yaml::String(..))
-                        | Some(inner_yaml @ &Yaml::Boolean(..))
-                        | Some(inner_yaml @ &Yaml::Integer(..))
-                        | Some(inner_yaml @ &Yaml::Real(..)) => {
-                            let result = metadata.insert(String::from(key_str), inner_yaml.clone());
-                            if result.is_some() {
-                                let main = format!("Double insertion of key {}.\n", key_str);
-                                let detail = format!(
-                                    "First: {:?}\nSecond: {:?}",
-                                    result.unwrap(),
-                                    inner_yaml
-                                );
-                                return Err(main + &detail);
-                            }
-                        }
-                        _ => {
-                            return Err(key_of_type(
-                                key_str,
-                                Required::No,
-                                hash,
-                                "string, boolean, or integer",
-                            ))
-                        }
-                    }
-                }
-                Ok(metadata)
-            }
-            _ => Err(key_of_type(METADATA, Required::No, yaml, "hash")),
-        }
-    }
-}
-
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Deserialize)]
 pub struct Templates {
     pub item: PathBuf,
     pub list: Option<PathBuf>,
 }
 
-impl Templates {
-    fn from_yaml(yaml: &yaml::Hash) -> Result<Templates, String> {
-        const TEMPLATES: &'static str = "templates";
-        let template_yaml = yaml
-            .get(&Yaml::from_str(TEMPLATES))
-            .ok_or(required_key(TEMPLATES, yaml))?
-            .as_hash()
-            .ok_or(key_of_type(TEMPLATES, Required::Yes, yaml, "hash"))?;
-
-        let item = Self::item_from_yaml(template_yaml)?;
-        let list = Self::list_from_yaml(template_yaml)?;
-
-        Ok(Templates {
-            item: item,
-            list: list,
-        })
-    }
-
-    /// Get the `item` value for a taxonomy's templates.
-    fn item_from_yaml(yaml: &yaml::Hash) -> Result<PathBuf, String> {
-        const ITEM: &'static str = "item";
-
-        let item_str = yaml
-            .get(&Yaml::from_str(ITEM))
-            .ok_or(required_key(ITEM, yaml))?
-            .as_str()
-            .ok_or(key_of_type(ITEM, Required::Yes, yaml, "string"))?;
-
-        Ok(item_str.into())
-    }
-
-    /// Get the `list` value for a taxonomy's templates.
-    ///
-    /// This return type isn't as crazy as it looks. A `list` entry is allowed
-    /// to be explicitly `null`/`~` or simply unset, but if the key is
-    /// included, it is not allowed to be anything other than a `string` or
-    /// explicitly set to null.
-    fn list_from_yaml(yaml: &yaml::Hash) -> Result<Option<PathBuf>, String> {
-        const LIST: &'static str = "list";
-
-        match yaml.get(&Yaml::from_str(LIST)) {
-            None | Some(&Yaml::Null) => Ok(None),
-            Some(&Yaml::String(ref string)) => Ok(Some(string.into())),
-            _ => Err(key_of_type(LIST, Required::No, yaml, "string")),
-        }
-    }
+#[derive(Debug, PartialEq, Deserialize)]
+pub enum Feed {
+    Atom,
+    RSS,
+    JSON,
 }
 
 #[test]
 fn parses_valid_taxonomies() {
     const TAXONOMIES: &'static str = "
-structure:
-  taxonomies:
-    - author:
-        type: multiple
-        required: true
-        hierarchical: false
-        templates:
-          list: authors.html
-          item: author.html
-    - category:
-        type: multiple
-        default: Blog
-        limit: 1
-        required: false
-        hierarchical: false
-        templates:
-          list: categories.html
-          item: category.html
-    - tag:
-        type: multiple
-        limit: ~
-        required: false
-        hierarchical: false
-        templates:
-          list: tags.html
-          item: tag.html
-    - date:
-        type: temporal
-        required: false
-        templates:
-          list: period_archives.html
-          item: archives.html
-    - page:
-        type: binary
-        hierarchical: true
-        templates:
-          item: page.html
+-   name: author
+    type: multiple
+    required: true
+    hierarchical: false
+    templates:
+        list: authors.html
+        item: author.html
+-   name: category
+    type: multiple
+    default: Blog
+    limit: 1
+    required: false
+    hierarchical: false
+    templates:
+        list: categories.html
+        item: category.html
+-   name: tag
+    type: multiple
+    limit: ~
+    required: false
+    hierarchical: false
+    templates:
+        list: tags.html
+        item: tag.html
+-   name: date
+    type: temporal
+    required: false
+    templates:
+        list: period_archives.html
+        item: archives.html
+-   name: page
+    type: binary
+    hierarchical: true
+    templates:
+        item: page.html
         ";
 
     let expected = vec![
@@ -521,6 +176,7 @@ structure:
                 item: "author.html".into(),
                 list: Some("authors.html".into()),
             },
+            feeds: vec![],
         },
         Taxonomy::Multiple {
             name: "category".into(),
@@ -532,6 +188,7 @@ structure:
                 item: "category.html".into(),
                 list: Some("categories.html".into()),
             },
+            feeds: vec![],
         },
         Taxonomy::Multiple {
             name: "tag".into(),
@@ -543,6 +200,7 @@ structure:
                 item: "tag.html".into(),
                 list: Some("tags.html".into()),
             },
+            feeds: vec![],
         },
         Taxonomy::Temporal {
             name: "date".into(),
@@ -551,6 +209,7 @@ structure:
                 item: "archives.html".into(),
                 list: Some("period_archives.html".into()),
             },
+            feeds: vec![],
         },
         Taxonomy::Binary {
             name: "page".into(),
@@ -559,78 +218,62 @@ structure:
                 item: "page.html".into(),
                 list: None,
             },
+            feeds: vec![],
         },
     ];
 
-    let mut loaded = YamlLoader::load_from_str(TAXONOMIES).unwrap();
-    let first = loaded.pop().unwrap();
-    let structure = first
-        .as_hash()
-        .unwrap()
-        .get(&Yaml::from_str("structure"))
-        .unwrap()
-        .as_hash()
-        .unwrap();
+    let loaded: Vec<Taxonomy> =
+        serde_yaml::from_str(TAXONOMIES).expect("bad test data: TAXONOMIES");
 
-    assert_eq!(
-        Ok(expected),
-        Config::parse_taxonomies(&structure, &"expected".into())
-    );
+    assert_eq!(expected, loaded);
 }
 
 #[test]
 fn parses_site_info() {
     const SITE_INFO: &'static str = "\
-site_info:
-  title: lx (lightning)
-  url: https://lightning.rs
-  description: >
+title: lx (lightning)
+url: https://lightning.rs
+description: >
     A ridiculously fast site generator and engine.
-  metadata:
+metadata:
     foo: bar
     quux: 2
     ";
 
-    let mut metadata = HashMap::new();
-    metadata.insert("foo".into(), Yaml::from_str("bar"));
-    metadata.insert("quux".into(), Yaml::from_str("2"));
+    let mut metadata = serde_yaml::Mapping::new();
+    metadata.insert("foo".into(), "bar".into());
+    metadata.insert("quux".into(), 2.into());
+
     let expected = SiteInfo {
         title: "lx (lightning)".into(),
-        url: ValidatedUrl::new("https://lightning.rs").unwrap(),
+        url: String::from("https://lightning.rs"),
         description: Some("A ridiculously fast site generator and engine.\n".into()),
-        metadata: metadata,
+        metadata: Some(metadata),
     };
 
-    let mut loaded = YamlLoader::load_from_str(SITE_INFO).unwrap();
-    let first = loaded.pop().unwrap();
-    let site_info = first.as_hash().unwrap()[&Yaml::from_str("site_info")]
-        .as_hash()
-        .unwrap();
-    assert_eq!(Ok(expected), SiteInfo::from_yaml(&site_info));
+    let loaded: SiteInfo = serde_yaml::from_str(SITE_INFO).expect("bad test data: SITE_INFO");
+    assert_eq!(expected, loaded);
 }
 
 #[test]
 fn parses_site_info_with_empty_metadata() {
     const SITE_INFO_EMPTY_METADATA: &'static str = "
-site_info:
-  title: lx (lightning)
-  url: https://lightning.rs
-  description: >
+title: lx (lightning)
+url: https://lightning.rs
+description: >
     A ridiculously fast site generator and engine.
-  metadata: ~
+metadata: ~
     ";
 
     let expected = SiteInfo {
         title: "lx (lightning)".into(),
-        url: ValidatedUrl::new("https://lightning.rs").unwrap(),
+        url: String::from("https://lightning.rs"),
         description: Some("A ridiculously fast site generator and engine.\n".into()),
-        metadata: HashMap::new(),
+        metadata: None,
     };
 
-    let mut loaded = YamlLoader::load_from_str(SITE_INFO_EMPTY_METADATA).unwrap();
-    let first = loaded.pop().unwrap();
-    let site_info = first.as_hash().unwrap()[&Yaml::from_str("site_info")]
-        .as_hash()
-        .unwrap();
-    assert_eq!(Ok(expected), SiteInfo::from_yaml(&site_info));
+    let loaded: SiteInfo = serde_yaml::from_str(SITE_INFO_EMPTY_METADATA)
+        .expect("bad test data: SITE_INFO_EMPTY_METADATA");
+
+    assert_eq!(expected, loaded);
 }

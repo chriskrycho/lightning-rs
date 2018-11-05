@@ -10,56 +10,66 @@ structure:
   directory: layout
   index: index.html
   taxonomies:
-    - author:
-        type: multiple
-        required: false
-        hierarchical: false
-        templates:
-          list: authors.html
-          item: author.html
-    - category:
-        type: multiple
-        default: Blog
-        limit: 1
-        required: false
-        hierarchical: false
-        templates:
-          list: categories.html
-          item: category.html
-    - tag:
-        type: multiple
-        limit: ~
-        required: false
-        hierarchical: false
-        templates:
-          list: tags.html
-          item: tag.html
-    - date:
-        type: temporal
-        required: false
-        template:
-          list: period_archives.html
-          item: archives.html
-    - page:
-        type: binary
-        hierarchical: true
-        templates:
-          item: tag.html
+    - name: author
+      type: multiple
+      required: false
+      hierarchical: false
+      templates:
+        list: authors.html
+        item: author.html
+      feeds:
+        - RSS
+        - JSON
+    - name: category
+      type: multiple
+      default: Blog
+      limit: 1
+      required: false
+      hierarchical: false
+      templates:
+        list: categories.html
+        item: category.html
+      feeds:
+        - RSS
+        - JSON
+    - name: tag
+      type: multiple
+      limit: ~
+      required: false
+      hierarchical: false
+      templates:
+        list: tags.html
+        item: tag.html
+      feeds:
+        - RSS
+        - JSON
+    - name: date
+      type: temporal
+      required: false
+      template:
+        list: period_archives.html
+        item: archives.html
+      feeds:
+        - RSS
+        - JSON
+    - name: page
+      type: binary
+      hierarchical: true
+      templates:
+        item: tag.html
   feeds:
-    engine: RSS
+    engines:
+      - RSS
+      - JSON
     additional:
-      taxonomies:
-        - category
-        - tag
-      custom:
-        - Art and Tech:
-            taxonomies:
-              - category: art
-              - category: tech
-        - Family Poetry:
-            taxonomies:
-              - tag: family
-              - tag: poetry
+      - Art and Tech:
+          taxonomies:
+            - category: art
+            - category: tech
+      - Family Poetry:
+          taxonomies:
+            - tag: family
+            - tag: poetry
   other_content:
     copy:
       - static

@@ -7,7 +7,6 @@ mod initializer;
 mod server;
 mod syntax_highlighting;
 mod validated_types;
-mod yaml_util;
 
 pub use crate::builder::build;
 pub use crate::creator::create;

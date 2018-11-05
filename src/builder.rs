@@ -39,7 +39,7 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
     // In the vein of "MVP": let's start by just loading all the files. We'll
     // extract this all into standalone functions as necessary later.
 
-    let config = Config::load(&PathBuf::from(&site_directory))?;
+    let config = Config::from_file(&PathBuf::from(&site_directory))?;
     let markdown_paths = glob_md_paths(&site_directory, &config)?;
     //    let templates = load_templates(&site_directory, &config)?;
 
@@ -88,7 +88,8 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
                 ff_path
                     .file_name()
                     .ok_or(format!("invalid file: {}", file_name))?,
-            ).with_extension("html");
+            )
+            .with_extension("html");
 
         let mut fd = match File::create(&dest) {
             Ok(file) => file,
