@@ -170,6 +170,7 @@ impl Taxonomy {
                     }))
                 }
 
+<<<<<<< HEAD
                 Yaml::Array(ref values) => {
                     if all_of_same_yaml_type(values) {
                         Ok(Some(Taxonomy::TagLike {
@@ -181,6 +182,16 @@ impl Taxonomy {
                         Err("not all values were of the same type".into())
                     }
                 }
+=======
+                &Yaml::Array(ref values) => if all_of_same_yaml_type(values) {
+                    Ok(Some(Taxonomy::TagLike {
+                        name: name.into(),
+                        values: split_tags(values),
+                    }))
+                } else {
+                    Err("not all values were of the same type".into())
+                },
+>>>>>>> upstream/18-metadata-extraction
 
                 Yaml::Null => if required {
                     Err("is required".into())
@@ -243,6 +254,7 @@ fn all_of_same_yaml_type(values: &[yaml::Yaml]) -> bool {
     values.iter().all(|v| is_same_variant(v))
 }
 
+<<<<<<< HEAD
 fn extract_values(values: &[yaml::Yaml]) -> Vec<PathSegments> {
     vec![
         values
@@ -254,6 +266,8 @@ fn extract_values(values: &[yaml::Yaml]) -> Vec<PathSegments> {
     ]
 }
 
+=======
+>>>>>>> upstream/18-metadata-extraction
 /// Split a
 /// - `values` is a
 fn split_tags(values: &Vec<yaml::Yaml>) -> Vec<PathSegments> {
@@ -264,11 +278,17 @@ fn split_tags(values: &Vec<yaml::Yaml>) -> Vec<PathSegments> {
             &Yaml::Hash(ref _h) => panic!("hash"),
             &Yaml::Array(ref _a) => panic!("array"),
             _ => vec!["".into()],
+<<<<<<< HEAD
         }).collect();
+=======
+        })
+        .collect();
+>>>>>>> upstream/18-metadata-extraction
 
     result
 }
 
+<<<<<<< HEAD
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -278,6 +298,12 @@ mod tests {
     use std::env;
     use std::path::PathBuf;
     use yaml_rust::YamlLoader;
+=======
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+>>>>>>> upstream/18-metadata-extraction
 
     #[test]
     fn split_tags_single_level() {
@@ -310,6 +336,7 @@ mod tests {
   - {}
   - {}
             ",
+<<<<<<< HEAD
             alpha, beta, charlie
         ));
 
@@ -350,4 +377,22 @@ series:
         let expected = Ok(HashMap::new());
         assert_eq!(expected, taxonomy);
     }
+=======
+            alpha,
+            beta,
+            charlie
+        ));
+
+        let the_yaml = the_yaml.as_vec().expect("badly formed test data");
+        let expected: Vec<PathSegments> = vec![
+            vec![
+                alpha.into(),
+                format!("{}/{}", alpha, beta),
+                format!("{}/{}", alpha, charlie),
+            ],
+        ];
+
+        assert_eq!(split_tags(&the_yaml), expected);
+    }
+>>>>>>> upstream/18-metadata-extraction
 }
