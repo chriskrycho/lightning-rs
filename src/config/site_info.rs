@@ -133,9 +133,6 @@ impl SiteInfo {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
-    use chrono_tz::UTC;
-    use yaml_rust::YamlLoader;
     use super::*;
     use chrono_tz::UTC;
     use std::collections::BTreeMap;

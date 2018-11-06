@@ -250,8 +250,6 @@ impl Taxonomy {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
-    use yaml_rust::YamlLoader;
     use super::*;
     use config::taxonomy::Taxonomy;
     use std::collections::BTreeMap;
