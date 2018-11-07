@@ -57,8 +57,8 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
 
         let mut pandoc = Pandoc::new();
         pandoc
-            .set_input_format(InputFormat::Markdown)
-            .set_output_format(OutputFormat::Html5)
+            .set_input_format(InputFormat::Markdown, Vec::new())
+            .set_output_format(OutputFormat::Html5, Vec::new())
             .add_options(&[PandocOption::Smart, PandocOption::NoHighlight])
             .add_input(file_name)
             .set_output(OutputKind::Pipe);
@@ -88,8 +88,7 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
                 ff_path
                     .file_name()
                     .ok_or(format!("invalid file: {}", file_name))?,
-            )
-            .with_extension("html");
+            ).with_extension("html");
 
         let mut fd = match File::create(&dest) {
             Ok(file) => file,

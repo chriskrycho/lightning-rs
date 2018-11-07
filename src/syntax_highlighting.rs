@@ -8,10 +8,13 @@ use std::default::Default;
 use std::str;
 
 // Third party
-use quick_xml::{Element, Event, XmlReader, XmlWriter};
+use quick_xml::events::attributes::Attribute;
+use quick_xml::events::BytesText;
+use quick_xml::events::Event;
+use quick_xml::{Reader, Writer};
 use syntect::highlighting::Theme;
-use syntect::html::highlighted_snippet_for_string;
-use syntect::parsing::{SyntaxDefinition, SyntaxSet};
+use syntect::html::highlighted_html_for_string;
+use syntect::parsing::{SyntaxReference, SyntaxSet};
 
 /// A `Language` is a `String` representing a code highlighting language.
 type Language = String;
@@ -76,13 +79,11 @@ impl Default for ParseState {
     }
 }
 
-impl<'e> From<&'e Event> for ParseEvent {
-    fn from(event: &'e Event) -> ParseEvent {
-        // TODO @1.15: remove `'static`.
-        const PRE: &'static [u8] = b"pre";
-        const CODE: &'static [u8] = b"code";
-        const CLASS: &'static [u8] = b"class";
-        const WHITE_SPACE: &'static [u8] = b"";
+impl<'a> From<&Event<'a>> for ParseEvent {
+    fn from(event: &Event) -> ParseEvent {
+        const PRE: &[u8] = b"pre";
+        const CODE: &[u8] = b"code";
+        const CLASS: &[u8] = b"class";
 
         match *event {
             Event::Start(ref element) => match element.name() {
@@ -90,11 +91,15 @@ impl<'e> From<&'e Event> for ParseEvent {
                     let maybe_class_attr = element
                         .attributes()
                         .map(|attr| attr.unwrap())
-                        .filter(|&(attr, _value)| attr == CLASS)
-                        .next();
+                        .filter(
+                            |&Attribute {
+                                 key: attr,
+                                 value: _,
+                             }| attr == CLASS,
+                        ).next();
 
-                    if let Some((_attr, value)) = maybe_class_attr {
-                        match str::from_utf8(value) {
+                    if let Some(Attribute { key: _attr, value }) = maybe_class_attr {
+                        match str::from_utf8(&value) {
                             Ok(lang) => ParseEvent::StartPre(Some(lang.into())),
                             Err(_) => ParseEvent::StartPre(None),
                         }
@@ -109,10 +114,7 @@ impl<'e> From<&'e Event> for ParseEvent {
                 CODE => ParseEvent::EndCode,
                 _ => ParseEvent::Other,
             },
-            Event::Text(ref element) => match element.name() {
-                WHITE_SPACE => ParseEvent::Whitespace,
-                _ => ParseEvent::Text,
-            },
+            Event::Text(ref element) => ParseEvent::Text,
             _ => ParseEvent::Other,
         }
     }
@@ -140,13 +142,18 @@ impl<'e> From<&'e Event> for ParseEvent {
 /// it will also be returned unchanged.
 pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
     let ss = SyntaxSet::load_defaults_nonewlines();
-    let mut syntax_definitions = HashMap::<Language, &SyntaxDefinition>::new();
+    let mut syntax_definitions = HashMap::<Language, &SyntaxReference>::new();
 
-    let mut writer = XmlWriter::new(Vec::<u8>::new());
+    let mut writer = Writer::new(Vec::<u8>::new());
     let mut state = ParseState::default();
 
-    for event in XmlReader::from(html_string.as_str()) {
+    let mut reader = Reader::from_str(html_string.as_str());
+    let mut buf = Vec::new();
+
+    loop {
+        let event = reader.read_event(&mut buf);
         let event = match event {
+            Ok(Event::Eof) => break,
             Ok(event) => event,
             Err(_) => continue,
         };
@@ -155,20 +162,23 @@ pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
         state = ParseState::next(state, parse_event);
 
         if let ParseState::InCodeBlock(ref language) = state {
-            if let Ok(unescaped_content) = event.element().unescaped_content() {
-                if let Ok(content_to_highlight) = str::from_utf8(&unescaped_content) {
+            if let Event::Text(unescaped_content) = &event {
+                if let Ok(content_to_highlight) =
+                    str::from_utf8(&unescaped_content.unescaped().unwrap())
+                {
                     if let Some(valid_syntax) = ss.find_syntax_by_token(&language) {
                         let syntax_definition = syntax_definitions
                             .entry(language.clone())
                             .or_insert(valid_syntax);
 
-                        let highlighted = highlighted_snippet_for_string(
+                        let highlighted = highlighted_html_for_string(
                             content_to_highlight,
+                            &ss,
                             syntax_definition,
                             &theme,
                         );
-                        let text = Element::new(highlighted);
-                        assert!(writer.write(Event::Text(text)).is_ok());
+                        let text = Event::Text(BytesText::from_plain_str(&highlighted));
+                        assert!(writer.write_event(text).is_ok());
                         continue;
                     }
                 }
@@ -176,7 +186,7 @@ pub fn syntax_highlight(html_string: String, theme: &Theme) -> String {
         }
 
         // Syntax highlighting did not succeed, so just write the original event.
-        assert!(writer.write(event).is_ok());
+        assert!(writer.write_event(event).is_ok());
     }
 
     String::from_utf8(writer.into_inner()).unwrap_or(html_string)
