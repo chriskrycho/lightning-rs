@@ -226,7 +226,7 @@ mod tests {
 
         assert_eq!(
             ParseState::MaybeStartBlock(lang.into()).next(ParseEvent::Text),
-            ParseState::NotInBlock
+            ParseState::MaybeStartBlock(lang.into())
         );
 
         assert_eq!(
