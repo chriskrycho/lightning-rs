@@ -251,13 +251,15 @@ mod tests {
     }
 
     #[test]
-    fn highlight_code(){
-        use syntect::highlighting::ThemeSet;
-        use std::path::{Path, PathBuf};
+    fn highlight_code() {
         use crate::syntax_highlighting::syntax_highlight;
+        use std::path::{Path, PathBuf};
+        use syntect::highlighting::ThemeSet;
 
         let theme_file = PathBuf::from("data/base16-harmonic16.light.tmTheme");
-        let theme = &ThemeSet::get_theme(theme_file).map_err(|err| format!("{:?}", err)).unwrap();
+        let theme = &ThemeSet::get_theme(theme_file)
+            .map_err(|err| format!("{:?}", err))
+            .unwrap();
 
         let code = r#"
 <pre class="rust">
