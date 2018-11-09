@@ -50,7 +50,6 @@ enum ParseEvent {
     // Ending a `<code>`.
     EndCode,
     Text,
-    Whitespace,
     Other,
 }
 
@@ -62,11 +61,9 @@ impl ParseState {
 
         match (self, event) {
             (NotInBlock, StartPre(Some(language))) => MaybeStartBlock(language),
-            (MaybeStartBlock(language), Whitespace) => MaybeStartBlock(language),
+            (MaybeStartBlock(language), Text) => MaybeStartBlock(language),
             (MaybeStartBlock(language), StartCode) => WillStartCodeBlock(language),
-            (WillStartCodeBlock(language), Text) | (WillStartCodeBlock(language), Whitespace) => {
-                InCodeBlock(language)
-            }
+            (WillStartCodeBlock(language), Text) => InCodeBlock(language),
             (InCodeBlock(_), EndCode) => NotInBlock,
             (_, _) => NotInBlock,
         }
@@ -251,5 +248,28 @@ mod tests {
             ParseState::WillStartCodeBlock(lang.into()).next(ParseEvent::Text),
             ParseState::InCodeBlock(lang.into())
         );
+    }
+
+    #[test]
+    fn highlight_code(){
+        use syntect::highlighting::ThemeSet;
+        use std::path::{Path, PathBuf};
+        use crate::syntax_highlighting::syntax_highlight;
+
+        let theme_file = PathBuf::from("data/base16-harmonic16.light.tmTheme");
+        let theme = &ThemeSet::get_theme(theme_file).map_err(|err| format!("{:?}", err)).unwrap();
+
+        let code = r#"
+<pre class="rust">
+ <code> 
+    pub fn syntax_highlight(html_string: String) -> String {
+        // implementation details
+    }
+  </code>
+</pre>"#;
+
+        let expected = "\n<pre class=\"rust\">\n <code>&lt;pre style=&quot;background-color:#f7f9fb;&quot;&gt;\n&lt;span style=&quot;color:#405c79;&quot;&gt; \n&lt;/span&gt;&lt;span style=&quot;color:#405c79;&quot;&gt;    &lt;/span&gt;&lt;span style=&quot;color:#bf568b;&quot;&gt;pub fn &lt;/span&gt;&lt;span style=&quot;color:#8b56bf;&quot;&gt;syntax_highlight&lt;/span&gt;&lt;span style=&quot;color:#405c79;&quot;&gt;(&lt;/span&gt;&lt;span style=&quot;color:#bf8b56;&quot;&gt;html_string&lt;/span&gt;&lt;span style=&quot;color:#405c79;&quot;&gt;: String) -&amp;gt; String {\n&lt;/span&gt;&lt;span style=&quot;color:#405c79;&quot;&gt;        &lt;/span&gt;&lt;span style=&quot;color:#aabcce;&quot;&gt;// implementation details\n&lt;/span&gt;&lt;span style=&quot;color:#405c79;&quot;&gt;    }\n&lt;/span&gt;&lt;span style=&quot;color:#405c79;&quot;&gt;  &lt;/span&gt;&lt;/pre&gt;\n</code>\n</pre>";
+        let highlighted = syntax_highlight(code.to_string(), &theme);
+        assert_eq!(highlighted, expected);
     }
 }
