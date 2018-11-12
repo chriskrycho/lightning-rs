@@ -25,6 +25,7 @@ This project's main goals are:
 - good out-of-the-box defaults, but with human-readable and -writable configurability
 - straightforward *import* from other systems (though see comment below)
 - extended Markdown functionality like processing citations
+- full cross-platform support: this should run equally well on macOS, Windows, and Linux
 
 It is an explicit non-goals to be an exact drop-in replacement for any other generator. Supporting the patterns other generators use for ease of import is good; requiring that everyone conform to e.g. Jekyll's, Hugo's, or any other generator's patterns as a result is *not* good. It should be easy to migrate in Jekyll/Hugo/etc. content; but you will never have to format the titles of your posts in any particular way.
 
