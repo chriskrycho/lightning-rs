@@ -56,7 +56,7 @@ N.b. the below is my overall set of goals. For the 1.0 roadmap, see the [milesto
 
 - [ ] Render Markdown
 
-    - [ ] with [pulldown-cmark]
+    - [ ] with [pulldown-cmark] or [comrak]
 
     - [ ] with [pandoc]
         - [x] via [subprocess][cmd-pandoc]
@@ -86,15 +86,11 @@ N.b. the below is my overall set of goals. For the 1.0 roadmap, see the [milesto
 
 - [ ] Embrace parallelism!
 
-    - [ ] Via threading?
+    - [x] Via threading, e.g. with Rayon
 
     - [ ] Via [futures-cpupool] or similar?
 
-- [ ] Extensibility
-
-    - [ ] via new commands, which can be installed and run _a la_ Git or Cargo commands (`cargo clippy` just runs the `cargo-clippy` binary)
-
-    - [ ] via some other system of plugin? (I'm inclined against plugin approach because it forces people to spend their time gluing things together.)
+- [ ] Extensibility via new commands, which can be installed and run _a la_ Git or Cargo commands (`cargo clippy` just runs the `cargo-clippy` binary)
 
 - [ ] Supply (and make it easy to extend) a `create` command and interface.
 
@@ -107,6 +103,7 @@ What else should be on this list?
 [Pelican]: http://docs.getpelican.com/en/stable/
 [Jekyll]: http://jekyllrb.com
 [pulldown-cmark]: https://crates.io/crates/pulldown-cmark
+[comrak]: https://github.com/kivikakk/comrak
 [cmd-pandoc]: https://crates.io/crates/cmd-pandoc
 [Hoedown]: https://crates.io/crates/hoedown
 [Syntect]: https://crates.io/crates/syntect
