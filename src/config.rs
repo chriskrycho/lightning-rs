@@ -1,7 +1,6 @@
 //! Process configurations for Lightning sites.
 
 // First-party
-use std::collections::BTreeMap;
 use std::convert::From;
 use std::error::Error;
 use std::fs::File;
