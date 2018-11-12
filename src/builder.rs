@@ -15,18 +15,32 @@ use crate::config::Config;
 use crate::syntax_highlighting::syntax_highlight;
 
 /// Load the `Paths` for all markdown files in the specified content directory.
-fn glob_md_paths(site_directory: &PathBuf, config: &Config) -> Result<Paths, String> {
-    let content_glob_str = format!(
-        "{}/{}/**/*.md",
-        site_directory.to_str().ok_or(String::from("bad `site`"))?,
-        config
-            .directories
-            .content
-            .to_str()
-            .ok_or(String::from("bad content directory"))?
-    );
+///
+/// If the specified configuration values are wrong, we return a vector of all
+/// the errors in the config as far as this is concerned.
+///
+/// TODO: move that validation elsewhere? Should probably extract a more general
+/// site configuration validator.
+fn load_markdown_paths(site_directory: &PathBuf, config: &Config) -> Result<Paths, String> {
+    let site = site_directory
+        .to_str()
+        .ok_or(format!("bad `site`: {:?}", site_directory));
 
-    glob(&content_glob_str).map_err(|err| format!("{:?}", err))
+    let directories = config.directories.content.to_str().ok_or(format!(
+        "bad content directory: {:?}",
+        config.directories.content
+    ));
+
+    let (site, directories) = match (site, directories) {
+        (Err(s), Err(d)) => Err(s + "\n" + &d),
+        (Err(s), Ok(_)) => Err(s),
+        (Ok(_), Err(d)) => Err(d),
+        (Ok(s), Ok(d)) => Ok((s, d)),
+    }?;
+
+    let content_glob = format!("{}/{}/**/*.md", site, directories);
+
+    glob(&content_glob).map_err(|err| format!("{:?}", err))
 }
 
 /// Load the templates associated with each taxonomy.
@@ -40,11 +54,12 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
     // extract this all into standalone functions as necessary later.
 
     let config = Config::from_file(&PathBuf::from(&site_directory))?;
-    let markdown_paths = glob_md_paths(&site_directory, &config)?;
+    let markdown_paths = load_markdown_paths(&site_directory, &config)?;
     //    let templates = load_templates(&site_directory, &config)?;
 
-    // TODO: build from config. Also, extract and just do this once *not* at the
-    //       top level function.
+    // TODO: build from config, if and only if specified and highlighting is
+    // enabled. Also, extract and just do this once *not* at the top level
+    // function.
     let theme_file = PathBuf::from("data/base16-harmonic16.light.tmTheme");
     let theme = &ThemeSet::get_theme(theme_file).map_err(|err| format!("{:?}", err))?;
 
@@ -55,6 +70,18 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
             .to_str()
             .ok_or(format!("Could not convert path {:?} to str", path))?;
 
+        // TODO: rework this to drop Pandoc in favor of either Comrak or
+        // pulldown-cmark, with the extraction happening in its own function
+        // which optimally could subtitute the parser based on configuration for
+        // my own experimentation with both in parallel. That should also be
+        // parallelized. It should take advantage of the fact that both
+        // pulldown-cmark and comrak provide streaming APIs so that we can drop
+        // in the syntax highlighting as part of the process of iterating over
+        // the content and generating it, with minimal extra overhead.
+        // (Currently, by contrast, this incurs not only the overhead of
+        // shelling out to pandoc -- ugh! -- but also the cost of parsing the
+        // content twice: once as Markdown, and then once as HTML/XML to do the
+        // syntax highlighting.)
         let mut pandoc = Pandoc::new();
         pandoc
             .set_input_format(InputFormat::Markdown)
