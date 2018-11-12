@@ -16,6 +16,12 @@ Today, Lightning *builds*, passes the tests I've written, and even correctly loa
 [Cobalt]: https://cobalt-org.github.io
 [Gutenberg]: https://www.getgutenberg.io
 
+## Contributing
+
+At the moment, I'm not really looking for collaborators. This is public because I default to making things public, but I'm really interested in this as a project where I can experiment and build *exactly* what I want over time. It's also apt to move in fits and starts. (If you happen to spot something small, I won't argue, though!)
+
+The only things you should know about are that this uses `rustfmt` for contributing and that things don't pass CI unless this builds on Windows.
+
 ### Goals
 
 This project's main goals are:
