@@ -1,18 +1,19 @@
 //! Generate the site content.
 
 // Standard library
+use std::borrow::Cow::Owned;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
 // Third party
 use glob::{glob, Paths};
-use pandoc::{InputFormat, OutputFormat, OutputKind, Pandoc, PandocOption, PandocOutput};
+use pulldown_cmark as cmark;
+use pulldown_cmark::{Event, Parser, Tag};
 use syntect::highlighting::ThemeSet;
 
 // First party
-use crate::config::Config;
-use crate::syntax_highlighting::syntax_highlight;
+use crate::config::{Config, SyntaxOption};
 
 /// Load the `Paths` for all markdown files in the specified content directory.
 ///
@@ -21,7 +22,7 @@ use crate::syntax_highlighting::syntax_highlight;
 ///
 /// TODO: move that validation elsewhere? Should probably extract a more general
 /// site configuration validator.
-fn load_markdown_paths(site_directory: &PathBuf, config: &Config) -> Result<Paths, String> {
+fn load_markdown_paths(site_directory: &PathBuf, config: &Config) -> Result<Vec<PathBuf>, String> {
     let site = site_directory
         .to_str()
         .ok_or(format!("bad `site`: {:?}", site_directory));
@@ -40,7 +41,45 @@ fn load_markdown_paths(site_directory: &PathBuf, config: &Config) -> Result<Path
 
     let content_glob = format!("{}/{}/**/*.md", site, directories);
 
-    glob(&content_glob).map_err(|err| format!("{:?}", err))
+    let paths = glob(&content_glob).map_err(|err| format!("{:?}", err))?;
+
+    let (valid, errors): (Vec<Result<PathBuf, _>>, Vec<Result<_, String>>) = paths
+        .map(|glob_result| glob_result.map_err(|err| format!("{:?}", err)))
+        .partition(|path| path.is_ok());
+
+    let errors: Vec<String> = errors.into_iter().map(|e| e.unwrap_err()).collect();
+    if errors.len() == 0 {
+        Ok(valid.into_iter().map(|v| v.unwrap()).collect())
+    } else {
+        Err(errors.join(",\n"))
+    }
+}
+
+type LoadTuple<'a> = (&'a PathBuf, Result<String, String>);
+
+fn load_content<'p>(paths: &'p [PathBuf]) -> Result<Vec<(&'p PathBuf, String)>, String> {
+    let (contents, errs): (Vec<LoadTuple>, Vec<LoadTuple>) = paths
+        .into_iter()
+        .map(|path| {
+            (
+                path,
+                std::fs::read_to_string(path).map_err(|e| format!("{:?}", e)),
+            )
+        })
+        .partition(|(_, result)| result.is_ok());
+
+    if errs.len() == 0 {
+        Ok(contents
+            .into_iter()
+            .map(|(path, contents)| (path, contents.unwrap()))
+            .collect())
+    } else {
+        Err(errs
+            .into_iter()
+            .map(|(path, err)| err.unwrap_err())
+            .collect::<Vec<String>>()
+            .join(",\n"))
+    }
 }
 
 /// Load the templates associated with each taxonomy.
@@ -50,71 +89,109 @@ fn load_templates(_site_directory: &PathBuf, _config: &Config) -> Result<Paths, 
 
 /// Generate content from a configuration.
 pub fn build(site_directory: PathBuf) -> Result<(), String> {
-    // In the vein of "MVP": let's start by just loading all the files. We'll
-    // extract this all into standalone functions as necessary later.
-
+    // NOTE: this is almost certainly not what we *ultimately* want here, but
+    // it'll do as a starting point. There's a lot of `into_iter` and `collect`
+    // happening here, which forces us to eagerly materialize a lot of these
+    // collections rather than being able to deal with them in a more
+    // "streaming" fashion.
     let config = Config::from_file(&PathBuf::from(&site_directory))?;
     let markdown_paths = load_markdown_paths(&site_directory, &config)?;
-    //    let templates = load_templates(&site_directory, &config)?;
+    let contents = load_content(&markdown_paths)?;
 
     // TODO: build from config, if and only if specified and highlighting is
     // enabled. Also, extract and just do this once *not* at the top level
     // function.
-    let theme_file = PathBuf::from("data/base16-harmonic16.light.tmTheme");
+    let theme_file = PathBuf::from("data/base16-ocean.dark.tmTheme");
     let theme = &ThemeSet::get_theme(theme_file).map_err(|err| format!("{:?}", err))?;
 
-    for path_result in markdown_paths {
-        // TODO: extract this into a nice function to call in a for loop/foreach.
-        let path = path_result.map_err(|e| format!("{:?}", e))?;
-        let file_name = path
-            .to_str()
-            .ok_or(format!("Could not convert path {:?} to str", path))?;
-
-        // TODO: rework this to drop Pandoc in favor of either Comrak or
-        // pulldown-cmark, with the extraction happening in its own function
-        // which optimally could subtitute the parser based on configuration for
-        // my own experimentation with both in parallel. That should also be
-        // parallelized. It should take advantage of the fact that both
-        // pulldown-cmark and comrak provide streaming APIs so that we can drop
-        // in the syntax highlighting as part of the process of iterating over
-        // the content and generating it, with minimal extra overhead.
-        // (Currently, by contrast, this incurs not only the overhead of
-        // shelling out to pandoc -- ugh! -- but also the cost of parsing the
-        // content twice: once as Markdown, and then once as HTML/XML to do the
-        // syntax highlighting.)
-        let mut pandoc = Pandoc::new();
-        pandoc
-            .set_input_format(InputFormat::Markdown)
-            .set_output_format(OutputFormat::Html5)
-            .add_options(&[PandocOption::Smart, PandocOption::NoHighlight])
-            .add_input(file_name)
-            .set_output(OutputKind::Pipe);
-
-        let pandoc_output = pandoc
-            .execute()
-            .map_err(|err| format!("pandoc failed on {}:\n{:?}", file_name, err))?;
-
-        let converted = match pandoc_output {
-            PandocOutput::ToFile(path_buf) => {
-                let msg = format!(
-                    "We wrote to a file ({}) instead of a pipe. That was weird.",
-                    path_buf.to_string_lossy()
-                );
-                return Err(msg);
+    let parsed_content: Vec<(&PathBuf, String)> = contents
+        .into_iter()
+        .map(|(path, content)| {
+            enum State {
+                InCodeBlock,
+                Other,
             }
-            PandocOutput::ToBuffer(string) => string,
-        };
 
-        let highlighted = syntax_highlight(converted, theme);
+            impl State {
+                fn new() -> State {
+                    State::Other
+                }
+            }
 
+            let mut state = State::new();
+
+            let parser = Parser::new_ext(&content, pulldown_cmark::Options::all()).map(|event| {
+                match (event, &state) {
+                    // We start every code block with `<pre><code class="...">`
+                    // so that we always have semantically correct HTML.
+                    (Event::Start(Tag::CodeBlock(language)), State::Other) => {
+                        state = State::InCodeBlock;
+                        Event::Html(Owned(format!(r#"<pre><code class="{}">"#, language)))
+                    }
+
+                    // The closing tag must match the opening tag.
+                    (Event::End(Tag::CodeBlock(_)), State::InCodeBlock) => {
+                        state = State::Other;
+                        Event::Html(Owned("</code></pre>".into()))
+                    }
+
+                    (Event::Text(s), State::InCodeBlock) => {
+                        match &config.options.syntax {
+                            SyntaxOption::Off => Event::Text(s),
+                            SyntaxOption::TagOnly => {
+                                // TODO: implement tag-only parsing with syntect
+                                // let parsed_by_syntect = syntect::parsing::ParseState::new();
+                                // Event::Html(Owned(syntect::html::tokens_to_classed_html(s, parsed_by_syntect, syntect::html::ClassStyle::Spaced)))
+                                Event::Text(s)
+                            }
+                            SyntaxOption::Highlight(theme_name) => {
+                                // TODO: full syntax highlighting on text
+                                Event::Text(s)
+                            }
+                        }
+                    }
+
+                    // If we hit this, we *know* that we can't be here without
+                    // there being a really bad bug in our code or
+                    // pulldown_cmark (i.e. in our code!).
+                    (Event::End(Tag::CodeBlock(_)), State::Other) | (_, State::InCodeBlock) => {
+                        unreachable!(format!("Error parsing code blocks in {:?}", path));
+                    }
+
+                    (Event::Text(s), State::Other) => Event::Text(s),
+                    (Event::Start(s), _) => Event::Start(s),
+                    (Event::End(e), _) => Event::End(e),
+                    (Event::InlineHtml(s), _) => Event::InlineHtml(s),
+                    (Event::Html(h), _) => Event::Html(h),
+                    (Event::SoftBreak, _) => Event::SoftBreak,
+                    (Event::HardBreak, _) => Event::HardBreak,
+                    (Event::FootnoteReference(s), _) => Event::FootnoteReference(s),
+                }
+            });
+
+            // These numbers are derived from a brief survey of content in my
+            // own website historically, including both code-heavy and
+            // prose-heavy posts. It's probably worth exploring other corpora
+            // to see if this is basically right.
+            let length_bound_estimate = match config.options.syntax {
+                SyntaxOption::Off | SyntaxOption::TagOnly => 2,
+                SyntaxOption::Highlight(_) => 8, // TODO: check other pages
+            };
+
+            let mut html = String::with_capacity(content.len() * length_bound_estimate);
+            cmark::html::push_html(&mut html, parser);
+
+            (path, html)
+        })
+        .collect();
+
+    for (path, content) in parsed_content {
         // TODO: extract this as part of the writing it out process.
         // TODO: set output location in config.
-        let ff_path = Path::new(file_name);
         let dest = Path::new("./tests/output")
             .join(
-                ff_path
-                    .file_name()
-                    .ok_or(format!("invalid file: {}", file_name))?,
+                path.file_name()
+                    .ok_or(format!("invalid file: {:?}", path))?,
             )
             .with_extension("html");
 
@@ -129,7 +206,7 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
             }
         };
 
-        let result = write!(fd, "{}", highlighted);
+        let result = write!(fd, "{}", content);
         if let Err(reason) = result {
             return Err(format!("{:?}", reason.kind()));
         }

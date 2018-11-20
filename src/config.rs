@@ -24,6 +24,7 @@ pub struct Config {
     pub site: SiteInfo,
     pub directories: Directories,
     pub structure: Structure,
+    pub options: Options,
 }
 
 impl Config {
@@ -56,6 +57,22 @@ impl Config {
 pub struct Directories {
     pub content: PathBuf,
     pub output: PathBuf,
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+pub struct Options {
+    pub syntax: SyntaxOption,
+}
+
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(tag = "mode")]
+pub enum SyntaxOption {
+    #[serde(rename = "off")]
+    Off,
+    #[serde(rename = "tag only")]
+    TagOnly,
+    #[serde(rename = "full")]
+    Highlight(String),
 }
 
 #[derive(Debug, PartialEq, Deserialize)]
@@ -470,6 +487,9 @@ fn parses_default_config() {
                 copy: vec!["static".into(), "extra".into()],
                 exclude: Vec::new(),
             },
+        },
+        options: Options {
+            syntax: SyntaxOption::Off,
         },
     };
 
