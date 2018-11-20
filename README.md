@@ -8,13 +8,13 @@ Yet another static site generator—but this one's written in Rust. (And therefo
 
 ## Status
 
-This currently ***does not work***. If you need a site generator that does, I can point you to [Hugo], which is great, speedy, and pretty well-documented. If you want one specifically in Rust, check out [Cobalt] or [Gutenberg]. ([Why am I building something else if Cobalt and Gutenberg already exist?](#why))
+This currently ***does not work***. If you need a site generator that does, also written in Rust and very fast, check out [Cobalt] or [Zola]. ([Why am I building something else if Cobalt and Zola already exist?](#why))
 
 Today, Lightning *builds*, passes the tests I've written, and even correctly loads the configuration file. But running `lx build` will *not* do what you expect: it'll convert all the Markdown in a config-specified directory, but it won't render it into templates in any way. Keep your expectations low on how fast this will develop, and you won't be disappointed.
 
 [Hugo]: https://gohugo.io
 [Cobalt]: https://cobalt-org.github.io
-[Gutenberg]: https://www.getgutenberg.io
+[Zola]: https://www.getzola.org
 
 ## Contributing
 
