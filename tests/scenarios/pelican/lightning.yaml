@@ -198,7 +198,8 @@ structure:
     # is included, a full RSS feed of every time-categorized item on the site
     # will be generated. (NOTE: If there are no `temporal` taxonomies, feed
     # items will will be generated.)
-    engine: RSS  # `RSS` or `Atom`
+    engines: # One or more of `RSS`, `Atom`, or `JSON`
+      - RSS
 
     # Generate additional feeds be
     additional:
@@ -209,21 +210,18 @@ structure:
       # feeds will be <name of taxonomy item> - <site name>. For example, that
       # might be 'Tech - Chris Krycho' if it were for the "Tech" category on
       # my personal website.
-      taxonomies:
-        - category
-        - tag
-
-      # TODO: Something like this---
-      custom:
-        - Art and Tech:
-            taxonomies:
-              - category: art
-              - category: tech
-        - Family Poetry:
-            taxonomies:
-              - tag: family
-              - tag: poetry
-
+      - name: Art and Tech
+        taxonomies:
+          - taxonomy: category
+            terms:
+              - art
+              - tech
+      - name: Family Poetry
+        taxonomies:
+          - taxonomy: tag
+            terms:
+              - family
+              - poetry
 
   # Define rules for other content to include or exclude.
   other_content:
