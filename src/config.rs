@@ -65,7 +65,6 @@ pub struct Options {
 }
 
 #[derive(Debug, PartialEq, Deserialize)]
-#[serde(tag = "mode")]
 pub enum SyntaxOption {
     #[serde(rename = "off")]
     Off,

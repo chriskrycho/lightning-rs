@@ -9,7 +9,7 @@ directories:
   output: output
 options:
   syntax:
-    off
+    off: ~
     #tag only
     # full: <theme>
 structure:

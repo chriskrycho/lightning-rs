@@ -33,6 +33,16 @@ site_info:
     quux: 42
     baz: 13.3
 
+options:
+  # Syntax may be one of `off`, `tag only`, or `full`. If it is `full`, it
+  # should be an "object" naming the highlighting theme to use. E.g.:
+  #
+  # ```yaml
+  # full: base16-ocean.dark
+  # ```
+  syntax:
+    off
+
 directories:
   # Specify the source for the content. It can be any folder at all; relative
   # paths are resolved from the location of this configuration file.
