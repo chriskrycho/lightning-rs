@@ -33,6 +33,16 @@ site_info:
     quux: 42
     baz: 13.3
 
+options:
+  # Syntax may be one of `off`, `tag only`, or `full`. If it is `full`, it
+  # should be an "object" naming the highlighting theme to use. E.g.:
+  #
+  # ```yaml
+  # full: base16-ocean.dark
+  # ```
+  syntax:
+    off
+
 directories:
   # Specify the source for the content. It can be any folder at all; relative
   # paths are resolved from the location of this configuration file.
@@ -188,7 +198,8 @@ structure:
     # is included, a full RSS feed of every time-categorized item on the site
     # will be generated. (NOTE: If there are no `temporal` taxonomies, feed
     # items will will be generated.)
-    engine: RSS  # `RSS` or `Atom`
+    engines: # One or more of `RSS`, `Atom`, or `JSON`
+      - RSS
 
     # Generate additional feeds be
     additional:
@@ -199,21 +210,18 @@ structure:
       # feeds will be <name of taxonomy item> - <site name>. For example, that
       # might be 'Tech - Chris Krycho' if it were for the "Tech" category on
       # my personal website.
-      taxonomies:
-        - category
-        - tag
-
-      # TODO: Something like this---
-      custom:
-        - Art and Tech:
-            taxonomies:
-              - category: art
-              - category: tech
-        - Family Poetry:
-            taxonomies:
-              - tag: family
-              - tag: poetry
-
+      - name: Art and Tech
+        taxonomies:
+          - taxonomy: category
+            terms:
+              - art
+              - tech
+      - name: Family Poetry
+        taxonomies:
+          - taxonomy: tag
+            terms:
+              - family
+              - poetry
 
   # Define rules for other content to include or exclude.
   other_content:

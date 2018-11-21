@@ -238,4 +238,4 @@ And that's enough playing with combinatorials for now. (Except that I'm kind of 
 
 <i class=editorial>If you're curious how I worked this out... I expanded the JS representations of the final forms ([here's the code][JS]) and then stepped through the result in my JavaScript dev tools, watching how the function calls worked and what the values of each intermediate value were. It's fascinating, and well worth your time.</i>
 
-[JS]: //www.chriskrycho.com/extra/ycombinator.js
+[JS]: https://www.chriskrycho.com/extra/ycombinator.js

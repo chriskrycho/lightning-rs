@@ -36,7 +36,7 @@ enum ParseState {
 /// Define XML parsing events of interest for highlighting.
 ///
 /// We don't care at all about any other items for this specific scenario; we
-/// use these in conjunction with the `ParseState` to drive the state  machine
+/// use these in conjunction with the `ParseState` to drive the state machine
 /// described there.
 #[derive(Debug)]
 enum ParseEvent {
@@ -76,14 +76,13 @@ impl Default for ParseState {
     }
 }
 
+const PRE: &[u8] = b"pre";
+const CODE: &[u8] = b"code";
+const CLASS: &[u8] = b"class";
+const WHITE_SPACE: &[u8] = b"";
+
 impl<'e> From<&'e Event> for ParseEvent {
     fn from(event: &'e Event) -> ParseEvent {
-        // TODO @1.15: remove `'static`.
-        const PRE: &'static [u8] = b"pre";
-        const CODE: &'static [u8] = b"code";
-        const CLASS: &'static [u8] = b"class";
-        const WHITE_SPACE: &'static [u8] = b"";
-
         match *event {
             Event::Start(ref element) => match element.name() {
                 PRE => {

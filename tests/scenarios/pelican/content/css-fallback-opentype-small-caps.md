@@ -75,6 +75,10 @@ After digging around as best I could, the top solutions for now are:
 Take advantage of the `@supports` rule in browsers. This is what I initially
 opted to do on this project.[^1] You use the rule this way:
 
+[^1]: For various reasons (especially see note 2 below), I actually opted for
+    the second approach outlined here, which is the same approach I was trying
+    to avoid. Alas.
+
 ```css
 .some-class {
     font-variant: small-caps;
@@ -180,10 +184,6 @@ of progressive enhancement. And we can all look forward to the day when true
 small-caps support is available on every browser, right?
 
 
-
-[^1]: For various reasons (especially see note 2 below), I actually opted for
-    the second approach outlined here, which is the same approach I was trying
-    to avoid. Alas.
 
 [^2]: Issues remain: even in the latest Chrome (46 as of the time of this post),
     using the `font-feature-settings: 'smcp'` approach has some issues. For

@@ -7,6 +7,11 @@ site_info:
 directories:
   content: content
   output: output
+options:
+  syntax:
+    off: ~
+    #tag only
+    # full: <theme>
 structure:
   directory: layout
   index: index.html
