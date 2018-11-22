@@ -1,7 +1,7 @@
 //! Generate the site content.
 
 // Standard library
-use std::borrow::Cow::Owned;
+use std::borrow::Cow::{Borrowed, Owned};
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
@@ -76,7 +76,7 @@ fn load_content<'p>(paths: &'p [PathBuf]) -> Result<Vec<(&'p PathBuf, String)>, 
     } else {
         Err(errs
             .into_iter()
-            .map(|(path, err)| err.unwrap_err())
+            .map(|(_path, err)| err.unwrap_err())
             .collect::<Vec<String>>()
             .join(",\n"))
     }
@@ -85,6 +85,21 @@ fn load_content<'p>(paths: &'p [PathBuf]) -> Result<Vec<(&'p PathBuf, String)>, 
 /// Load the templates associated with each taxonomy.
 fn load_templates(_site_directory: &PathBuf, _config: &Config) -> Result<Paths, String> {
     unimplemented!()
+}
+
+// TODO: put this somewhere else when extracting all the parser logic below into
+// its own module.
+#[derive(Debug)]
+enum ParseState<'s> {
+    CodeBlock(&'s syntect::parsing::SyntaxReference),
+    PlainTextBlock,
+    NonCode,
+}
+
+impl<'s> std::default::Default for ParseState<'s> {
+    fn default() -> ParseState<'s> {
+        ParseState::NonCode
+    }
 }
 
 /// Generate content from a configuration.
@@ -98,76 +113,99 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
     let markdown_paths = load_markdown_paths(&site_directory, &config)?;
     let contents = load_content(&markdown_paths)?;
 
-    // TODO: build from config, if and only if specified and highlighting is
-    // enabled. Also, extract and just do this once *not* at the top level
-    // function.
-    let theme_file = PathBuf::from("data/base16-ocean.dark.tmTheme");
-    let theme = &ThemeSet::get_theme(theme_file).map_err(|err| format!("{:?}", err))?;
+    // TODO: migrate this logic out elsewhere
+    // TODO: when doing ^ take into account that we want to be able to avoid a
+    // bunch of extra layers of indirection here. If we don't have a theme, that
+    // translates to being in `SyntaxOption::Off` or `SyntaxOption::TagOnly`,
+    // since the case where we can't *load* the theme is an error. What I want,
+    // therefore, is to reflect that in the parsing behavior later.
+    let theme = match &config.options.syntax {
+        SyntaxOption::Highlight(theme) => {
+            let theme_file = PathBuf::from("data").join(theme);
+            let theme = ThemeSet::get_theme(theme_file).map_err(|err| format!("{:?}", err))?;
+            Some(theme)
+        }
+        SyntaxOption::Off | SyntaxOption::TagOnly => None,
+    };
+
+    // TODO: generate these! Best move: on build, generate a `.packdump`, since
+    // that seems to be what Syntect knows how to deal with.
+    let syntax_dir = PathBuf::from("data/syntaxes");
+    let syntax_set =
+        syntect::parsing::SyntaxSet::load_from_folder(syntax_dir).expect("can't load syntaxes");
 
     let parsed_content: Vec<(&PathBuf, String)> = contents
         .into_iter()
         .map(|(path, content)| {
-            enum State {
-                InCodeBlock,
-                Other,
-            }
+            let parser = Parser::new_ext(&content, pulldown_cmark::Options::all()).scan(
+                ParseState::default(),
+                |state, event| match event {
+                    Event::Start(Tag::CodeBlock(ref language)) => match state {
+                        ParseState::NonCode => {
+                            *state = match syntax_set.find_syntax_by_name(&language) {
+                                Some(syntax) => ParseState::CodeBlock(syntax),
+                                None => ParseState::PlainTextBlock,
+                            };
 
-            impl State {
-                fn new() -> State {
-                    State::Other
-                }
-            }
+                            // We start every code block with `<pre><code class="...">`
+                            // so that we always have semantically correct HTML. However, we
+                            // don't add the language class if the language isn't set.
+                            let emit_event = if language.len() > 0 {
+                                Event::Html(Owned(format!(r#"<pre><code class="{}">"#, language)))
+                            } else {
+                                Event::Html(Borrowed("<pre><code>"))
+                            };
 
-            let mut state = State::new();
+                            Some(emit_event)
+                        }
+                            // TODO: don't panic.
+                            panic!("Bad event/state: {:?} with {:?}", event, state);
+                        ParseState::CodeBlock(_) | ParseState::PlainTextBlock => {
+                        }
+                    },
 
-            let parser = Parser::new_ext(&content, pulldown_cmark::Options::all()).map(|event| {
-                match (event, &state) {
-                    // We start every code block with `<pre><code class="...">`
-                    // so that we always have semantically correct HTML.
-                    (Event::Start(Tag::CodeBlock(language)), State::Other) => {
-                        state = State::InCodeBlock;
-                        Event::Html(Owned(format!(r#"<pre><code class="{}">"#, language)))
-                    }
+                    Event::End(Tag::CodeBlock(_)) => match state {
+                        ParseState::CodeBlock(_) | ParseState::PlainTextBlock => {
+                            *state = ParseState::NonCode;
+                            Some(Event::Html(Borrowed("</code></pre>")))
+                        }
+                            // TODO: don't panic.
+                            panic!("Bad event/state: {:?} with {:?}", event, state);
+                        ParseState::NonCode => {
+                        }
+                    },
 
-                    // The closing tag must match the opening tag.
-                    (Event::End(Tag::CodeBlock(_)), State::InCodeBlock) => {
-                        state = State::Other;
-                        Event::Html(Owned("</code></pre>".into()))
-                    }
+                    Event::Text(s) => {
+                        match state {
+                            ParseState::CodeBlock(syntax) => match &theme {
+                                Some(theme) => {
+                                    let highlighted = syntect::html::highlighted_html_for_string(
+                                        &s,
+                                        &syntax_set,
+                                        &syntax,
+                                        theme,
+                                    );
 
-                    (Event::Text(s), State::InCodeBlock) => {
-                        match &config.options.syntax {
-                            SyntaxOption::Off => Event::Text(s),
-                            SyntaxOption::TagOnly => {
-                                // TODO: implement tag-only parsing with syntect
-                                // let parsed_by_syntect = syntect::parsing::ParseState::new();
-                                // Event::Html(Owned(syntect::html::tokens_to_classed_html(s, parsed_by_syntect, syntect::html::ClassStyle::Spaced)))
-                                Event::Text(s)
-                            }
-                            SyntaxOption::Highlight(theme_name) => {
-                                // TODO: full syntax highlighting on text
-                                Event::Text(s)
-                            }
+                                    Some(Event::Text(Owned(highlighted)))
+                                }
+                                None => {
+                                    // TODO: implement tag-only parsing with syntect
+                                    unimplemented!()
+                                }
+                            },
+                            ParseState::PlainTextBlock => Some(Event::Text(s)),
+                            ParseState::NonCode => Some(Event::Text(s)),
                         }
                     }
-
-                    // If we hit this, we *know* that we can't be here without
-                    // there being a really bad bug in our code or
-                    // pulldown_cmark (i.e. in our code!).
-                    (Event::End(Tag::CodeBlock(_)), State::Other) | (_, State::InCodeBlock) => {
-                        unreachable!(format!("Error parsing code blocks in {:?}", path));
-                    }
-
-                    (Event::Text(s), State::Other) => Event::Text(s),
-                    (Event::Start(s), _) => Event::Start(s),
-                    (Event::End(e), _) => Event::End(e),
-                    (Event::InlineHtml(s), _) => Event::InlineHtml(s),
-                    (Event::Html(h), _) => Event::Html(h),
-                    (Event::SoftBreak, _) => Event::SoftBreak,
-                    (Event::HardBreak, _) => Event::HardBreak,
-                    (Event::FootnoteReference(s), _) => Event::FootnoteReference(s),
-                }
-            });
+                    Event::Start(s) => Some(Event::Start(s)),
+                    Event::End(e) => Some(Event::End(e)),
+                    Event::InlineHtml(s) => Some(Event::InlineHtml(s)),
+                    Event::Html(h) => Some(Event::Html(h)),
+                    Event::SoftBreak => Some(Event::SoftBreak),
+                    Event::HardBreak => Some(Event::HardBreak),
+                    Event::FootnoteReference(s) => Some(Event::FootnoteReference(s)),
+                },
+            );
 
             // These numbers are derived from a brief survey of content in my
             // own website historically, including both code-heavy and
