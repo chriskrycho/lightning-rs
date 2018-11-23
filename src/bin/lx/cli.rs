@@ -1,41 +1,59 @@
 //! Supply the command line.
 
 // Standard library
-use std::env;
-use std::fmt;
 use std::path::PathBuf;
 
 // Third party
-use clap::{load_yaml, App, ArgMatches};
+use structopt::StructOpt;
 
-const INIT: &'static str = "init";
-const BUILD: &'static str = "build";
-const CREATE: &'static str = "create";
-const SERVE: &'static str = "serve";
-
-/// Commands which can be called, mapped from strings of the same name.
+#[derive(StructOpt, Debug)]
+#[structopt(
+    name = "Lightning (lx)",
+    about = "A fast, reliable, configurable static site generator",
+    raw(setting = "structopt::clap::AppSettings::ArgRequiredElseHelp"),
+    raw(setting = "structopt::clap::AppSettings::ColoredHelp")
+)]
 pub enum Command {
-    /// Create a new site.
+    /// Create a new Lightning site.
+    #[structopt(name = "init")]
     Init {
-        site: PathBuf,
+        /// The folder to create the site in. If no argument is supplied, the
+        /// current directory will be used instead.
+        #[structopt(short = "p", long = "path", parse(from_os_str))]
+        site_directory: PathBuf,
     },
-    /// Generate the site at `site`.
-    Build {
-        site: PathBuf,
-    },
-    Create,
-    Serve,
-}
 
-impl fmt::Display for Command {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Command::Init { ref site } => write!(f, "{} {}", INIT, site.to_string_lossy()),
-            Command::Build { ref site } => write!(f, "{} {}", BUILD, site.to_string_lossy()),
-            Command::Create => write!(f, "{}", CREATE),
-            Command::Serve => write!(f, "{}", SERVE),
-        }
-    }
+    /// Build the site.
+    #[structopt(name = "build")]
+    Build {
+        /// The root of the site (if different from the current directory).
+        #[structopt(short = "p", long = "path", parse(from_os_str))]
+        site_directory: PathBuf,
+
+        /// Use local paths to resources.
+        #[structopt(short = "l")]
+        local: bool,
+    },
+
+    /// Create an item from a template.
+    #[structopt(name = "create")]
+    Create {
+        /// The name of the template to generate, e.g. 'post'. Must be the stem
+        /// of a file in your `<site>/templates` directory.
+        template: Vec<String>,
+    },
+
+    /// Serve the site.
+    #[structopt(name = "serve")]
+    Serve {
+        // TODO: make this basically the same as `Build`, but with reload.
+    },
+
+    /// Run the UI for the site.
+    #[structopt(name = "run")]
+    Run {
+        // TODO: this is super aspirational.
+    },
 }
 
 // TODO: figure out a way, eventually, to customize arguments based on whatever
@@ -43,30 +61,5 @@ impl fmt::Display for Command {
 //       what Cargo does.)
 /// Get arguments from the command line.
 pub fn cli() -> Command {
-    use self::Command::*;
-
-    let yaml = load_yaml!("cli.yml");
-    let matches = App::from_yaml(yaml).get_matches();
-
-    // Since a subcommand is required, if this fails it's clap's (or, more
-    // likely, our *configuration* of clap's) fault. In any case... `unwrap()`
-    // at will, commander!
-    match matches.subcommand_name().unwrap() {
-        INIT => Init {
-            site: site_directory(matches.subcommand_matches(INIT).unwrap()),
-        },
-        BUILD => Build {
-            site: site_directory(matches.subcommand_matches(BUILD).unwrap()),
-        },
-        CREATE => Create,
-        SERVE => Serve,
-        _ => panic!("ERROR: `clap.rs` is configured wrong somehow, kids."),
-    }
-}
-
-fn site_directory<'m>(matches: &'m ArgMatches) -> PathBuf {
-    match matches.value_of("site_directory") {
-        Some(path_str) => PathBuf::from(path_str),
-        None => env::current_dir().unwrap(),
-    }
+    Command::from_args()
 }

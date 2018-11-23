@@ -22,9 +22,13 @@ fn main() {
 /// not doing that yet, but I expect we might eventually; this is convenient.)
 fn run() -> Result<(), String> {
     match cli() {
-        Command::Init { site } => lightning::init(site),
-        Command::Build { site } => lightning::build(site),
-        Command::Create => lightning::create(),
-        Command::Serve => lightning::serve(),
+        Command::Init { site_directory } => lightning::init(site_directory),
+        Command::Build {
+            site_directory,
+            local: _,
+        } => lightning::build(site_directory),
+        Command::Create { template: _ } => lightning::create(),
+        Command::Serve {} => lightning::serve(),
+        Command::Run {} => unimplemented!(),
     }
 }
