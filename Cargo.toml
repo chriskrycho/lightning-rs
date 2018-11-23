@@ -1,10 +1,11 @@
 [package]
 name = "lightning"
 version = "0.1.0"
-authors = ["Chris Krycho <chris@chriskrycho.com>"]
+authors = ["Chris Krycho <hello@chriskrycho.com>"]
 edition = "2018"
 
 [dependencies]
+clap = "2.32.0"
 glob = "0.2.11"
 quick-xml = "0.4.1"
 pulldown-cmark = { version = "0.0.11", default-features = false }
@@ -12,11 +13,8 @@ serde = "1.0"
 serde_derive = "1.0"
 serde_yaml = "0.8"
 syntect = "1.0.1"
+structopt = "0.2.13"
 yaml-rust = "0.3.5"
-
-[dependencies.clap]
-version = "~2.19.0"
-features = [ "yaml" ]
 
 [profile.release]
 # debug = true  # For profiling only.
