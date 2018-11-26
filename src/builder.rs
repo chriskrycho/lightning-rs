@@ -150,13 +150,13 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
                             // We start every code block with `<pre><code class="...">`
                             // so that we always have semantically correct HTML. However, we
                             // don't add the language class if the language isn't set.
-                            let emit_event = if language.len() > 0 {
-                                Event::Html(Owned(format!(r#"<pre><code class="{}">"#, language)))
+                            let content = if language.len() > 0 {
+                                Owned(format!(r#"<pre><code class="{}">"#, language))
                             } else {
-                                Event::Html(Borrowed("<pre><code>"))
+                                Borrowed("<pre><code>")
                             };
 
-                            Some(emit_event)
+                            Some(Event::Html(content))
                         }
                         ParseState::CodeBlock(_) | ParseState::PlainTextBlock => {
                             unreachable!("Bad event/state: {:?} with {:?}", event, state);
@@ -173,6 +173,9 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
                         }
                     },
 
+                    // When we are in a text block, we *may* be in a code block,
+                    // so we may also need to do whatever highlighting is
+                    // specified.
                     Event::Text(s) => {
                         match state {
                             ParseState::CodeBlock(syntax) => match &theme {
@@ -195,13 +198,18 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
                             ParseState::NonCode => Some(Event::Text(s)),
                         }
                     }
+
+                    // TODO: accumulate footnote references and always put them
+                    // at the end. Also, generate back-links for them, unless or
+                    // until pulldown-cmark does so.
+                    Event::FootnoteReference(s) => Some(Event::FootnoteReference(s)),
+
                     Event::Start(s) => Some(Event::Start(s)),
                     Event::End(e) => Some(Event::End(e)),
                     Event::InlineHtml(s) => Some(Event::InlineHtml(s)),
                     Event::Html(h) => Some(Event::Html(h)),
                     Event::SoftBreak => Some(Event::SoftBreak),
                     Event::HardBreak => Some(Event::HardBreak),
-                    Event::FootnoteReference(s) => Some(Event::FootnoteReference(s)),
                 },
             );
 
