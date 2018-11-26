@@ -158,9 +158,8 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
 
                             Some(emit_event)
                         }
-                            // TODO: don't panic.
-                            panic!("Bad event/state: {:?} with {:?}", event, state);
                         ParseState::CodeBlock(_) | ParseState::PlainTextBlock => {
+                            unreachable!("Bad event/state: {:?} with {:?}", event, state);
                         }
                     },
 
@@ -169,9 +168,8 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
                             *state = ParseState::NonCode;
                             Some(Event::Html(Borrowed("</code></pre>")))
                         }
-                            // TODO: don't panic.
-                            panic!("Bad event/state: {:?} with {:?}", event, state);
                         ParseState::NonCode => {
+                            unreachable!("Bad event/state: {:?} with {:?}", event, state);
                         }
                     },
 
@@ -227,8 +225,7 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
     let output_dir = site_directory.join(&config.directories.output);
 
     if output_dir.exists() && !output_dir.is_dir() {
-        // TODO: don't panic!
-        panic!("{:?} already exists!", output_dir);
+        return Err(format!("Output directory {:?} already exists!", output_dir));
     }
 
     if !output_dir.exists() {
