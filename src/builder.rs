@@ -55,16 +55,15 @@ fn load_markdown_paths(site_directory: &PathBuf, config: &Config) -> Result<Vec<
     }
 }
 
+// TODO: this is an obvious candidate for a `HashMap`, so use that instead.
 type LoadTuple<'a> = (&'a PathBuf, Result<String, String>);
 
 fn load_content<'p>(paths: &'p [PathBuf]) -> Result<Vec<(&'p PathBuf, String)>, String> {
     let (contents, errs): (Vec<LoadTuple>, Vec<LoadTuple>) = paths
         .into_iter()
         .map(|path| {
-            (
-                path,
-                std::fs::read_to_string(path).map_err(|e| format!("{:?}", e)),
-            )
+            let content = std::fs::read_to_string(path).map_err(|e| format!("{:?}", e));
+            (path, content)
         })
         .partition(|(_, result)| result.is_ok());
 
