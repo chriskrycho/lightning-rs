@@ -211,7 +211,7 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
             // own website historically, including both code-heavy and
             // prose-heavy posts. It's probably worth exploring other corpora
             // to see if this is basically right.
-            let length_bound_estimate = match config.options.syntax {
+            let length_bound_estimate = match &config.options.syntax {
                 SyntaxOption::Off | SyntaxOption::TagOnly => 2,
                 SyntaxOption::Highlight(_) => 8, // TODO: check other pages
             };
@@ -223,15 +223,27 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
         })
         .collect();
 
+    // TODO: extract this as part of the writing it out process.
+    let output_dir = site_directory.join(&config.directories.output);
+
+    if output_dir.exists() && !output_dir.is_dir() {
+        // TODO: don't panic!
+        panic!("{:?} already exists!", output_dir);
+    }
+
+    if !output_dir.exists() {
+        std::fs::create_dir(&output_dir).expect(&format!(
+            "could not create output directory {:?}",
+            &output_dir
+        ));
+    }
+
     for (path, content) in parsed_content {
-        // TODO: extract this as part of the writing it out process.
-        // TODO: set output location in config.
-        let dest = Path::new("./tests/output")
-            .join(
-                path.file_name()
-                    .ok_or(format!("invalid file: {:?}", path))?,
-            )
-            .with_extension("html");
+        let file_path = path
+            .file_name()
+            .ok_or(format!("invalid file: {:?}", path))?;
+
+        let dest = output_dir.join(file_path).with_extension("html");
 
         let mut fd = match File::create(&dest) {
             Ok(file) => file,
