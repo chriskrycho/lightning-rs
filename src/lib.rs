@@ -5,7 +5,6 @@ mod config;
 mod creator;
 mod initializer;
 mod server;
-mod syntax_highlighting;
 mod validated_types;
 
 pub use crate::builder::build;

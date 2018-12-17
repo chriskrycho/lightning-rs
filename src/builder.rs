@@ -1,7 +1,7 @@
 //! Generate the site content.
 
 // Standard library
-use std::borrow::Cow::Owned;
+use std::borrow::Cow::{Borrowed, Owned};
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
@@ -55,16 +55,18 @@ fn load_markdown_paths(site_directory: &PathBuf, config: &Config) -> Result<Vec<
     }
 }
 
+// TODO: this is an obvious candidate for a `HashMap`, so use that instead.
 type LoadTuple<'a> = (&'a PathBuf, Result<String, String>);
 
+// Instead of using `.collect` at the end of these, I *should* be able to use
+// something like `Result<impl Iterator<HashMap<PathBuf, String>, String>`, even
+// if the type isn't *quite* taht.
 fn load_content<'p>(paths: &'p [PathBuf]) -> Result<Vec<(&'p PathBuf, String)>, String> {
     let (contents, errs): (Vec<LoadTuple>, Vec<LoadTuple>) = paths
         .into_iter()
         .map(|path| {
-            (
-                path,
-                std::fs::read_to_string(path).map_err(|e| format!("{:?}", e)),
-            )
+            let content = std::fs::read_to_string(path).map_err(|e| format!("{:?}", e));
+            (path, content)
         })
         .partition(|(_, result)| result.is_ok());
 
@@ -76,7 +78,7 @@ fn load_content<'p>(paths: &'p [PathBuf]) -> Result<Vec<(&'p PathBuf, String)>, 
     } else {
         Err(errs
             .into_iter()
-            .map(|(path, err)| err.unwrap_err())
+            .map(|(_path, err)| err.unwrap_err())
             .collect::<Vec<String>>()
             .join(",\n"))
     }
@@ -85,6 +87,41 @@ fn load_content<'p>(paths: &'p [PathBuf]) -> Result<Vec<(&'p PathBuf, String)>, 
 /// Load the templates associated with each taxonomy.
 fn load_templates(_site_directory: &PathBuf, _config: &Config) -> Result<Paths, String> {
     unimplemented!()
+}
+
+// TODO: put this somewhere else when extracting all the parser logic below into
+// its own module.
+#[derive(Debug)]
+enum ParseState<'s> {
+    CodeBlock(&'s syntect::parsing::SyntaxReference),
+    PlainTextBlock,
+    NonCode,
+}
+
+impl<'s> std::default::Default for ParseState<'s> {
+    fn default() -> ParseState<'s> {
+        ParseState::NonCode
+    }
+}
+
+enum Syntax {
+    Highlight(syntect::highlighting::Theme),
+    TagOnly,
+    Off,
+}
+
+impl Syntax {
+    fn try_from(config_syntax: &SyntaxOption) -> Result<Syntax, String> {
+        match config_syntax {
+            SyntaxOption::Highlight(theme) => {
+                let theme_file = PathBuf::from("data").join(theme);
+                let theme = ThemeSet::get_theme(theme_file).map_err(|err| format!("{:?}", err))?;
+                Ok(Syntax::Highlight(theme))
+            }
+            SyntaxOption::TagOnly => Ok(Syntax::TagOnly),
+            SyntaxOption::Off => Ok(Syntax::Off),
+        }
+    }
 }
 
 /// Generate content from a configuration.
@@ -98,82 +135,99 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
     let markdown_paths = load_markdown_paths(&site_directory, &config)?;
     let contents = load_content(&markdown_paths)?;
 
-    // TODO: build from config, if and only if specified and highlighting is
-    // enabled. Also, extract and just do this once *not* at the top level
-    // function.
-    let theme_file = PathBuf::from("data/base16-ocean.dark.tmTheme");
-    let theme = &ThemeSet::get_theme(theme_file).map_err(|err| format!("{:?}", err))?;
+    let configured_syntax = Syntax::try_from(&config.options.syntax)?;
+
+    // TODO: generate these! Best move: on build, generate a `.packdump`, since
+    // that seems to be what Syntect knows how to deal with.
+    let syntax_dir = PathBuf::from("data/syntaxes");
+    let syntax_set =
+        syntect::parsing::SyntaxSet::load_from_folder(syntax_dir).expect("can't load syntaxes");
 
     let parsed_content: Vec<(&PathBuf, String)> = contents
         .into_iter()
         .map(|(path, content)| {
-            enum State {
-                InCodeBlock,
-                Other,
-            }
+            let parser = Parser::new_ext(&content, pulldown_cmark::Options::all()).scan(
+                ParseState::default(),
+                |state, event| match event {
+                    Event::Start(Tag::CodeBlock(ref language)) => match state {
+                        ParseState::NonCode => {
+                            *state = match syntax_set.find_syntax_by_name(&language) {
+                                Some(syntax) => ParseState::CodeBlock(syntax),
+                                None => ParseState::PlainTextBlock,
+                            };
 
-            impl State {
-                fn new() -> State {
-                    State::Other
-                }
-            }
+                            // We start every code block with `<pre><code class="...">`
+                            // so that we always have semantically correct HTML. However, we
+                            // don't add the language class if the language isn't set.
+                            let content = if language.len() > 0 {
+                                Owned(format!(r#"<pre><code class="{}">"#, language))
+                            } else {
+                                Borrowed("<pre><code>")
+                            };
 
-            let mut state = State::new();
+                            Some(Event::Html(content))
+                        }
+                        ParseState::CodeBlock(_) | ParseState::PlainTextBlock => {
+                            unreachable!("Bad event/state: {:?} with {:?}", event, state);
+                        }
+                    },
 
-            let parser = Parser::new_ext(&content, pulldown_cmark::Options::all()).map(|event| {
-                match (event, &state) {
-                    // We start every code block with `<pre><code class="...">`
-                    // so that we always have semantically correct HTML.
-                    (Event::Start(Tag::CodeBlock(language)), State::Other) => {
-                        state = State::InCodeBlock;
-                        Event::Html(Owned(format!(r#"<pre><code class="{}">"#, language)))
-                    }
+                    Event::End(Tag::CodeBlock(_)) => match state {
+                        ParseState::CodeBlock(_) | ParseState::PlainTextBlock => {
+                            *state = ParseState::NonCode;
+                            Some(Event::Html(Borrowed("</code></pre>")))
+                        }
+                        ParseState::NonCode => {
+                            unreachable!("Bad event/state: {:?} with {:?}", event, state);
+                        }
+                    },
 
-                    // The closing tag must match the opening tag.
-                    (Event::End(Tag::CodeBlock(_)), State::InCodeBlock) => {
-                        state = State::Other;
-                        Event::Html(Owned("</code></pre>".into()))
-                    }
+                    // When we are in a text block, we *may* be in a code block,
+                    // so we may also need to do whatever highlighting is
+                    // specified.
+                    Event::Text(s) => {
+                        match state {
+                            ParseState::CodeBlock(syntax) => match &configured_syntax {
+                                Syntax::Highlight(theme) => {
+                                    let highlighted = syntect::html::highlighted_html_for_string(
+                                        &s,
+                                        &syntax_set,
+                                        &syntax,
+                                        theme,
+                                    );
 
-                    (Event::Text(s), State::InCodeBlock) => {
-                        match &config.options.syntax {
-                            SyntaxOption::Off => Event::Text(s),
-                            SyntaxOption::TagOnly => {
-                                // TODO: implement tag-only parsing with syntect
-                                // let parsed_by_syntect = syntect::parsing::ParseState::new();
-                                // Event::Html(Owned(syntect::html::tokens_to_classed_html(s, parsed_by_syntect, syntect::html::ClassStyle::Spaced)))
-                                Event::Text(s)
-                            }
-                            SyntaxOption::Highlight(theme_name) => {
-                                // TODO: full syntax highlighting on text
-                                Event::Text(s)
-                            }
+                                    Some(Event::Text(Owned(highlighted)))
+                                }
+                                Syntax::TagOnly => {
+                                    // TODO: implement tag-only parsing with syntect
+                                    unimplemented!()
+                                }
+                                Syntax::Off => Some(Event::Text(s)),
+                            },
+                            ParseState::PlainTextBlock => Some(Event::Text(s)),
+                            ParseState::NonCode => Some(Event::Text(s)),
                         }
                     }
 
-                    // If we hit this, we *know* that we can't be here without
-                    // there being a really bad bug in our code or
-                    // pulldown_cmark (i.e. in our code!).
-                    (Event::End(Tag::CodeBlock(_)), State::Other) | (_, State::InCodeBlock) => {
-                        unreachable!(format!("Error parsing code blocks in {:?}", path));
-                    }
+                    // TODO: accumulate footnote references and always put them
+                    // at the end. Also, generate back-links for them, unless or
+                    // until pulldown-cmark does so.
+                    Event::FootnoteReference(s) => Some(Event::FootnoteReference(s)),
 
-                    (Event::Text(s), State::Other) => Event::Text(s),
-                    (Event::Start(s), _) => Event::Start(s),
-                    (Event::End(e), _) => Event::End(e),
-                    (Event::InlineHtml(s), _) => Event::InlineHtml(s),
-                    (Event::Html(h), _) => Event::Html(h),
-                    (Event::SoftBreak, _) => Event::SoftBreak,
-                    (Event::HardBreak, _) => Event::HardBreak,
-                    (Event::FootnoteReference(s), _) => Event::FootnoteReference(s),
-                }
-            });
+                    Event::Start(s) => Some(Event::Start(s)),
+                    Event::End(e) => Some(Event::End(e)),
+                    Event::InlineHtml(s) => Some(Event::InlineHtml(s)),
+                    Event::Html(h) => Some(Event::Html(h)),
+                    Event::SoftBreak => Some(Event::SoftBreak),
+                    Event::HardBreak => Some(Event::HardBreak),
+                },
+            );
 
             // These numbers are derived from a brief survey of content in my
             // own website historically, including both code-heavy and
             // prose-heavy posts. It's probably worth exploring other corpora
             // to see if this is basically right.
-            let length_bound_estimate = match config.options.syntax {
+            let length_bound_estimate = match &config.options.syntax {
                 SyntaxOption::Off | SyntaxOption::TagOnly => 2,
                 SyntaxOption::Highlight(_) => 8, // TODO: check other pages
             };
@@ -185,15 +239,26 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
         })
         .collect();
 
+    // TODO: extract this as part of the writing it out process.
+    let output_dir = site_directory.join(&config.directories.output);
+
+    if output_dir.exists() && !output_dir.is_dir() {
+        return Err(format!("Output directory {:?} already exists!", output_dir));
+    }
+
+    if !output_dir.exists() {
+        std::fs::create_dir(&output_dir).expect(&format!(
+            "could not create output directory {:?}",
+            &output_dir
+        ));
+    }
+
     for (path, content) in parsed_content {
-        // TODO: extract this as part of the writing it out process.
-        // TODO: set output location in config.
-        let dest = Path::new("./tests/output")
-            .join(
-                path.file_name()
-                    .ok_or(format!("invalid file: {:?}", path))?,
-            )
-            .with_extension("html");
+        let file_path = path
+            .file_name()
+            .ok_or(format!("invalid file: {:?}", path))?;
+
+        let dest = output_dir.join(file_path).with_extension("html");
 
         let mut fd = match File::create(&dest) {
             Ok(file) => file,
