@@ -243,7 +243,10 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
     let output_dir = site_directory.join(&config.directories.output);
 
     if output_dir.exists() && !output_dir.is_dir() {
-        return Err(format!("Output directory {:?} already exists!", output_dir));
+        return Err(format!(
+            "A file with the same name as the output directory {:?} already exists!",
+            output_dir
+        ));
     }
 
     if !output_dir.exists() {
