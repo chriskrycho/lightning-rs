@@ -101,6 +101,26 @@ impl<'s> std::default::Default for ParseState<'s> {
     }
 }
 
+enum Syntax {
+    Highlight(syntect::highlighting::Theme),
+    TagOnly,
+    Off,
+}
+
+impl Syntax {
+    fn try_from(config_syntax: &SyntaxOption) -> Result<Syntax, String> {
+        match config_syntax {
+            SyntaxOption::Highlight(theme) => {
+                let theme_file = PathBuf::from("data").join(theme);
+                let theme = ThemeSet::get_theme(theme_file).map_err(|err| format!("{:?}", err))?;
+                Ok(Syntax::Highlight(theme))
+            }
+            SyntaxOption::TagOnly => Ok(Syntax::TagOnly),
+            SyntaxOption::Off => Ok(Syntax::Off),
+        }
+    }
+}
+
 /// Generate content from a configuration.
 pub fn build(site_directory: PathBuf) -> Result<(), String> {
     // NOTE: this is almost certainly not what we *ultimately* want here, but
@@ -112,20 +132,7 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
     let markdown_paths = load_markdown_paths(&site_directory, &config)?;
     let contents = load_content(&markdown_paths)?;
 
-    // TODO: migrate this logic out elsewhere
-    // TODO: when doing ^ take into account that we want to be able to avoid a
-    // bunch of extra layers of indirection here. If we don't have a theme, that
-    // translates to being in `SyntaxOption::Off` or `SyntaxOption::TagOnly`,
-    // since the case where we can't *load* the theme is an error. What I want,
-    // therefore, is to reflect that in the parsing behavior later.
-    let theme = match &config.options.syntax {
-        SyntaxOption::Highlight(theme) => {
-            let theme_file = PathBuf::from("data").join(theme);
-            let theme = ThemeSet::get_theme(theme_file).map_err(|err| format!("{:?}", err))?;
-            Some(theme)
-        }
-        SyntaxOption::Off | SyntaxOption::TagOnly => None,
-    };
+    let configured_syntax = Syntax::try_from(&config.options.syntax)?;
 
     // TODO: generate these! Best move: on build, generate a `.packdump`, since
     // that seems to be what Syntect knows how to deal with.
@@ -177,8 +184,8 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
                     // specified.
                     Event::Text(s) => {
                         match state {
-                            ParseState::CodeBlock(syntax) => match &theme {
-                                Some(theme) => {
+                            ParseState::CodeBlock(syntax) => match &configured_syntax {
+                                Syntax::Highlight(theme) => {
                                     let highlighted = syntect::html::highlighted_html_for_string(
                                         &s,
                                         &syntax_set,
@@ -188,10 +195,11 @@ pub fn build(site_directory: PathBuf) -> Result<(), String> {
 
                                     Some(Event::Text(Owned(highlighted)))
                                 }
-                                None => {
+                                Syntax::TagOnly => {
                                     // TODO: implement tag-only parsing with syntect
                                     unimplemented!()
                                 }
+                                Syntax::Off => Some(Event::Text(s)),
                             },
                             ParseState::PlainTextBlock => Some(Event::Text(s)),
                             ParseState::NonCode => Some(Event::Text(s)),
