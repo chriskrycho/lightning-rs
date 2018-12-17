@@ -58,6 +58,9 @@ fn load_markdown_paths(site_directory: &PathBuf, config: &Config) -> Result<Vec<
 // TODO: this is an obvious candidate for a `HashMap`, so use that instead.
 type LoadTuple<'a> = (&'a PathBuf, Result<String, String>);
 
+// Instead of using `.collect` at the end of these, I *should* be able to use
+// something like `Result<impl Iterator<HashMap<PathBuf, String>, String>`, even
+// if the type isn't *quite* taht.
 fn load_content<'p>(paths: &'p [PathBuf]) -> Result<Vec<(&'p PathBuf, String)>, String> {
     let (contents, errs): (Vec<LoadTuple>, Vec<LoadTuple>) = paths
         .into_iter()
