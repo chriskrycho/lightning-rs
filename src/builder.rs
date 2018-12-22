@@ -62,7 +62,7 @@ type LoadTuple<'a> = (&'a PathBuf, Result<String, String>);
 // something like `Result<impl Iterator<HashMap<PathBuf, String>, String>`, even
 // if the type isn't *quite* taht.
 fn load_content<'p>(paths: &'p [PathBuf]) -> Result<Vec<(&'p PathBuf, String)>, String> {
-    let (contents, errs): (Vec<LoadTuple>, Vec<LoadTuple>) = paths
+    let (contents, errs): (Vec<LoadTuple<'_>>, Vec<LoadTuple<'_>>) = paths
         .into_iter()
         .map(|path| {
             let content = std::fs::read_to_string(path).map_err(|e| format!("{:?}", e));
