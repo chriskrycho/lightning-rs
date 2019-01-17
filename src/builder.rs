@@ -4,7 +4,7 @@
 use std::borrow::Cow::{Borrowed, Owned};
 use std::fs::File;
 use std::io::prelude::*;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 // Third party
 use glob::{glob, Paths};
