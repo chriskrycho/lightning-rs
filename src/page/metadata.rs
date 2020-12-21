@@ -3,28 +3,31 @@ use serde_derive::Deserialize;
 
 #[derive(Deserialize)]
 pub(super) struct Metadata {
-    title: Option<String>,
-    subtitle: Option<String>,
-    summary: Option<String>,
-    qualifiers: Option<Qualifiers>,
-    date: Option<DateTime<FixedOffset>>,
-    updated: Option<DateTime<FixedOffset>>,
-    permalink: Option<String>,
-    thanks: Option<String>,
-    tags: Vec<String>,
-    featured: bool,
-    layout: Option<String>,
-    series: Option<Series>,
+    pub(super) title: Option<String>,
+    pub(super) subtitle: Option<String>,
+    pub(super) summary: Option<String>,
+    pub(super) qualifiers: Option<Qualifiers>,
+    pub(super) date: Option<DateTime<FixedOffset>>,
+    pub(super) updated: Option<DateTime<FixedOffset>>,
+    pub(super) permalink: Option<String>,
+    pub(super) thanks: Option<String>,
+    #[serde(default)]
+    pub(super) tags: Vec<String>,
+    #[serde(default)]
+    pub(super) featured: bool,
+    pub(super) layout: Option<String>,
+    pub(super) book: Option<Book>,
+    pub(super) series: Option<Series>,
 }
 
 #[derive(Deserialize)]
-struct Qualifiers {
+pub(super) struct Qualifiers {
     audience: Option<String>,
     epistemic: Option<String>,
 }
 
 #[derive(Deserialize)]
-struct Book {
+pub(super) struct Book {
     title: String,
     author: String,
     editors: Vec<String>,
@@ -36,7 +39,7 @@ struct Book {
 }
 
 #[derive(Deserialize)]
-struct Review {
+pub(super) struct Review {
     rating: Rating,
     summary: String,
 }
@@ -65,7 +68,7 @@ impl std::fmt::Display for Rating {
 }
 
 #[derive(Deserialize)]
-struct Series {
+pub(super) struct Series {
     name: String,
     part: u8,
 }
