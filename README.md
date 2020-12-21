@@ -1,120 +1,56 @@
 # Lightning (`lx`)
 
-[![Build Status](https://travis-ci.org/chriskrycho/lightning-rs.svg?branch=master)](https://travis-ci.org/chriskrycho/lightning-rs)
+An opinionated—I dare say idiosyncratic—take on the static site generator, written in Rust,[<sup>[1]</sup>](#notes) and built for the very specific needs of my own website publishing. **I do not intend to make this a general-purpose tool.** It is public because I default to making things public, but this project is distinctly *personal*, and in it I will experiment freely and build *exactly* what I want over time.
 
-Yet another static site generator—but this one's written in Rust. (And therefore, not to be confused with the [*other* lightning] static site generator: that one is written in Python.)
+Accordingly, I'm not really looking for collaborators, and I will not be taking feature requests. (If it works for you, that’s great, and if you happen to spot and fix a bug, I won't argue, though!)
 
-[*other* lightning]: https://github.com/borismus/lightning
-
-## Status
-
-This currently ***does not work***. If you need a site generator that does, also written in Rust and very fast, check out [Cobalt] or [Zola]. ([Why am I building something else if Cobalt and Zola already exist?](#why))
-
-Today, Lightning *builds*, passes the tests I've written, and even correctly loads the configuration file. But running `lx build` will *not* do what you expect: it'll convert all the Markdown in a config-specified directory, but it won't render it into templates in any way. Keep your expectations low on how fast this will develop, and you won't be disappointed.
-
-[Hugo]: https://gohugo.io
 [Cobalt]: https://cobalt-org.github.io
-[Zola]: https://www.getzola.org
 
-## Contributing
-
-At the moment, I'm not really looking for collaborators. This is public because I default to making things public, but I'm really interested in this as a project where I can experiment and build *exactly* what I want over time. It's also apt to move in fits and starts. (If you happen to spot something small, I won't argue, though!)
-
-The only things you should know about are that this uses `rustfmt` for contributing and that things don't pass CI unless this builds on Windows.
-
-### Goals
+## Goals
 
 This project's main goals are:
 
 - speed
 - ease of use, even for more complex ways of structuring a site
-- good out-of-the-box defaults, but with human-readable and -writable configurability
-- straightforward *import* from other systems (though see comment below)
-- extended Markdown functionality like processing citations
-- full cross-platform support: this should run equally well on macOS, Windows, and Linux
+- good out-of-the-box defaults (‘zero-config’, ‘convention over configuration’, etc.), but with human-readable and -writable configurability
 
-It is an explicit non-goals to be an exact drop-in replacement for any other generator. Supporting the patterns other generators use for ease of import is good; requiring that everyone conform to e.g. Jekyll's, Hugo's, or any other generator's patterns as a result is *not* good. It should be easy to migrate in Jekyll/Hugo/etc. content; but you will never have to format the titles of your posts in any particular way.
+It is an explicit non-goal to be an exact drop-in replacement for any other generator, or indeed to be useful for anyone but me!
 
-### Roadmap
-
-N.b. the below is my overall set of goals. For the 1.0 roadmap, see the [milestone](https://github.com/chriskrycho/lightning-rs/milestone/1) and the [tracking issue](https://github.com/chriskrycho/lightning-rs/issues/3).
-
-- [ ] Define configuration scheme
-
-    - [x] **Support custom taxonomies**: not being limited to just having categories and tags, and pages being off in their own corner
-
-        - [x] binary (true/false)
-
-        - [x] tag-like: items may belong to multiple items
-
-        - [x] hierarchical: items may belong to parents and children e.g. something can be at `Tech/Programming` and thus belong to both Tech and Programming
-
-            - [x] hierarchical *and exclusive*, i.e. if something is in the category `Tech` it *cannot* be in the category `Art`. I don't actually want or need this, but other users almost certainly will.
-
-    - [ ] Support importing content from other generators' basic setups.
-
-        This really means, make sure the configuration can support the configuration patterns for popular generators. This is not so much a *formal support* issue (though being able to `lx create --from-jekyll` would be cool) as it is a *make sure this is well-covered by the implementation* issue. Other generators to cover, in order:
-
-        - [x] from [Pelican] – a must for the obvious reason that I want to be able to import my existing sites.
-
-        - [ ] from [Jekyll] – a high priority given the sheer popularity of the generator
-
-        - [ ] from [Hugo] – because it's basically a direct competitor if I ever get this thing to where I want performance-wise
+## Roadmap
 
 - [ ] Render Markdown
 
-    - [ ] with [pulldown-cmark] or [comrak]
-
-    - [ ] with [pandoc]
-        - [x] via [subprocess][cmd-pandoc]
-        - [ ] as a library
-
-    - [ ] via [Hoedown] bindings? (big maybe, but it has the upside of being very widely used b/c of Jekyll and such.)
-
-    - [x] optionally using [Syntect] for syntax highlighting
+    - [ ] with [pulldown-cmark]
+    - [ ] with [Syntect] for syntax highlighting
 
 - [ ] Templating
 
     - [ ] Taxonomy-specific views
-
     - [ ] Standalone pages
-
     - [ ] Fully customizable "formats" to enable e.g. link-blogging, podcasting, slide shows, etc.
+
+- [ ] Generate RSS
+
+    - [ ] support podcast elements for RSS
+    - [ ] render template not only into rendered content but also RSS/Atom
 
 - [ ] Server mode
 
     It's nice to be able to generate everything statically, but depending on the site it may *also* be nice to have an actual server application, whether for generating content or simply for serving it in a non-static fashion if so desired. (There's a lot of thought that would need to go into figuring out what this flow would look like.)
 
-- [ ] Generate RSS
+    - [ ] Watchers – I want to be able to tweak content and regenerate it on the fly, or especially to be able to tweak a template and have it rebuild on the fly.
+    - [ ] SCSS integration
 
-    - [ ] support podcast elements for RSS
-
-    - [ ] render template not only into rendered content but also RSS/Atom
 
 - [ ] Embrace parallelism!
 
-    - [x] Via threading, e.g. with Rayon
+    - [ ] Via threading, e.g. with Rayon
+    - [ ] Via `async`/`.await`?
 
-    - [ ] Via [futures-cpupool] or similar?
+- [ ] Supply (and make it easy to extend) a `create` command and interface. `lx create note`, `lx create journal` etc.
 
-- [ ] Extensibility via new commands, which can be installed and run _a la_ Git or Cargo commands (`cargo clippy` just runs the `cargo-clippy` binary)
-
-- [ ] Supply (and make it easy to extend) a `create` command and interface.
-
-    It's hard to overstate how much utility I get out of the `ember generate` family of commands, or how much I use the hacked-together Python CLI I use to generate stubs for posts. And both Jekyll and Hugo have tools for this, and it's very handy.
-
-- [ ] Watchers – I want to be able to tweak content and regenerate it on the fly, or especially to be able to tweak a template and have it rebuild on the fly. (This may be a good thing to integrate with the **Server Mode** noted above.)
-
-What else should be on this list?
-
-[Pelican]: http://docs.getpelican.com/en/stable/
-[Jekyll]: http://jekyllrb.com
 [pulldown-cmark]: https://crates.io/crates/pulldown-cmark
-[comrak]: https://github.com/kivikakk/comrak
-[cmd-pandoc]: https://crates.io/crates/cmd-pandoc
-[Hoedown]: https://crates.io/crates/hoedown
 [Syntect]: https://crates.io/crates/syntect
-[futures-cpupool]: https://docs.rs/futures-cpupool/0.1.2/futures_cpupool/
 
 ## Why?
 
@@ -135,10 +71,19 @@ What else should be on this list?
 
 2.  Because I really like writing Rust.
 
-    There are other tools out there that I could *probably* bend to my will here, e.g. [Metalsmith]. But I'd really rather work out something new in Rust than spend time fighting with a plugin system in
+    There are other tools out there that I could bend to my will here, e.g. [Eleventy][11ty], which I [*have*][v5] bent to my will. But I'd really rather work out something new in Rust than spend time fighting with a plugin system in
 
-3.  Because I want to see if I can make the fastest (or at least: *one* of the fastest) static site generators out there. When all is said and done, this should be as fast as [Hugo]. (That's a pretty high bar; Hugo is great, and if you want a static site generator *today*, especially if you don't have my quirky needs, that's what I would point you to.)
+3.  Because I want to see if I can make the fastest (or at least: *one* of the fastest) static site generators out there. When all is said and done, this should be as fast as Hugo or Zola or similar.
 
 [POSSE]: https://indieweb.org/POSSE
 [Pandoc]: http://pandoc.org
-[Metalsmith]: http://www.metalsmith.io
+[11ty]: http://www.metalsmith.io
+[v5]: https://v5.chriskrycho.com/journal/how-i-publish-this-site/
+
+---
+
+## Notes
+
+1. And therefore, not to be confused with the [*other* lightning][py-lightning] static site generator: that one is written in Python.
+
+[py-lightning]: https://github.com/borismus/lightning
