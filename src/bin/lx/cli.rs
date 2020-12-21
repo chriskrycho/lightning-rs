@@ -20,7 +20,6 @@ pub(crate) enum Command {
     #[clap(name = "build")]
     Build {
         /// The root of the site (if different from the current directory).
-        #[clap(short = 'p', long = "path", parse(from_os_str))]
         site_directory: Option<PathBuf>,
     },
 }
