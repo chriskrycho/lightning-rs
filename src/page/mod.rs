@@ -1,9 +1,11 @@
-mod serialize;
+mod metadata;
 
 use std::{path::PathBuf, unimplemented};
 
 use chrono::{format::ParseError, FixedOffset};
 use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime};
+
+use metadata::Metadata;
 
 struct Page {
     /// The full path to the source input file.
@@ -22,7 +24,7 @@ struct Page {
     date: DateTime<FixedOffset>,
 
     /// The parsed metadata associated with the page.
-    metadata: serialize::Metadata,
+    metadata: Metadata,
 }
 
 impl Page {
