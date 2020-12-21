@@ -1,4 +1,4 @@
-use chrono::format::ParseError;
+use chrono::{format::ParseError, FixedOffset};
 use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime};
 
 struct Page {
@@ -12,6 +12,7 @@ struct Page {
 
     /// url used to link to this piece of content.
     url: String,
+
     /// the resolved date used for sorting. Read more about [Content Dates].
-    date: Date,
+    date: DateTime<FixedOffset>,
 }
