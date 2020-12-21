@@ -2,6 +2,6 @@
 
 mod build;
 mod config;
-mod metadata;
+mod page;
 
 pub use build::build;

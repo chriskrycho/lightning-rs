@@ -2,7 +2,7 @@ use chrono::{DateTime, FixedOffset};
 use serde_derive::Deserialize;
 
 #[derive(Deserialize)]
-pub(super) struct Page {
+pub(super) struct Metadata {
     title: Option<String>,
     subtitle: Option<String>,
     summary: Option<String>,
