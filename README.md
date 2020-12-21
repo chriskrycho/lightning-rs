@@ -1,4 +1,6 @@
-# Lightning (`lx`)
+# ⚡ Lightning (`lx`) ⚡ 
+
+![CI](https://github.com/chriskrycho/lightning-rs/workflows/CI/badge.svg)
 
 An opinionated—I dare say idiosyncratic—take on the static site generator, written in Rust,[<sup>[1]</sup>](#notes) and built for the very specific needs of my own website publishing. **I do not intend to make this a general-purpose tool.** It is public because I default to making things public, but this project is distinctly *personal*, and in it I will experiment freely and build *exactly* what I want over time.
 
