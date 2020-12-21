@@ -1,18 +1,29 @@
+mod serialize;
+
+use std::unimplemented;
+
 use chrono::{format::ParseError, FixedOffset};
 use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime};
 
 struct Page {
-    /// the full path to the source input file (including the path to the input directory)
+    /// The full path to the source input file.
     inputPath: String,
 
-    /// Mapped from the input file name, useful for permalinks. Read more about
+    /// Mapped from the input file name, useful for permalinks.
     fileSlug: String,
-    /** the full path to the output file to be written for this content */
+
+    /// The full path to the output file to be written for this content.
     outputPath: String,
 
-    /// url used to link to this piece of content.
+    /// Url used to link to this piece of content.
     url: String,
 
-    /// the resolved date used for sorting. Read more about [Content Dates].
+    /// The resolved date.
     date: DateTime<FixedOffset>,
+}
+
+impl From<serialize::Page> for Page {
+    fn from(_: serialize::Page) -> Self {
+        unimplemented!()
+    }
 }
