@@ -1,0 +1,66 @@
+html {
+   background: var(--root-bg);
+}
+
+body {
+   padding: 0;
+   background-color: var(--root-bg);
+}
+
+main {
+   --padding: #{ms(-8)};
+   margin: var(--padding);
+   width: calc(100% - 2 * var(--padding));
+}
+
+@media screen {
+   @media (min-width: $resize) {
+      main {
+         --padding: #{ms(-1)};
+      }
+   }
+
+   @media (min-width: $reflow) {
+      main {
+         min-height: calc(100vh - 2 * var(--padding));
+      }
+
+      @media (min-height: 600px) {
+         main {
+            --padding: #{ms(-1)};
+
+            margin: {
+               top: var(--padding);
+               left: var(--padding);
+               bottom: var(--padding);
+            }
+            width: 100%;
+            max-width: calc(75vw - var(--padding));
+         }
+
+         nav {
+            width: 100%;
+            max-width: 25vw;
+            height: 100%;
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+         }
+      }
+   }
+
+   @media (min-height: 600px) {
+      @media (min-width: $break-4) {
+         main {
+            --padding: #{ms(1)};
+         }
+      }
+
+      @media (min-width: $break-5) {
+         main {
+            --padding: #{ms(3)};
+         }
+      }
+   }
+}

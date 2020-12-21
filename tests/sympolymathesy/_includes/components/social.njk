@@ -1,0 +1,108 @@
+{%- macro meta(page, config, titleOverride) -%}
+   <meta name="twitter:card" content="summary"/>
+   <meta name="twitter:site" content="@chriskrycho"/>
+   <meta name="twitter:creator" content="@chriskrycho"/>
+
+   {%- set logo -%}
+   {# TODO: get an image in place! #}
+   {#
+   <meta property="og:image" content="{{SITEURL}}/{{LOGO}}" />
+   <meta property="og:image:type" content="image/png" />
+   <meta property="og:image:width" content="3000" />
+   <meta property="og:image:height" content="3000" />
+   <meta
+      property="og:image:alt"
+      content="Logo for Sympolymathesy"
+   />
+   <meta name="twitter:image" content="{{SITEURL}}/{{LOGO}}" />
+   #}
+   {%- endset -%}
+
+   {%- if page.url -%}
+      {%- set url = page.url | absoluteUrl(config.url) -%}
+   {%- else -%}
+      {%- set url = config.url -%}
+   {%- endif %}
+   <meta property="og:url" content="{{url}}"/>
+   <meta name="article:author" content="{{config.url}}"/>
+
+   {%- if titleOverride -%}
+      {%- set title = titleOverride | siteTitle(config) -%}
+   {%- else -%}
+      {%- set title = page.data.title | siteTitle(config) -%}
+   {%- endif -%}
+   <meta property="og:title" content="{{title}}"/>
+   <meta name="twitter:title" content="{{title}}"/>
+
+   {%- if page.data.summary is defined -%}
+      {%- set description = page.data.summary -%}
+   {%- elif page.data.book.review is defined -%}
+      {%- set reviewSummary = page.data.book.review.summary | striptags(true) -%}
+      {%- set description -%}
+      {{page.data.book.review.rating}}:
+      {{reviewSummary}}
+      {%- endset -%}
+   {%- elif page.data.subtitle is defined -%}
+      {%- set description = page.data.subtitle -%}
+   {%- elif page.templateContent is defined and page.templateContent.length > 0 -%}
+      {%- set description -%}
+      {%- set justContent = page.templateContent | striptags(true) -%}
+      {%- if justContent.length > 160 -%}
+         {{ justContent | truncate(158) }}…
+      {%- else -%}
+         {{ justContent }}
+      {%- endif -%}
+      {%- endset -%}
+   {%- else -%}
+      {%- set description = config.description -%}
+   {%- endif %}
+
+   {% set renderedDescription = description | inlineMd | safe | striptags(true) %}
+   <meta name="description" content="{{renderedDescription}}"/>
+   <meta property="og:description" content="{{renderedDescription}}"/>
+   <meta name="twitter:description" content="{{renderedDescription}}"/>
+
+   <meta property="og:type" content="article"/>
+
+   {%- if page.date is defined %}
+      <meta property="article:published_time" content="{{page.date | isoDate}}"/>
+   {%- else %}
+      <meta property="article:published_time" content="{{page.date | isoDate}}"/>
+   {%- endif %}
+
+   {%- if page.data.updated is defined %}
+      <meta property="article:modified_time" content="{{page.data.updated | isoDate}}"/>
+   {%- elif page.date is defined %}
+      <meta property="article:modified_time" content="{{page.date | isoDate}}"/>
+   {%- else %}
+      <meta property="article:modified_time" content="{{page.date | isoDate}}"/>
+   {%- endif %}
+
+   {%- for tag in page.data.tags %}
+      <meta property="article:tag" content="{{tag}}"/>
+   {%- endfor -%}
+
+   {%- if page.data.image -%}
+      <meta property="og:image" content="{{page.data.image}}"/>
+      <meta name="twitter:image" content="{{page.data.image}}"/>
+   {%- elif page.data.book.cover -%}
+      <meta property="og:image" content="{{page.data.book.cover}}"/>
+      <meta name="twitter:image" content="{{page.data.book.cover}}"/>
+   {%- else -%}
+      {{logo}}
+   {%- endif -%}
+
+   {%- if page.data.audio -%}
+      <meta property="og:audio" content="{{page.data.audio}}"/>
+      <meta property="og:audio:title" content="{{title}}"/>
+      <meta property="og:audio:artist" content="Chris Krycho"/>
+      {# <meta property="og:audio:album" content="Amazing Album" /> #}
+      <meta property="og:audio:type" content="audio/mpeg"/>
+
+      <meta property="twitter:player" content="{{url}}">
+      <meta property="twitter:player:stream" content="{{page.data.audio}}">
+      <meta property="twitter:player:stream:content-type" content="audio/mpeg">
+      <meta property="twitter:player:width" content="600">
+      <meta property="twitter:player:height" content="600">
+   {%- endif -%}
+{%- endmacro -%}

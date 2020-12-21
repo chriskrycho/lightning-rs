@@ -1,0 +1,99 @@
+{%- macro entries(items, config, includeReplyViaEmail = true) -%}
+   {# invalid without date #}
+   {%- if items is not undefined and items.length > 0 -%}
+      {%- for item in items | withValidDate -%}
+         <entry>
+            {#- Invalid to send an item without title or description -#}
+            {% set url -%}
+            {%- if item.data.feedId -%}
+               {{item.data.feedId | absoluteUrl(config.url)}}
+            {%- else -%}
+               {{item.url | absoluteUrl(config.url)}}
+            {%- endif -%}
+            {%- endset -%}
+            <id>{{url}}</id>
+            {%- set entryTitle -%}
+            {%- if item.data.title -%}
+               {{item.data.title}}
+            {%- else -%}
+               {% localeDate item.date, 'yyyy.MM.dd.HHmm' -%}
+            {%- endif -%}
+            {%- endset -%}
+            <title type="html">[{{item.inputPath | toCollection}}] {{entryTitle}}</title>
+            {%- set updated -%}
+               {% if item.data.updated -%}
+               {{item.data.updated | isoDate}}
+               {%- else -%}
+                  {{item.date | isoDate}}
+               {%- endif -%}
+            {%- endset -%}
+            <published>{{item.date | isoDate}}</published>
+            <updated>{{updated}}</updated>
+            <link href='{{url}}'/>
+            {%- set summary -%}
+            {%- if item.data.summary -%}
+               {{-item.data.summary-}}
+            {%- elif item.data.book.review -%}
+               {{-item.data.book.review.rating-}}:
+               {{item.data.book.review.summary-}}
+            {%- elif item.data.subtitle -%}
+               {{-item.data.subtitle-}}
+            {%- else -%}
+               {{-item.templateContent | striptags(true)-}}
+            {%- endif -%}
+            {%- endset %}
+            <summary type="html">{{- summary -}}</summary>
+            <content type="html">
+               <![CDATA[
+                  {%- if item.data.subtitle -%}
+                  <i>{{- item.data.subtitle | inlineMd | safe -}}</i>
+                     {%- endif -%}
+                     {%- if item.data.qualifiers.audience -%}
+                        <p><b>Assumed Audience:</b> {{ item.data.qualifiers.audience | inlineMd | safe -}}</p>
+                     {%- endif -%}
+                     {%- if item.data.qualifiers.epistemic -%}
+                        <p><b>Epistemic Status:</b> {{ item.data.qualifiers.epistemic | inlineMd | safe -}}</p>
+                     {%- endif -%}
+                     {%- if item.data.book and item.data.book.review -%}
+                        {%- set book = item.data.book -%}
+                        <p>
+                           {%- if book.cover -%}
+                           <img src="{{book.cover | safe}}" alt="cover art for {{book.title | safe}}" />
+                           {%- endif -%}
+                           {%- if book.link -%}
+                           <a href="{{book.link | safe}}" rel="nofollow"><cite>{{book.title | safe}}</cite></a>, {{book.author | safe}} ({{book.year | safe}})<br/></a>
+                           {%- else -%}
+                           <cite>{{book.title | safe}}</cite>, {{book.author | safe}} ({{book.year | safe}})<br/>
+                           {%- endif -%}
+                           {%- if book.review -%}
+                           <b>{{book.review.rating | safe}}:</b> {{book.review.summary | inlineMd | safe -}}
+                           {%- endif -%}
+                        </p>
+                     {%- endif -%}
+                     {{-item.templateContent | safe-}}
+                     <hr/>
+                     {%- if includeReplyViaEmail -%}
+                        <p><a href="mailto:{{config.author.email}}?subject={{entryTitle | urlencode}}">Reply via email!</a></p>
+                     {%- endif -%}
+               ]]>
+            </content>
+            {%- include 'blocks/rss-author.njk' -%}
+            {#- <comments>TODO: Webmention!</comments> -#}
+            {%- for tag in item.data.tags -%}
+               <category term="{{tag}}"/>
+            {%- endfor -%}
+            {%- set image -%}
+            {%- if item.data.book and item.data.book.cover -%}
+               {{-item.data.book.cover | safe-}}
+            {%- elif item.data.image -%}
+               {{-item.image | safe-}}
+            {%- endif -%}
+            {%- endset -%}
+            {%- if image -%}
+               <link rel='enclosure' href='{{image | safe}}'/>
+               <media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="{{image | safe}}"/>
+            {%- endif -%}
+         </entry>
+      {%- endfor -%}
+   {%- endif -%}
+{%- endmacro -%}

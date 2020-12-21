@@ -1,0 +1,52 @@
+.item-header {
+   width: 100%;
+   max-width: var(--max-width);
+   margin: {
+      bottom: 1em;
+      left: auto;
+      right: auto;
+   }
+
+   --line-height: #{ms(1) / 1em};
+
+   .item-title {
+      line-height: 1;
+      font: {
+         family: var(--sans);
+         weight: 400;
+         size: calc(var(--sans-adjust) * #{ms(3)});
+      }
+      color: var(--h1-fg);
+      position: relative;
+   }
+
+   .item-subtitle {
+      line-height: var(--line-height);
+      font: {
+         family: var(--serif);
+         size: ms(0);
+         style: italic;
+      }
+      color: var(--h2-fg);
+
+      em {
+         font-style: normal;
+      }
+   }
+
+   &.archive,
+   &.page {
+      .item-title {
+         text-transform: uppercase;
+         font-weight: 300;
+         letter-spacing: 1px;
+      }
+   }
+}
+
+.item-title-arrow {
+   transform: rotate(150deg);
+   display: inline-block;
+   top: -0.2em;
+   position: relative;
+}

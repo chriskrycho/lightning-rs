@@ -1,0 +1,216 @@
+.archive-list {
+   width: 100%;
+   margin: ms(8) auto;
+
+   .date {
+      font-family: var(--sans);
+      font-weight: 300;
+      text-transform: uppercase;
+      font-size: ms(-1);
+      font-variant-numeric: lining-nums tabular-nums;
+      line-height: calc(var(--sans-adjust) * 1.1);
+   }
+
+   .year {
+      position: relative;
+      &:not(:last-child) {
+         margin-bottom: ms(9);
+      }
+   }
+
+   .year-info {
+      width: 100%;
+      margin: 0 auto;
+      display: grid;
+      grid-template:
+         ". year ." auto / minmax(7rem, 1fr) minmax(min-content, 34rem) minmax(7rem, 1fr);
+      background-color: var(--bg);
+
+      position: sticky;
+      top: 0;
+      padding-top: 0.5em;
+      z-index: 1;
+   }
+
+   .year-title {
+      grid-area: year;
+      display: block;
+      font-weight: bold;
+      line-height: 1;
+      font-size: calc(var(--sans-adjust) * #{ms(0)});
+
+      &::after {
+         --padding: #{ms(-2)};
+         content: '';
+         display: block;
+         width: 1em;
+         height: 0;
+         margin-bottom: var(--padding);
+         padding-bottom: calc(var(--padding) - 2px);
+         border-bottom: 2px solid var(--divider);
+      }
+   }
+
+   .month {
+      width: 100%;
+      margin: {
+         left: auto;
+         right: auto;
+         bottom: ms(7)
+      }
+      list-style-type: none;
+      display: grid;
+      grid-template:
+         "title entries ." auto / 1fr minmax(min-content, 38rem) 1fr;
+      gap: 0 1rem;
+      justify-content: stretch;
+      justify-items: stretch;
+
+      &:last-child {
+         margin-bottom: 0;
+      }
+   }
+
+   .month-sticky {
+      position: sticky;
+      top: 3.25em;
+   }
+
+   .month-title {
+      grid-area: title;
+      justify-self: end;
+      text-align: right;
+      display: inline-block;
+      text-align: right;
+      letter-spacing: 1px;
+      width: 4rem;
+   }
+
+   .month-items {
+      grid-area: entries;
+   }
+
+   .day {
+      display: grid;
+      grid-template: "day entries" auto / 1rem minmax(8em, 1fr);
+      gap: 0 1rem;
+      margin: 0 0 ms(1);
+      width: 100%;
+      position: relative;
+
+      &:last-child {
+         margin: 0;
+      }
+   }
+
+   .day-title {
+      grid-area: day;
+   }
+
+   .day-sticky {
+      position: sticky;
+      top: 3.2em;
+   }
+
+   .year-title, .month-title, .day-title {
+      color: var(--h2-fg);
+   }
+
+   .day-items {
+      grid-area: entries;
+   }
+
+   .item {
+      margin: 0 0 ms(1);
+      width: 100%;
+   }
+
+   .item:last-child {
+      margin-bottom: 0;
+   }
+
+   .item-title {
+      font: {
+         family: var(--sans-subhead);
+         weight: 400;
+      }
+      margin-bottom: ms(-8);
+      position: relative;
+
+      &__text {
+         size: calc(var(--sans-adjust) * #{ms(0)});
+      }
+
+      &__date {
+         font-size: ms(-1);
+      }
+
+      &__collection {
+         font-weight: 300;
+         font-size: ms(-1);
+         letter-spacing: 0.5pt;
+      }
+   }
+
+   .item-permalink {
+      font-family: var(--sans);
+
+      -moz-text-decoration-color: transparent;
+      text-decoration-color: transparent;
+
+      transition: all var(--transition);
+
+      &:hover,
+      &:active {
+         -moz-text-decoration-color: var(--hover-underline);
+         text-decoration-color: var(--hover-underline);
+      }
+   }
+
+   .item-content {
+      margin: {
+         top: -0.2em;
+         left: 0;
+         right: 0;
+      }
+      font-size: ms(-1);
+      line-height: var(--min-line-height);
+      max-width: 32em;
+   }
+
+   .item-subtitle {
+      line-height: 1.1;
+      font-size: ms(-1);
+      font-style: italic;
+      color: var(--h2-fg);
+
+      em {
+         font-style: normal;
+      }
+   }
+}
+
+.for-callout + .archive-list {
+   margin-top: ms(1);
+}
+
+@media screen and (max-width: $break-2) {
+   .archive-list {
+      .year-info {
+         grid-template-columns: minmax(4rem, 1fr) minmax(min-content, 30rem) minmax(4rem, 1fr);
+      }
+
+      .month {
+         gap: 0.5rem;
+         grid-template-columns: 1fr minmax(min-content, 34rem) 1fr;
+      }
+
+      .month-title {
+         width: 2rem;
+      }
+
+      .day {
+         gap: 0 0.5rem;
+      }
+   }
+}

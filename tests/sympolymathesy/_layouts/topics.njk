@@ -1,0 +1,46 @@
+{% extends 'base.njk' %}
+{% import 'components/item.njk' as item %}
+{% import 'components/archive-list.njk' as archive %}
+{% from 'components/social.njk' import meta %}
+
+{%- set title -%}
+   topic: {{tag}}
+{%- endset -%}
+
+{%- block meta %}
+{{ meta(collections.live | current(page), config, title) }}
+{%- endblock meta %}
+
+{%- set styled_title -%}
+   <span class='tag-label'>topic:</span> <span class='tag-name'>{{tag}}</span>
+{%- endset -%}
+
+{%- block main -%}
+<section class='content-block'>
+
+{{item.header(type='archive', title=styled_title, subtitle=subtitle)}}
+
+<article class='article-content for-callout'>
+   <div class='callout'>
+      <p>
+         I may also have written on this on earlier versions of my website:
+      </p>
+      {%- set tagSlug = tag | slug -%}
+      <ol class='past-versions'>
+         <li>2006–2011 (link coming soon!)</li>
+         <li>did not have a blog!</li>
+         <li>2012–2013 (link coming soon!)</li>
+         {# <li><a href='https://2012-2013.chriskrycho.com'>v3: 2012–2013</a></li> #}
+         <li><a href='https://v4.chriskrycho.com/{{tagSlug}}'>2014–2019</a></li>
+      </ol>
+   </div>
+</article>
+
+{%- set tagCollection = collections[tag] | isLive -%}
+{%- if tagCollection and tagCollection.length -%}
+   {{ archive.list(tagCollection | archiveByYears('OLD_FIRST'), idByCollection=true) }}
+{%- else -%}
+   {%- include 'blocks/wip.njk' -%}
+{%- endif -%}
+</div>
+{%- endblock main -%}

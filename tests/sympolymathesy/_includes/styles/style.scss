@@ -1,0 +1,70 @@
+@import './reset';
+@import './config';
+
+* {
+   box-sizing: border-box;
+}
+
+:root {
+   // -- Typography -- //
+   --serif: Sabon, Palatino, Book Antiqua, serif;
+   --greek: Palatino, Book Antiqua, serif;
+   --serif-smcp: Sabon SMCP, Palatino, Book Antiqua, serif;
+   --sans: cronos-pro, Avenir Next, Avenir, sans-serif;
+   --sans-subhead: cronos-pro-subhead, Avenir Next, Avenir, sans-serif;
+   --sans-display: cronos-pro-display, Avenir Next, Avenir, sans-serif;
+   --mono: Hack, Menlo, Consolas, monospace;
+   --fs-base: 16px;
+   --sans-adjust: 1.05;
+   --min-line-height: 1.375;
+   --line-height: var(--min-line-height);
+
+   // -- Colors -- //
+   --gray-0: hsl(222, 10%, 15%);
+   --gray-1: hsl(222, 10%, 25%);
+   --gray-2: hsl(222, 10%, 35%);
+   --gray-3: hsl(222, 10%, 50%);
+   --gray-4: hsl(222, 10%, 70%);
+   --gray-5: hsl(222, 10%, 95%);
+   --gray-6: hsl(222, 10%, 99%);
+
+   --blue-0: hsl(208, 85%, 18%);
+   --blue-1: hsl(208, 85%, 33%);
+   --blue-2: hsl(208, 85%, 45%);
+   --blue-3: hsl(208, 85%, 60%);
+   --blue-4: hsl(208, 85%, 71%);
+   --blue-5: hsl(208, 85%, 80%);
+   --blue-6: hsl(208, 85%, 92%);
+
+   --transition: 0.25s ease;
+}
+
+@media screen {
+   @media (prefers-reduced-motion: reduce) {
+      :root {
+         --transition: 0s;
+      }
+   }
+
+   @media (min-width: $resize) {
+      :root {
+         --fs-base: 18px;
+         --line-height: 1.425;
+      }
+   }
+}
+
+html {
+   padding: 0;
+   margin: 0;
+   font: var(--fs-base) / var(--line-height) var(--serif);
+}
+
+@import './color-scheme';
+@import './mixins';
+
+@import './defaults';
+
+@import './components';
+@import './layout';
+@import './typography';

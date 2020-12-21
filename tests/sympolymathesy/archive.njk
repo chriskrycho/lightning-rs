@@ -1,0 +1,24 @@
+---
+title: Archive
+subtitle: Every single post on the site.
+standalonePage: true
+permalink: /archive/
+subscribe:
+    atom: "/feed.xml"
+    json: "/feed.json"
+    email: "https://buttondown.email/v5.chriskrycho.com"
+
+---
+
+{% extends 'base.njk' %}
+{% import 'components/item.njk' as item %}
+{% from 'components/archive-list.njk' import list %}
+
+{%- block main -%}
+<section class='content-block'>
+{{item.header(type='archive', title=title, subtitle=subtitle, subscribe=subscribe)}}
+
+{% set items = collections.live | excludingStandalonePages %}
+{{ list(items | archiveByYears('NEW_FIRST'), idByCollection=true)}}
+</section>
+{%- endblock main -%}

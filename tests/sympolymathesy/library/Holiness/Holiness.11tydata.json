@@ -1,0 +1,15 @@
+{
+   "layout": "post.njk",
+   "permalink": "/library/{{page.fileSlug | slug}}/index.html",
+   "book": {
+      "title": "Holiness",
+      "cover": "https://cdn.chriskrycho.com/file/chriskrycho-com/images/books/holiness.jpg",
+      "author": "John Webster",
+      "year": 2003,
+      "link": "https://click.linksynergy.com/deeplink?id=qvtf8Hp8DGA&mid=2653&murl=https%3A%2F%2Fwww.alibris.com%2Fsearch%2Fbooks%2Fisbn%2F9780802822154"
+   },
+   "tags": ["John Webster", "Holiness book", "theology"],
+   "qualifiers": {
+      "audience": "Theologically-orthodox Christians, or folks interested in things that theologically-orthodox Christians think."
+   }
+}

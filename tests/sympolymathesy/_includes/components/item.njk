@@ -1,0 +1,84 @@
+{% macro header(type, title, subtitle, subscribe, link) %}
+{% if title %}
+<header class='item-header {{type}}'>
+   {% set formattedTitle = title | inlineMd | safe %}
+   {%- if link %}<a href='{{link}}'>{% endif -%}
+   {% if type == 'index' %}
+   <h2 class='item-title'>
+      {{formattedTitle}}
+      {%if link %}<span class='item-title-arrow'>↩︎</span>{% endif %}
+   </h2>
+   {% else %}
+   <h1 class='item-title'>
+      {{formattedTitle}}
+      {%if link %}<span class='item-title-arrow'>↩︎</span>{% endif %}
+   </h1>
+   {% endif %}
+   {%- if link %}</a>{% endif -%}
+   {% if subtitle -%}
+      <p class='item-subtitle'>
+         {{subtitle | inlineMd | safe}}
+
+         {% if subscribe %}
+            Subscribe via <a href='{{subscribe.atom}}'>Atom</a> or <a href='{{subscribe.json}}'><abbr>JSON</abbr></a> feed
+            {%- if subscribe.email -%}
+            , or <a href='{{subscribe.email}}'>via email</a>
+            {%- endif -%}
+            .
+         {% endif %}
+      </p>
+   {%- endif %}
+</header>
+{% endif %}
+{% endmacro %}
+
+{% macro meta(title, date, tags, updated, inputPath, thanks) %}
+{%- set dateFormat = 'MMMM d, yyyy' %}
+<footer class='post-meta'>
+   {% if thanks is defined %}
+   <span class='section-label'>Thanks:</span>
+   <div class='section-content'>
+      {{thanks | inlineMd | safe}}
+   </div>
+   {% endif %}
+
+   <span class='section-label'>Posted:</span>
+   <span class='section-content'>
+      This entry was originally published in
+      {% set collection = inputPath | toCollection %}
+      <a href='/{{collection}}/'>{{collection | title}}</a>
+      on <span class='dt-published'>{% localeDate date, dateFormat %}</span>
+      {%- if updated is defined -%}
+      , and last updated on {% localeDate updated, dateFormat %} (you can see the full revision history <a href='{{inputPath | historyLink}}'>here</a>)
+      {%- endif -%}
+      .
+      Spotted a typo? <a href='{{inputPath | editLink}}'>Submit a correction!</a>
+   </span>
+
+   {%- if tags.length > 0 %}
+   <span class='section-label'>Topics:</span>
+   <ul class='topics section-content'>
+      {%- for tag in tags %}
+      <li class='__topic'><a href='/topics/{{tag | slug}}'>{{tag}}</a></li>
+      {%- endfor -%}
+   </ul>
+   {%- endif %}
+
+   <span class='section-label'>Respond:</span>
+   <div class='section-content'>
+      <p>
+         Have a thought to share about this? <a href='mailto:hello@chriskrycho.com?subject={{title}}'>Send me an email!</a> (It’s way better than traditional comments.)
+      </p>
+   </div>
+
+   <span class='section-label'>About:</span>
+   <div class='section-content'>
+      {% include 'blocks/short-about.njk' %}
+   </div>
+
+   <span class='section-label'>Support:</span>
+   <div class='section-content'>
+      {% include 'blocks/sponsor-me.njk' %}
+   </div>
+</footer>
+{% endmacro %}

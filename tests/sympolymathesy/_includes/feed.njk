@@ -1,0 +1,34 @@
+{#-
+   I am defining this myself instead of using the quite reasonable [existing plugin]
+   because I want finer-grained control and in particular the ability to extend this to
+   publishing variations on the theme. Controlling this will let me create custom variants
+   of items for link posts, for example, and it will also make it straightforward for me
+   to generate per-collection variants.
+
+   [existing plugin] https://github.com/11ty/eleventy-plugin-rss
+-#}
+
+{%- import 'components/atom.njk' as atom -%}
+<?xml version='1.0' encoding='utf-8'?>
+<feed xmlns='http://www.w3.org/2005/Atom'>
+   {%- block feed_info -%}
+   <title>{{- title | siteTitle(config) | striptags(true) | safe -}}</title>
+   <id>{{- config.url -}}</id>
+   {% include 'blocks/rss-author.njk' %}
+   <link href='{{- config.url -}}' />
+   <link href='{{- page.url | absoluteUrl(config.url) -}}' rel='self'/>
+   <subtitle>{{- config.description -}}</subtitle>
+   {%- set rights -%}
+      {%- copyright build.date -%}
+   {%- endset -%}
+   <rights>{{- rights | striptags(true) -}}</rights>
+   <updated>{{- build.date | isoDate -}}</updated>
+   <generator>Eleventy Atom Plugin by Chris Krycho</generator>
+   <icon>https://v5.chriskrycho.com/assets/images/favicon.png</icon>
+   {#- TODO: logo -#}
+   {%- endblock feed_info %}
+   {%- block entries -%}
+      {%- set items = collections.live | excludingStandalonePages -%}
+      {{-atom.entries(items, config)-}}
+   {%- endblock entries -%}
+</feed>

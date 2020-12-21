@@ -1,0 +1,84 @@
+# Redirect default Netlify subdomain to primary domain
+http://v5-chriskrycho-com.netlify.com/* https://v5.chriskrycho.com/:splat 301!
+https://v5-chriskrycho-com.netlify.com/* https://v5.chriskrycho.com/:splat 301!
+http://v5.chriskrycho.com/* https://v5.chriskrycho.com/:splat 301!
+
+# Redirect misconfigured URLs from when I accidentally had `title | slug`
+# instead of `fileSlug | slug`.
+/journal/relaunch! /journal/relaunch 301!
+
+# A few URLs I changed on purpose after publication
+/journal/work-in-progress-composition-for-crew-dragon-demo-2/ /journal/crew-dragon-fanfare/day-1/ 301!
+/journal/crew-dragon-fanfare-day-2/ /journal/crew-dragon-fanfare/day-2/ 301!
+/journal/crew-dragon-fanfare/day-4/ /journal/crew-dragon-fanfare/day-4-part-1/ 301!
+/journal/crew-dragon-fanfare/days-7-and-8/ /journal/crew-dragon-fanfare/day-7/ 301!
+/journal/this-week-i-learned-*/ /journal/this-week-i-learned/:splat/ 301!
+/appearances/* /elsewhere/:splat 301!
+/library/2020-11-28-1146/ /notes/2020-11-28-1146/ 301!
+
+# ...including notes redirects for bad slug generation
+/notes/0634/ /notes/2020-04-29-0634/ 301!
+/notes/0640/ /notes/2020-07-17-0640/ 301!
+/notes/0712/ /notes/2020-07-18-0712/ 301!
+/notes/0806/ /notes/2020-05-13-0811/ 301!
+/notes/0813/ /notes/2020-08-06T08:13/ 301!
+/notes/0837/ /notes/2020-09-11T08:37/ 301!
+/notes/0855/ /notes/2020-04-26-0900/ 301!
+/notes/0900/ /notes/2020-05-16-0900/ 301!
+/notes/0929/ /notes/2020-08-08T09:29/ 301!
+/notes/1034/ /notes/2020-03-08-1034/ 301!
+/notes/1037/ /notes/2020-05-09-1037/ 301!
+/notes/1146/ /notes/2020-05-24-1146/ 301!
+/notes/1230/ /notes/2020-07-16-1230/ 301!
+/notes/1305/ /notes/2020-05-03-1305/ 301!
+/notes/1357/ /notes/2020-08-01-1357/ 301!
+/notes/1421/ /notes/2020-07-25-1421/ 301!
+/notes/1433/ /notes/2020-03-01-1433/ 301!
+/notes/1538/ /notes/2020-02-29-1538/ 301!
+/notes/1553/ /notes/2020-06-28-1553/ 301!
+/notes/1556/ /notes/2020-06-28-1559/ 301!
+/notes/1607/ /notes/2020-04-25-1607/ 301!
+/notes/1613/ /notes/2020-03-08-1613/ 301!
+/notes/1618/ /notes/2020-05-17-1618/ 301!
+/notes/1634/ /notes/2020-07-30-0640/ 301!
+/notes/1641/ /notes/2020-02-29-1641/ 301!
+/notes/1653/ /notes/2020-06-19-1700/ 301!
+/notes/1730/ /notes/2020-10-11T17:30/ 301!
+/notes/1721/ /notes/2020-03-21-1721/ 301!
+/notes/1750/ /notes/2020-06-14-1750/ 301!
+/notes/1809/ /notes/2020-03-01-1809/ 301!
+/notes/1810/ /notes/2020-08-30T18:10/ 301!
+/notes/1821/ /notes/2020-09-20T18:21/ 301!
+/notes/1825/ /notes/2020-06-27-1825/ 301!
+/notes/1840/ /notes/2020-07-28-1840/ 301!
+/notes/1859/ /notes/2020-05-17-1901/ 301!
+/notes/1935/ /notes/2020-05-02-1935/ 301!
+/notes/1942/ /notes/2020-03-08-1942/ 301!
+/notes/1958/ /notes/2020-10-12T19:58/ 301!
+/notes/2003/ /notes/2020-02-28-2003/ 301!
+/notes/2015/ /notes/2020-09-22T20:15/ 301!
+/notes/2016/ /notes/2020-10-21T20:16/ 301!
+/notes/2020-02-18/ /notes/2020-02-18-1320/ 301!
+/notes/2020-02-19/ /notes/2020-02-19-2021 301!
+/notes/2020-02-20/ /notes/2020-02-20-0815 301!
+/notes/2020-02-23/ /notes/2020-02-23-1725 301!
+/notes/2020-02-29/ /notes/2020-02-29-1130 301!
+/notes/2020-03-05/ /notes/2020-03-05-1435 301!
+/notes/2020-05-05/ /notes/2020-05-05-0810 301!
+/notes/2020-05-06/ /notes/2020-05-06-1428 301!
+/notes/2020-05-08/ /notes/2020-05-08-2120/ 301!
+/notes/2020-05-12/ /notes/2020-05-12-1015 301!
+/notes/2020-06-16/ /notes/2020-06-16-1508 301!
+/notes/2020-06-19/ /notes/2020-06-19-1300 301!
+/notes/2024/ /notes/2020-05-03-2024/ 301!
+/notes/2027/ /notes/2020-05-13-2027/ 301!
+/notes/2031/ /notes/2020-05-10-2031/ 301!
+/notes/2032/ /notes/2020-07-31-2032/ 301!
+/notes/2045/ /notes/2020-04-28-2045/ 301!
+/notes/2046/ /notes/2020-03-05-2046/ 301!
+/notes/2100/ /notes/2020-03-28-2100/ 301!
+/notes/2103/ /notes/2020-06-07-2103/ 301!
+/notes/2107/ /notes/2020-04-28-2107/ 301!
+/notes/2112/ /notes/2020-03-25-2112/ 301!
+/notes/2126/ /notes/2020-03-30-2126/ 301!
+/notes/2146/ /notes/2020-08-04T21:46/ 301!

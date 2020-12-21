@@ -1,0 +1,14 @@
+---
+title: Notes
+permalink: /notes/feed-for-social.xml
+standalonePage: true
+eleventyExcludeFromCollections: true
+---
+
+{%- import 'components/atom.njk' as atom -%}
+
+{%- extends 'feed.njk' -%}
+
+{%- block entries -%}
+   {{atom.entries(collections.notes, config, includeReplyViaEmail=false)}}
+{%- endblock -%}

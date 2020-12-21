@@ -1,0 +1,14 @@
+---
+title: Journal
+permalink: /journal/feed.xml
+eleventyExcludeFromCollections: true
+standalonePage: true
+---
+
+{%- import 'components/atom.njk' as atom -%}
+
+{%- extends 'feed.njk' -%}
+
+{%- block entries -%}
+   {{atom.entries(collections.journal, config)}}
+{%- endblock -%}

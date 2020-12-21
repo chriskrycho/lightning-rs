@@ -1,0 +1,25 @@
+{%- extends 'base.njk' -%}
+
+{% from 'components/social.njk' import meta %}
+
+{%- block extra_links %}
+{% if canonical %}
+   <link rel='canonical' href='{{canonical}}' />
+{% endif %}
+{%- endblock extra_links %}
+
+{% block meta %}
+{{ meta(collections.live | current(page), config) }}
+{% endblock meta%}
+
+
+{%- block main -%}
+<article class='content-block post'>
+   {% block header -%}{%- endblock header %}
+   {% block before_content %}{% endblock before_content %}
+   <div class='article-content'>
+      {% block content -%}{{content | safe}}{%- endblock content %}
+   </div>
+   {% block after_content %}{% endblock after_content %}
+</article>
+{%- endblock main -%}

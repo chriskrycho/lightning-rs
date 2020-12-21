@@ -1,0 +1,35 @@
+{% macro review(book) %}
+<figure class='book-review'>
+{% set cover -%}
+   {%- if book.link -%}
+      <a href='{{book.link}}' class='book-review__cover-link' rel='nofollow'>
+         <img src='{{book.cover}}' alt='cover for {{book.title}}' class='book-review__cover'/>
+      </a>
+   {%- else -%}
+      <a href='{{book.cover}}' class='book-review__cover-link'>
+         <img src='{{book.cover}}' alt='cover for {{book.title}}' class='book-review__cover'/>
+      </a>
+   {%- endif -%}
+{%- endset %}
+{{cover | safe}}
+<figcaption class='book-review__details'>
+   <section class='book-review__about'>
+      {% set title -%}
+         {%- if book.link -%}
+            <a href='{{book.link}}'><cite>{{book.title}}</cite></a>
+         {%- else -%}
+            <cite>{{book.title}}</cite>
+         {%- endif -%}
+      {%- endset %}
+
+      {{title | safe}}, {{book.author}} ({{book.year}})
+   </section>
+   {% if book.review %}
+      <section class='book-review__summary'>
+         <b>{{book.review.rating}}</b><br>
+         {{book.review.summary | inlineMd | safe}}
+      </section>
+   {% endif %}
+</figcaption>
+</figure>
+{% endmacro %}

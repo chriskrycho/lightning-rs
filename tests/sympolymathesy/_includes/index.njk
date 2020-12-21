@@ -1,0 +1,33 @@
+{%- extends '_layouts/base.njk' -%}
+{%- block main -%}
+
+<div class='bio'>
+   {# <img src='{{headshoot}}' alt='Headshot of Chris' class='headshot'> #}
+
+   <article>
+      {%- if config.extra.headshot -%}
+         <img src='{{config.extra.headshot}}' alt='Headshot of Chris' />
+      {%- endif -%}
+      {{section.content | safe}}
+   </article>
+</div>
+
+<div class='summary'>
+   <section class='now'>
+      <article class='family'></article>
+      <article class='work'>
+         In January, I joined LinkedIn as a Staff Software Engineer. My passion is
+      </article>
+   </section>
+   <section class='essays'>
+      <h1>Essays</h1>
+   </section>
+   <section class='posts'>
+
+   </section>
+   <section class='etc'>
+      <section class='library'></section>
+      <section class='notes'></section>
+   </section>
+</div>
+{%- endblock main -%}

@@ -1,0 +1,151 @@
+@import "./config";
+@import "./syntax-highlighting/a11y-light";
+@import "./syntax-highlighting/tomorrow-night-bright";
+
+@mixin light {
+   // Colors
+   --bg: var(--gray-6);
+   --fg: var(--gray-0);
+   --link: var(--blue-1);
+   --underline: var(--gray-4);
+   --hover: var(--blue-0);
+   --hover-underline: var(--blue-2);
+
+   --root-bg: var(--gray-5);
+
+   --nav-bg: var(--root-bg);
+   --nav-fg-active: var(--gray-0);
+   --nav-fg-weight: 400;
+   --nav-fg-current-weight: 600;
+   --nav-fg-inactive: var(--gray-2);
+   --nav-divider: var(--gray-4);
+
+   --main-border: var(--gray-4);
+
+   --meta-divider: var(--blue-1);
+   --meta-label-color: var(--gray-2);
+
+   --h1-fg: var(--gray-1);
+   --h2-fg: var(--gray-2);
+   --h3-fg: var(--gray-3);
+   --h4-fg: var(--gray-2);
+   --h5-fg: var(--gray-1);
+   --h6-fg: var(--gray-1);
+
+   --title-hover-bar: var(--hover-underline);
+
+   --blockquote-border: var(--blue-1);
+
+   --aside-bg: var(--gray-5);
+   --aside-fg: var(--gray-1);
+   --aside-border: var(--gray-3);
+   --aside-marker-fg: var(--gray-2);
+   --aside-code-bg: var(--gray-6);
+
+   --note-fg: var(--gray-0);
+   --note-bg: var(--blue-6);
+   --note-accent: var(--blockquote-border);
+
+   --code-border: var(--gray-4);
+   --code-bg: var(--gray-5);
+   --code-fg: var(--gray-0);
+
+   --figure-fg: var(--gray-2);
+
+   --kbd-fg: var(--gray-1);
+   --kbd-bg: var(--gray-5);
+   --kbd-border: var(--gray-4);
+   --kbd-shadow: var(--gray-3);
+
+   @include a11y-light();
+}
+
+@mixin dark {
+   // Colors
+   --bg: var(--gray-0);
+   --fg: var(--gray-5);
+   --link: var(--blue-4);
+   --underline: var(--gray-4);
+   --hover: var(--gray-6);
+   --hover-underline: var(--blue-2);
+
+   --root-bg: var(--gray-1);
+
+   --nav-fg-weight: 300;
+   --nav-fg-active-weight: 400;
+   --nav-fg-active: var(--gray-6);
+   --nav-fg-inactive: var(--gray-4);
+   --nav-divider: var(--gray-3);
+
+   --main-border: var(--gray-2);
+
+   --meta-divider: var(--blue-4);
+   --meta-label-color: var(--gray-4);
+
+   --h1-fg: var(--gray-5);
+   --h2-fg: var(--gray-4);
+   --h3-fg: var(--gray-4);
+   --h4-fg: var(--gray-4);
+   --h5-fg: var(--gray-4);
+   --h6-fg: var(--gray-4);
+
+   --blockquote-border: var(--blue-3);
+
+   --aside-bg: var(--gray-1);
+   --aside-fg: var(--gray-5);
+   --aside-marker-fg: var(--gray-4);
+   --aside-code-bg: var(--gray-2);
+
+   --note-fg: var(--gray-5);
+   --note-bg: var(--blue-1);
+
+   --code-border: var(--gray-2);
+   --code-bg: var(--gray-1);
+   --code-fg: var(--gray-6);
+
+   --figure-fg: var(--gray-4);
+
+   --kbd-fg: var(--gray-5);
+   --kbd-bg: var(--gray-1);
+   --kbd-border: var(--gray-4);
+   --kbd-shadow: var(--gray-3);
+
+   @include tomorrow-night-bright();
+
+   code, pre code {
+      -webkit-font-smoothing: antialiased;
+      -moz-font-smoothing: grayscale;
+   }
+}
+
+// Default to light unless the user explicitly specifies they prefer dark.
+:root,
+.light:root {
+   @include light();
+}
+
+.dark:root {
+   @include dark();
+}
+
+@media screen {
+   @media (prefers-color-scheme: light) {
+      :root {
+         @include light();
+      }
+   
+      .dark:root {
+         @include dark();
+      }
+   }
+   
+   @media (prefers-color-scheme: dark) {
+      :root {
+         @include dark();
+      }
+   
+      .light:root {
+         @include light();
+      }
+   }
+}

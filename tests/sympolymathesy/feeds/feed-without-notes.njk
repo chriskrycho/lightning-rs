@@ -1,0 +1,15 @@
+---
+title: Feed Without Notes
+permalink: /feed-without-notes.xml
+standalonePage: true
+eleventyExcludeFromCollections: true
+---
+
+{%- import 'components/atom.njk' as atom -%}
+
+{%- extends 'feed.njk' -%}
+
+{%- block entries -%}
+   {% set items = collections.live | excludingCollection(collections.notes) | excludingStandalonePages %}
+   {{atom.entries(items, config)}}
+{%- endblock -%}

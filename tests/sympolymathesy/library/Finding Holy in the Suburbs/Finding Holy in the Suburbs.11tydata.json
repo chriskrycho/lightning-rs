@@ -1,0 +1,11 @@
+{
+   "layout": "post.njk",
+   "permalink": "/library/{{page.fileSlug | slug}}/index.html",
+   "book": {
+      "title": "Finding Holy in the Suburbs: Living Faithfully in the Land of Too Much",
+      "cover": "https://cdn.chriskrycho.com/file/chriskrycho-com/images/books/finding-holy-in-the-suburbs.jpg",
+      "author": "Ashley Hales",
+      "year": 2018,
+      "link": "https://click.linksynergy.com/deeplink?id=qvtf8Hp8DGA&mid=2653&murl=https%3A%2F%2Fwww.alibris.com%2FFinding-Holy-in-the-Suburbs-Living-Faithfully-in-the-Land-of-Too-Much%2Fbook%2F40780432%3Fmatches%3D15"
+   }
+}

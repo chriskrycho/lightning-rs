@@ -1,0 +1,71 @@
+{% macro list(collection, idByCollection=false) %}
+<ul class='archive-list'>
+{%- for year in collection %}
+<li class='year'>
+   <div class='year-info sticky'>
+      <h2 class='year-title date'>{{year.name}}</h2>
+   </div>
+   <ul class='year-items'>
+   {%- for month in year.months %}
+      <li class='month'>
+         <h3 class='month-title date'><span class='month-sticky'>{{month.name}}</span></h3>
+         <ul class='month-items'>
+         {%- for day in month.days %}
+            <li class='day'>
+               <h4 class='day-title date'><span class='day-sticky'>{{day.name}}</span></h4>
+               <ul class='day-items'>
+               {%- for item in day.items %}
+                  <li class='item'>
+                     <h5 class='item-title'>
+                        {% set url -%}
+                           {%- if item.data.link -%}
+                              {{item.data.link}}
+                           {%- else -%}
+                              {{item.url}}
+                           {%- endif -%}
+                        {%- endset %}
+                        {% set linkTitle -%}
+                           {%- if item.data.link -%}
+                              direct link to item
+                           {%- else -%}
+                              item permalink
+                           {%- endif -%}
+                        {%- endset %}
+
+                        <a href='{{url}}' class='item-permalink' title='{{linkTitle}}'>
+                        {%- if item.data.title -%}
+                           <span class='item-title__text'>{{-item.data.title | inlineMd | safe-}}</span>
+                           {%- if item.data.link %}<span class='item-title-arrow'>↩︎</span>{% endif -%}
+                        {%- else -%}
+                           <span class='date item-title__date'>{% localeDate item.date, 'HH:mm' %}</span> ❈
+                        {%- endif -%}
+                        </a>
+                        {%- if item.data.link -%}
+                           —<a href='{{item.url}}' title='item permalink'>❈</a>
+                        {%- endif -%}
+                        {%- if idByCollection %}
+                           {%- set collection = item.inputPath | toCollection -%}
+                           <span class='item-title__collection'>—<a href="/{{collection}}/">{{collection | upper}}</a></span>
+                        {% endif -%}
+                     </h5>
+                     {% if item.data.subtitle -%}
+                     <p class='item-subtitle'>{{item.data.subtitle | inlineMd | safe}}</p>
+                     {%- endif %}
+                     {%- if not item.data.title %}
+                     <article class='item-content article-content'>
+                        {{item.templateContent | safe}}
+                     </article>
+                     {% endif -%}
+                  </li>
+               {% endfor -%}
+               </ul>
+            </li>
+         {% endfor -%}
+         </ul>
+      </li>
+   {%- endfor -%}
+   </ul>
+</li>
+{% endfor -%}
+</ul>
+{% endmacro %}

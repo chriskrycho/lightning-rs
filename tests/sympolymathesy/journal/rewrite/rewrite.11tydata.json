@@ -1,0 +1,8 @@
+{
+   "layout": "post.njk",
+   "permalink": "/journal/rewrite/{{page.fileSlug | slug}}/index.html",
+   "series": {
+      "title": "<b><i>re</i>write</b> dev journal"
+   },
+   "tags": ["rewrite", "rewrite dev journal", "software development"]
+}

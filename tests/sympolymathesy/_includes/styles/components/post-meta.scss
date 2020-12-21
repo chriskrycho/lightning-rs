@@ -1,0 +1,63 @@
+.post-meta {
+   max-width: var(--max-width);
+   margin: 1em auto;
+   display: grid;
+   grid: auto-flow / min-content 1fr;
+   gap: 1rem;
+   align-content: start;
+   line-height: 1.2;
+
+   &::before {
+      content: '';
+
+      grid-column: 1 / 3;
+      display: block;
+      width: ms(8);
+      height: 2px;
+      background: var(--meta-divider);
+      margin: ms(2) 0 ms(3);
+   }
+
+   margin-bottom: ms(4);
+}
+
+
+.section-label {
+   grid-column: 1 / 2;
+   align-self: first baseline;
+   font: {
+      family: var(--sans-subhead);
+      size: calc(var(--sans-adjust) * #{ms(-2)});
+   }
+   display: block;
+   font-weight: bold;
+   color: var(--meta-label-color);
+   text-transform: uppercase;
+   letter-spacing: 1px;
+}
+
+.section-content {
+   font: {
+      family: var(--sans);
+      size: calc(var(--sans-adjust) * #{ms(-1)});
+      weight: 300;
+   }
+   display: block;
+   align-self: first baseline;
+   grid-column: 2 / 3;
+}
+
+.topics {
+   list-style: none;
+   display: inline;
+
+   .__topic {
+      display: inline;
+
+      &:not(:last-child) {
+         &:after {
+            content: ',';
+         }
+      }
+   }
+}

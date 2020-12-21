@@ -1,0 +1,4 @@
+{
+   "layout": "link-post.njk",
+   "permalink": "/elsewhere/{{page.fileSlug | slug}}/index.html"
+}

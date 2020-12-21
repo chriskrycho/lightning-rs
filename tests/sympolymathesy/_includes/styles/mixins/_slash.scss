@@ -1,0 +1,22 @@
+@mixin slash() {
+   --slash-offset: calc(50% - 2px);
+
+   &:before, &:after {
+      content: "";
+      border-left: 1px solid var(--divider);
+      height: 110%;
+      transform: translateY(-2px) rotate(15deg);
+      position: absolute;
+      display: block;
+   }
+
+   &:before {
+      top: -51%;
+      right: var(--slash-offset);
+   }
+
+   &:after {
+      top: -41%;
+      left: var(--slash-offset);
+   }
+}

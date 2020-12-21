@@ -1,0 +1,157 @@
+.site-header {
+   color: var(--fg);
+   background-color: var(--bg);
+   display: flex;
+   flex-wrap: wrap;
+   align-items: center;
+   align-content: center;
+   padding: 1rem;
+}
+
+.site-title {
+   flex: 1 1 auto;
+   align-self: center;
+   margin-bottom: .42505rem; // ms(-6) in rem
+
+   font: {
+      family: var(--sans-display);
+      weight: 400;
+      size: calc(var(--sans-adjust) * #{ms(5)});
+   }
+   letter-spacing: normal;
+   text-shadow: 0 0 2px var(--bg);
+
+   line-height: 1;
+   text-align: left;
+
+   a {
+      display: inline-block;
+      text-decoration: none;
+      background: var(--bg);
+      z-index: 0;
+      position: relative;
+
+      --bar-height: 2px;
+      --bar-width: 0;
+      --bar-color: transparent;
+
+      &:after {
+         content: '';
+         position: absolute;
+         z-index: -1;
+         top: 87%;
+         background-color: var(--bar-color);
+         height: calc(var(--bar-height) - 2px);
+         width: var(--bar-width);
+         border: {
+            width: 1px;
+            style: solid;
+            color: transparent;
+            radius: calc(var(--bar-height) / 2);
+         }
+
+         transition: all var(--transition);
+         left: calc(50%);
+      }
+
+      &:hover,
+      &:active {
+         --bar-color: var(--title-hover-bar);
+         --bar-width: 98.5%;
+
+         &:after {
+            left: 0.25%;
+         }
+      }
+   }
+}
+
+.site-subtitle {
+   flex: 1 1 auto;
+   align-self: center;
+
+   padding-left: 1rem;
+   text-align: right;
+   line-height: 1;
+
+   font: {
+      family: var(--serif);
+      style: italic;
+      size: ms(0);
+   }
+}
+
+.site-about-link {
+   font-style: normal;
+   text-decoration: underline;
+   text-decoration-color: transparent;
+   -webkit-text-decoration-color: var(--underline);
+   -moz-text-decoration-color: var(--underline);
+   text-decoration-color: var(--underline);
+   transition: color var(--transition), -webkit-text-decoration-color var(--transition),
+      -moz-text-decoration-color var(--transition),
+      text-decoration-color var(--transition);
+
+   &:hover,
+   &:active {
+      -webkit-text-decoration-color: var(--hover-underline);
+      -moz-text-decoration-color: var(--hover-underline);
+      text-decoration-color: var(--hover-underline);
+   }
+}
+
+@media screen {
+   @media (min-width: $resize) {
+      .site-header {
+         padding: {
+            top: ms(2);
+            bottom: ms(2);
+            left: ms(3);
+            right: ms(3);
+         }
+
+         a {
+            --bar-height: 3px;
+         }
+      }
+
+      .site-title {
+         letter-spacing: 1pt;
+      }
+   }
+
+   @media (min-width: $reflow) {
+      .site-header {
+         padding: {
+            top: ms(2);
+            bottom: ms(2);
+            left: ms(4);
+            right: ms(3);
+         }
+      }
+
+      .site-title {
+         flex: 1 0 100%;
+         font-size: calc(var(--sans-adjust) * #{ms(6)});
+      }
+   }
+
+   @media (min-width: $break-5) {
+      .site-header {
+         padding: {
+            top: ms(5);
+            bottom: ms(5);
+            left: ms(7);
+            right: ms(7);
+         }
+      }
+
+      .site-title {
+         font-size: calc(var(--sans-adjust) * #{ms(7)});
+      }
+
+      .site-subtitle {
+         font-size: ms(1);
+      }
+   }
+}

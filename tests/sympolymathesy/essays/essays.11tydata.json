@@ -1,0 +1,4 @@
+{
+   "layout": "post.njk",
+   "permalink": "/essays/{{page.fileSlug | slug}}/index.html"
+}

@@ -1,0 +1,147 @@
+a {
+   color: var(--link);
+   transition: color var(--transition);
+
+   &:hover,
+   &:active {
+      color: var(--hover);
+   }
+}
+
+abbr {
+   font-variant-caps: all-small-caps;
+   letter-spacing: 0.2pt;
+}
+
+:root {
+   --divider: hsl(222, 10%, 70%);
+
+   --hr-width: 3rem;
+}
+
+// Defines the *shape* of an `hr`. Does *not* define its layout, which needs to be set
+// appropriately in the contexts where it is used, e.g. by centering in the nav or by
+// *visually* centering in body text on large widths.
+hr {
+   height: 1.25rem;
+   width: var(--hr-width);
+   padding: 0;
+   margin: 1.75rem 0 0.5rem;
+   border: 0;
+   border-top: 1px solid var(--divider);
+   position: relative;
+   overflow: visible;
+
+   @include slash();
+}
+
+em {
+   font-style: italic;
+   line-height: 1;
+
+   em {
+      text-decoration: underline;
+   }
+}
+
+strong {
+   font-weight: bold;
+   line-height: 1;
+
+   strong {
+      text-decoration: underline;
+   }
+}
+
+b {
+   font-weight: bold;
+}
+
+i {
+   font-style: italic;
+
+   em {
+      font-style: normal;
+   }
+}
+
+cite {
+   font-style: italic;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+   line-height: 1;
+}
+
+p,
+dl {
+   width: 100%;
+   margin: 0 0 ms(0);
+   padding: 0;
+
+   &:last-child {
+      margin-bottom: 0;
+   }
+}
+
+code {
+   font: {
+      family: var(--mono);
+      size: ms(-2);
+   }
+   background: var(--code-bg);
+   padding: ms(-12) ms(-4);
+   color: var(--code-fg);
+}
+
+pre {
+   background: var(--code-bg);
+   color: var(--code-fg);
+   border-left: 2px solid var(--code-border);
+   padding-left: calc(1em - 2px);
+
+   code {
+      background-color: transparent;
+      display: block;
+      overflow-x: auto;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      line-height: ms(2);
+      font-size: ms(-2);
+      -webkit-font-smoothing: antialiased;
+   }
+}
+
+kbd {
+   color: var(--kbd-fg);
+   background-color: var(--kbd-bg);
+   border: 1px solid var(--kbd-border);
+   border-radius: 3px;
+   box-shadow: 1px 1px 0 var(--kbd-shadow);
+   display: inline-block;
+   font-family: System, -apple-system, Avenir, Arial, Helvetica, sans-serif;
+   font-size: 11px;
+   line-height: 1.4;
+   margin: 0 0.1em;
+   padding: 0.1em 0.6em;
+}
+
+img {
+   // I never uses images inline. (I can override locally if that ever changes.)
+   display: block;
+
+   // Means that even with `max-width` set to some arbitrary value, the image will
+   // never overflow its bounds. Makes it basically responsive right out of the gate.
+   width: 100%;
+
+   margin: {
+      left: auto;
+      right: auto;
+   }
+}

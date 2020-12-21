@@ -1,0 +1,118 @@
+@mixin bars($top, $width) {
+   content: '';
+   height: 1px;
+   background: var(--bar-color);
+   border-radius: 1px;
+   width: $width;
+   position: absolute;
+   top: $top;
+   transition: background-color var(--transition);
+}
+
+.site-nav {
+   background-color: var(--nav-bg);
+
+   font: {
+      family: var(--sans-subhead);
+      size: calc(var(--sans-adjust) *#{ms(0)});
+      weight: var(--nav-fg-weight);
+   }
+
+   text-transform: uppercase;
+   letter-spacing: 0.5pt;
+
+   display: flex;
+   align-content: center;
+   align-items: center;
+   justify-content: space-around;
+   flex-direction: column;
+   padding: {
+      top: ms(4);
+      bottom: ms(5);
+   }
+
+   ul {
+      margin: 0;
+      padding: 0 ms(3);
+      list-style: none;
+      display: flex;
+      justify-content: start;
+      flex-direction: column;
+      align-items: center;
+
+      li {
+         text-align: center;
+         flex: 0 0 auto;
+         margin: 0.1rem 0;
+
+         &[role='separator'] {
+            margin: 0.25rem 0;
+         }
+      }
+   }
+
+   a {
+      --color: var(--nav-fg-inactive);
+      --bar-color: transparent;
+
+      &:hover,
+      &:active,
+      &.current {
+         --color: var(--nav-fg-active);
+         --bar-color: var(--nav-fg-active);
+      }
+
+      &.current {
+         font-weight: var(--nav-fg-current-weight);
+      }
+
+      text-decoration: none;
+      position: relative;
+
+      color: var(--color);
+
+      &:before {
+         @include bars(0.5em, calc(var(--hr-width) / 2));
+         left: calc(0.25em + 100%);
+      }
+
+      &:after {
+         @include bars(0.5em, calc(var(--hr-width) / 2));
+         right: calc(0.4em + 100%);
+      }
+   }
+
+   hr {
+      border-color: var(--nav-divider);
+   }
+}
+
+@media screen and (min-width: $reflow) and (min-height: 600px) {
+   .site-nav {
+      font-size: calc(var(--sans-adjust) * #{ms(-1)});
+
+      padding: {
+         top: 0;
+         bottom: 0;
+      }
+
+      ul {
+         height: 100vh;
+         justify-content: center;
+      }
+   }
+}
+
+@media screen and (min-width: $reflow) and (min-height: 800px) {
+   .site-nav {
+      padding: {
+         top: 0;
+         bottom: 0;
+      }
+
+      ul {
+         height: 100vh;
+         justify-content: center;
+      }
+   }
+}

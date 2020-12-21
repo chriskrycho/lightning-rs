@@ -1,0 +1,17 @@
+@import "./_vendor/modularscale";
+
+// https://www.modularscale.com/?1,4&em&1.5
+$modularscale: (
+   base: 1em 4em,
+   ratio: 1.33
+);
+
+$break-0: 520px;
+$break-1: 660px;
+$break-2: 768px;
+$break-3: 960px;
+$break-4: 1080px;
+$break-5: 1440px;
+
+$resize: $break-2;
+$reflow: $break-3;

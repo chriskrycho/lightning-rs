@@ -1,0 +1,2 @@
+User-agent: *
+Disallow: /journal/content-test

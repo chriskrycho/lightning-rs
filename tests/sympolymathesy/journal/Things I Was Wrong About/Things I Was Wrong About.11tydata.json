@@ -1,0 +1,11 @@
+{
+   "layout": "post.njk",
+   "permalink": "/journal/things-i-was-wrong-about/{{page.fileSlug | slug}}/index.html",
+   "series": {
+      "title": "Things I Was Wrong About"
+   },
+   "tags": ["learning"],
+   "qualifiers": {
+      "epistemic": "These are things I *currently* think I’m wrong about. But I’ve changed my mind on them once already, so…"
+   }
+}

@@ -1,0 +1,708 @@
+@mixin fancy-block($bg, $fg, $b-l-w: 0px, $b-r-w: 0px) {
+   max-width: var(--max-width);
+   padding: {
+      left: calc(var(--side-padding) - #{$b-l-w});
+      right: calc(var(--side-padding) - #{$b-r-w});
+   }
+   margin-bottom: ms(0);
+   width: 100%;
+   color: $fg;
+   background: $bg;
+}
+
+@mixin extra-vertical($top: ms(-4), $bottom: ms(-4)) {
+   padding-top: $top;
+   padding-bottom: $bottom;
+}
+
+.content-block {
+   --max-width: 34rem;
+   --side-border-width: 2px;
+   --side-padding: calc(#{ms(-2)} * var(--sans-adjust));
+
+   font-feature-settings: 'liga', 'onum', 'pnum', 'kern';
+   padding-bottom: ms(2);
+
+   a {
+      -webkit-text-decoration-color: var(--underline);
+      -moz-text-decoration-color: var(--underline);
+      text-decoration-color: var(--underline);
+      text-decoration-skip-ink: auto;
+
+      transition: -webkit-text-decoration-color var(--transition),
+         -moz-text-decoration-color var(--transition),
+         text-decoration-color var(--transition), color var(--transition);
+
+      &:hover {
+         -webkit-text-decoration-color: var(--hover-underline);
+         -moz-text-decoration-color: var(--hover-underline);
+         text-decoration-color: var(--hover-underline);
+      }
+   }
+
+   hr {
+      margin-bottom: ms(0);
+      margin-left: auto;
+      margin-right: auto;
+   }
+
+   figure {
+      width: 100%;
+      margin {
+         bottom: 1em;
+         left: auto;
+         right: auto;
+      }
+
+      figcaption {
+         text-align: center;
+         margin: auto;
+         font: {
+            family: var(--sans);
+            size: calc(var(--sans-adjust) * #{ms(0)});
+         }
+         color: var(--figure-fg);
+      }
+   }
+
+   audio {
+      width: 100%;
+      margin-left: auto;
+      margin-right: auto;
+   }
+
+   sup {
+      line-height: 0;
+      vertical-align: 0.558em;
+
+      font: {
+         family: var(--sans);
+         weight: bold;
+         size: ms(-2);
+         variant-numeric: lining-nums;
+      }
+   }
+}
+
+.article-content {
+   margin-left: auto;
+   margin-right: auto;
+
+   h1,
+   h2,
+   h3,
+   h4,
+   h5,
+   h6,
+   ul,
+   ol,
+   p,
+   blockquote,
+   dl,
+   pre,
+   aside,
+   table,
+   .callout,
+   .footnotes,
+   .note,
+   .qualifiers,
+   .quotation {
+      margin: {
+         left: auto;
+         right: auto;
+      }
+   }
+
+   h1,
+   h2,
+   h3,
+   h4,
+   h5,
+   h6 {
+      width: 100%;
+      max-width: var(--max-width);
+      text-align: left;
+
+      .section-link {
+         text-decoration: none;
+         text-align: left;
+         transition: color var(--transition);
+         position: relative;
+         padding-bottom: 0.5em;
+
+         .__marker {
+            background-color: currentColor;
+            transition: all var(--transition);
+            display: inline-block;
+            width: 1rem;
+            position: absolute;
+            left: 0;
+            bottom: 0;
+         }
+
+         &:hover,
+         &:active {
+            color: currentColor;
+
+            .__marker {
+               width: 100%;
+               background-color: var(--link);
+            }
+         }
+      }
+   }
+
+   h1,
+   h2,
+   h3 {
+      .section-link .__marker {
+         height: 2px;
+      }
+   }
+
+   h4,
+   h5,
+   h6 {
+      .section-link .__marker {
+         height: 1.5px;
+      }
+   }
+
+   h1 {
+      font: {
+         family: var(--sans);
+         size: ms(3);
+         weight: 400;
+      }
+
+      margin-top: ms(4);
+      margin-bottom: ms(0);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: var(--max-width);
+      text-align: center;
+
+      .section-link {
+         color: var(--h1-fg);
+
+         .__marker {
+            width: 3rem;
+            left: calc(50% - 1.5rem);
+         }
+
+         &:hover,
+         &:active {
+            .__marker {
+               left: 0;
+            }
+         }
+      }
+   }
+
+   h2 {
+      font: {
+         family: var(--sans);
+         size: calc(var(--sans-adjust) * #{ms(2)});
+         weight: 400;
+      }
+      text-transform: uppercase;
+      text-align: center;
+      letter-spacing: 1px;
+      margin-top: ms(4);
+      margin-bottom: calc(1em + 2px); // account for height of marker
+
+      .section-link {
+         color: var(--h2-fg);
+
+         .__marker {
+            width: 1.5rem;
+            left: calc(50% - 0.75rem);
+         }
+
+         &:hover .__marker {
+            left: 0;
+         }
+      }
+   }
+
+   h3 {
+      font: {
+         family: var(--sans);
+         size: calc(var(--sans-adjust) * #{ms(1)});
+         weight: 300;
+      }
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: ms(1);
+      margin-bottom: calc(#{ms(-1)} + 2px);
+
+      .section-link {
+         color: var(--h3-fg);
+      }
+   }
+
+   h4 {
+      font: {
+         family: var(--sans);
+         size: calc(var(--sans-adjust) * #{ms(1)});
+         weight: 300;
+      }
+
+      margin-top: ms(0);
+      margin-bottom: calc(1.5px + #{ms(-4)});
+
+      .section-link {
+         color: var(--h4-fg);
+         padding-bottom: ms(-8);
+      }
+   }
+
+   h5 {
+      font: {
+         family: var(--sans);
+         size: calc(var(--sans-adjust) * #{ms(0)});
+         weight: 600;
+      }
+
+      margin-top: ms(0);
+      margin-bottom: calc(#{ms(-5)} + 1.5px);
+
+      .section-link {
+         color: var(--h5-fg);
+         text-decoration: underline;
+         text-decoration-color: transparent;
+         padding-bottom: ms(-9);
+      }
+   }
+
+   h6 {
+      font: {
+         family: var(--sans);
+         size: calc(var(--sans-adjust) * #{ms(0)});
+         style: italic;
+         weight: 300;
+      }
+
+      margin-top: ms(0);
+      margin-bottom: calc(#{ms(-5)} + 1.5px);
+
+      .section-link {
+         color: var(--h6-fg);
+         text-decoration: underline;
+         text-decoration-color: transparent;
+         padding-bottom: ms(-9);
+      }
+   }
+
+   h3 + h4,
+   h4 + h5,
+   h5 + h6 {
+      margin-top: 1rem;
+   }
+
+   ul,
+   ol {
+      width: 100%;
+      max-width: var(--max-width);
+      padding-left: ms(2);
+      margin-bottom: ms(0);
+   }
+
+   .table-of-contents {
+      width: 100%;
+      max-width: var(--max-width);
+   }
+
+   // This is a slightly ridiculoud implementation, but it actually does what I
+   // want: all list items have their normal margins, *except* those at the end
+   // of a list. When the item is the terminal item in a list, it drops that
+   // padding. This works for nested lists because in that case, the parent list
+   // container, `ul` or `ol`, will have its own margin which only gets cleared
+   // when *it* is the final such item in the list.
+   li {
+      &:last-child > {
+         p,
+         ol,
+         ul,
+         dl {
+            &:last-child {
+               margin-bottom: 0;
+            }
+         }
+      }
+
+      p:last-child {
+         margin-bottom: 1em;
+      }
+   }
+
+   ol {
+      list-style: decimal;
+      font-variant-numeric: lining-nums;
+   }
+
+   .outline ol {
+      list-style: upper-roman;
+
+      ol {
+         list-style: decimal;
+
+         ol {
+            list-style: lower-alpha;
+
+            ol {
+               list-style: lower-roman;
+            }
+         }
+      }
+   }
+
+   .alphabetical-list ol {
+      list-style: lower-alpha;
+   }
+
+   ul {
+      list-style: circle;
+   }
+
+   .past-versions {
+      counter-reset: version;
+   }
+
+   .past-versions li {
+      list-style-type: none;
+      counter-increment: version;
+   }
+
+   .past-versions li::before {
+      content: 'v' counter(version) ':';
+      display: inline-block;
+      text-align: right;
+      margin-right: ms(-4);
+   }
+
+   p {
+      max-width: var(--max-width);
+   }
+
+   dl {
+      max-width: var(--max-width);
+   }
+
+   dt {
+      font-style: italic;
+      margin-bottom: 1em;
+   }
+
+   dd {
+      margin-left: 1em;
+      margin-bottom: 1em;
+   }
+
+   img {
+      margin-bottom: 1rem;
+   }
+
+   blockquote {
+      font: {
+         family: var(--sans);
+         weight: 300;
+         size: calc(var(--sans-adjust) * #{ms(0)});
+      }
+      @include fancy-block(transparent, inherit, var(--side-border-width));
+      border-left: var(--side-border-width) solid var(--blockquote-border);
+
+      padding-top: 1.5px;
+   }
+
+   aside,
+   .note,
+   .callout {
+      &::before {
+         display: block;
+         text-align: center;
+         margin: ms(-8) 0 ms(-8) -#{ms(-4)};
+         font: {
+            family: var(--sans-subhead);
+            weight: bold;
+            size: calc(var(--sans-adjust) * #{ms(-2)});
+         }
+         text-transform: uppercase;
+         letter-spacing: 2pt;
+         color: var(--aside-marker-fg);
+      }
+   }
+
+   aside,
+   .note,
+   .qualifiers {
+      font: {
+         family: var(--sans);
+         weight: 300;
+         size: calc(var(--sans-adjust) * #{ms(0)});
+      }
+
+      margin-bottom: ms(0);
+      border-top: 2px solid var(--top-border);
+   }
+
+   .callout {
+      margin-bottom: ms(0);
+   }
+
+   aside {
+      @include fancy-block(var(--aside-bg), var(--aside-fg));
+      @include extra-vertical();
+      --top-border: var(--aside-border);
+
+      &::before {
+         content: '—/ Aside /—';
+      }
+
+      pre,
+      code {
+         background: var(--bg);
+      }
+   }
+
+   .callout {
+      @include fancy-block(var(--aside-bg), var(--aside-fg));
+      @include extra-vertical($bottom: ms(-3)); // balances better
+      --top-border: var(--aside-border);
+
+      &::before {
+         display: none;
+      }
+   }
+
+   .qualifiers {
+      @include fancy-block(var(--aside-bg), var(--aside-fg));
+      @include extra-vertical();
+      --top-border: var(--aside-border);
+
+      display: block;
+
+      b {
+         font-weight: 600;
+      }
+   }
+
+   .note {
+      @include fancy-block(var(--note-bg), var(--note-fg));
+      @include extra-vertical();
+      --top-border: var(--note-accent);
+
+      &::before {
+         content: '—/ Note /—';
+         color: var(--note-accent);
+      }
+   }
+
+   .quotation {
+      width: 100%;
+      max-width: var(--max-width);
+
+      figcaption {
+         width: 100%;
+         text-align: left;
+         text-indent: hanging -1.3em;
+         padding-left: 1.1em;
+      }
+   }
+
+   .book-review {
+      margin : {
+         left: auto;
+         right: auto;
+      }
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: var(--max-width);
+      padding: 1em;
+      background: var(--aside-bg); // TODO: replace
+      margin-bottom: ms(3);
+
+      &__cover-link {
+         max-width: calc(40vh / 2);
+         text-align: right;
+         margin: 0 0 0.5em 0;
+         flex: 0 0 100%;
+
+         img {
+            margin: 0;
+         }
+      }
+
+      &__details {
+         margin: 0.5em 0 0;
+         text-align: left;
+         // flex: auto; -- implicit
+      }
+
+      &__about {
+         margin-bottom: 1em;
+      }
+
+      &__summary {
+         font-weight: 300;
+
+         b {
+            font-weight: 600;
+         }
+      }
+   }
+
+   // As with list items (above), `blockquote` and `aside` children should have
+   // their normal margins *except* when terminating the container, so that they
+   // do not cause visual disparities between top and bottom.
+   blockquote,
+   aside,
+   .note,
+   .qualifiers,
+   .callout {
+      > {
+         p,
+         ul,
+         ol {
+            &:last-child {
+               margin-bottom: 0;
+            }
+         }
+      }
+   }
+
+   blockquote,
+   aside,
+   .note,
+   .qualifiers,
+   .footnotes {
+      --double-margin: var(--double-margin-sans);
+      --single-margin: var(--single-margin-sans);
+   }
+
+   pre {
+      @include fancy-block(var(--code-bg), var(--code-fg), var(--side-border-width));
+      @include extra-vertical();
+
+      margin-bottom: 1em;
+   }
+
+   table {
+      max-width: var(--max-width);
+
+      thead {
+         font-family: var(--sans);
+         text-transform: uppercase;
+         letter-spacing: 1px;
+      }
+
+      td,
+      th {
+         &:first-child {
+            text-align: right;
+         }
+
+         &:last-child {
+            text-align: left;
+         }
+      }
+
+      th {
+         padding: 0 ms(-4);
+      }
+
+      td {
+         padding: ms(-8) ms(-4);
+
+         &:first-child {
+            font-weight: bold;
+            min-width: ms(8);
+         }
+      }
+   }
+
+   .footnotes {
+      font: {
+         family: var(--sans);
+         weight: 300;
+         size: calc(var(--sans-adjust) * #{ms(0)});
+      }
+      width: 100%;
+      max-width: var(--max-width);
+   }
+
+   sup.footnote-ref a {
+      display: inline-block;
+
+      text-decoration: none;
+      transition: all var(--transition);
+   }
+}
+
+@media screen {
+   @media (min-width: 32.6667rem) {
+      .content-block {
+         --side-padding: calc(#{ms(-1)} * var(--sans-adjust));
+      }
+
+      .article-content {
+         aside,
+         .qualifiers,
+         .note,
+         .callout {
+            align-self: center;
+            padding: {
+               left: var(--side-padding);
+               right: var(--side-padding);
+            }
+         }
+
+         pre,
+         blockquote {
+            padding: {
+               left: calc(var(--side-padding) - var(--side-border-width));
+               right: var(--side-padding);
+            }
+         }
+
+         .book-review {
+            flex-wrap: nowrap;
+            justify-content: stretch;
+
+            &__cover-link {
+               flex: 0 0 auto;
+               margin: 0 0.5em 0 0;
+            }
+
+            &__details {
+               margin: 0 0 0 0.5em;
+               // flex: auto; -- implicit
+            }
+         }
+      }
+   }
+
+   @media (min-width: $resize) {
+      .content-block {
+         --side-padding: calc(#{ms(0)} * var(--sans-adjust));
+      }
+   }
+
+   @media (min-width: $reflow) {
+      .content-block {
+         padding-bottom: ms(3);
+
+         figure {
+            max-width: 90%;
+         }
+      }
+   }
+}

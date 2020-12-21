@@ -1,0 +1,15 @@
+{
+   "layout": "post.njk",
+   "permalink": "/library/{{page.fileSlug | slug}}/index.html",
+   "book": {
+      "title": "Politics & The Order of Love: An Augustinian Ethic of Democratic Citizenship",
+      "cover": "https://cdn.chriskrycho.com/file/chriskrycho-com/images/books/politics-and-the-order-of-love.jpg",
+      "author": "Eric Gregory",
+      "year": 2008,
+      "link": "https://click.linksynergy.com/deeplink?id=qvtf8Hp8DGA&mid=2653&murl=https%3A%2F%2Fwww.alibris.com%2FThe-Culture-of-Theology-John-Webster%2Fbook%2F43815243"
+   },
+   "qualifiers": {
+     "audience": "‘Little-o’ orthodox Christians interested in political theology, or others curious about what a healthier (because more robustly!) Christian political theology might look like."
+   },
+   "tags": ["Eric Gregory", "Politics & The Order of Love"]
+}

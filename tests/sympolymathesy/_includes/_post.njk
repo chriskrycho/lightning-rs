@@ -1,0 +1,35 @@
+{% extends 'item.njk' %}
+{% import 'components/item.njk' as item %}
+{% from 'components/book.njk' import review %}
+
+{% block header %}
+{{item.header(type='post', title=title, subtitle=subtitle)}}
+{% endblock header %}
+
+{% block content %}
+{% if qualifiers -%}
+<div class='qualifiers'>
+   {% if qualifiers.audience -%}
+   <p>
+      <b><a href='https://v4.chriskrycho.com/2018/assumed-audiences.html'>Assumed Audience</a>:</b>
+      {{qualifiers.audience | inlineMd | safe}}
+   </p>
+   {%- endif %}
+   {% if qualifiers.epistemic %}
+   <p>
+      <b><a href='https://v5.chriskrycho.com/journal/epistemic-status/'>Epistemic Status</a>:</b>
+      {{qualifiers.epistemic | inlineMd | safe}}
+   </p>
+   {% endif %}
+</div>
+{%- endif %}
+
+{%- if book.review -%}
+   {{- review(book) -}}
+{%- endif -%}
+   {{- super() -}}
+{% endblock %}
+
+{% block after_content %}
+   {{item.meta(title, page.date, tags, updated, page.inputPath, thanks)}}
+{% endblock %}

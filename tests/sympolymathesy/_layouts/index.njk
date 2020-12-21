@@ -1,0 +1,21 @@
+---
+standalonePage: true
+---
+
+{% extends 'base.njk' %}
+{% from 'components/index-list.njk' import list %}
+
+{%- block main -%}
+<article class='content-block post'>
+   {% block header -%}{%- endblock header %}
+   {% block before_content %}{% endblock before_content %}
+   <div class='article-content'>
+      {% block content -%}{{content | safe}}{%- endblock content %}
+   </div>
+   {% block after_content %}{% endblock after_content %}
+</article>
+
+{{list(collections.featured, title="Featured")}}
+{{list(collections.latest, "The Latest")}}
+{{list(collections.updated, title="Updated Recently", includeUpdated=true)}}
+{%- endblock main -%}

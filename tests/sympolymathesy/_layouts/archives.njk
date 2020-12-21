@@ -1,0 +1,28 @@
+---
+standalonePage: true
+---
+
+{% extends 'base.njk' %}
+{% import 'components/item.njk' as item %}
+{% import 'components/archive-list.njk' as archive %}
+{% from 'components/social.njk' import meta %}
+
+{%- block meta %}
+{{ meta(collections.live | current(page), config) }}
+{%- endblock meta %}
+
+{%- block main -%}
+<section class='content-block'>
+{{item.header(type='archive', title=title, subtitle=subtitle, subscribe=subscribe)}}
+
+{%- set c = page.inputPath | toCollection -%}
+{%- if collections[c] -%}
+   {%-
+      set items = collections[c]
+         | excludingStandalonePages
+         | archiveByYears('NEW_FIRST')
+   -%}
+   {{ archive.list(items) }}
+{%- endif -%}
+</section>
+{%- endblock main -%}

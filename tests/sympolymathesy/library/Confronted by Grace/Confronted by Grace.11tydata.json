@@ -1,0 +1,15 @@
+{
+   "layout": "post.njk",
+   "permalink": "/library/confronted-by-grace/{{page.fileSlug | slug}}/index.html",
+   "book": {
+      "title": "Confronted by Grace: Meditations of a Theologian",
+      "cover": "https://cdn.chriskrycho.com/file/chriskrycho-com/images/books/confronted-by-grace.jpg",
+      "author": "John Webster",
+      "year": 2015,
+      "link": "https://click.linksynergy.com/deeplink?id=qvtf8Hp8DGA&mid=2653&murl=https%3A%2F%2Fwww.alibris.com%2FConfronted-by-Grace-Meditations-of-a-Theologian-Prof-John-Webster%2Fbook%2F31784244"
+   },
+   "tags": ["John Webster", "theology"],
+   "qualifiers": {
+     "audience": "Theologically-orthodox Christians, or folks interested in things that theologically-orthodox Christians think."
+   }
+}

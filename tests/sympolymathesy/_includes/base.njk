@@ -1,0 +1,93 @@
+{% import 'components/nav.njk' as nav %}
+{% import 'components/social.njk' as social %}
+
+<!DOCTYPE html>
+<html>
+   <head>
+      <meta charset='utf-8'/>
+      <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+      <title>{{title | siteTitle(config) | striptags(true) | safe}}</title>
+      <meta name='viewport' content='width=device-width, initial-scale=1'>
+
+      <link rel="stylesheet" href="/styles/style.css">
+      <link rel="stylesheet" href="/styles/fonts.css">
+      <link rel="stylesheet" href="/styles/print.css" media="print">
+
+      <link rel="preload" as='style' href="https://use.typekit.net/azk8hwe.css">
+      <link rel="stylesheet" href="https://use.typekit.net/azk8hwe.css">
+
+      {% block extra_styles %}{% endblock extra_styles %}
+
+      <link href="/assets/images/favicon.png" type="image/png" rel="icon">
+      <link href="/assets/images/favicon.ico" type="image/ico" rel="icon">
+
+      <link rel='alternate' href='/feed.json' type='application/json' title='Sympolymathesy (JSON)'>
+      {%- if subscribe %}
+         <link rel='alternate' href='{{subscribe.json}}' type='application/json' title='{{title}} - Sympolymathesy (JSON)'>
+      {% else %}
+         <link rel='alternate' href='/essays/feed.json' type='application/json' title='Essays - Sympolymathesy (JSON)'>
+         <link rel='alternate' href='/journal/feed.json' type='application/json' title='Journal - Sympolymathesy (JSON)'>
+         <link rel='alternate' href='/library/feed.json' type='application/json' title='Library - Sympolymathesy (JSON)'>
+         <link rel='alternate' href='/notes/feed.json' type='application/json' title='Notes - Sympolymathesy (JSON)'>
+         <link rel='alternate' href='/elsewhere/feed.json' type='application/json' title='Elsewhere - Sympolymathesy (JSON)'>
+      {% endif -%}
+
+      <link rel='alternate' href='/feed.xml' type='application/atom+xml' title='Sympolymathesy (Atom)'>
+      {%- if subscribe %}
+         <link rel='alternate' href='{{subscribe.atom}}' type='application/atom+xml' title='{{title}} - Sympolymathesy (Atom)'>
+      {% else %}
+         <link rel='alternate' href='/essays/feed.xml' type='application/atom+xml' title='Essays - Sympolymathesy (Atom)'>
+         <link rel='alternate' href='/journal/feed.xml' type='application/atom+xml' title='Journal - Sympolymathesy (Atom)'>
+         <link rel='alternate' href='/library/feed.xml' type='application/atom+xml' title='Library - Sympolymathesy (Atom)'>
+         <link rel='alternate' href='/notes/feed.xml' type='application/atom+xml' title='Notes - Sympolymathesy (Atom)'>
+         <link rel='alternate' href='/elsewhere/feed.xml' type='application/atom+xml' title='Elsewhere - Sympolymathesy (Atom)'>
+      {% endif -%}
+
+      {% for link in config.author.links -%}
+         <link rel='me' href='{{link}}'>
+      {% endfor -%}
+
+      <link rel="openid.delegate" href="https://v4.chriskrycho.com/">
+      <link rel="openid.server" href="https://indieauth.com/openid">
+
+      <!-- Fathom - beautiful, simple website analytics -->
+      <script src="https://cdn.usefathom.com/script.js" data-site="ZNNPEBCY" defer="defer"></script>
+      <!-- / Fathom -->
+
+      {% block extra_links %}{% endblock extra_links %}
+
+      {% block meta %}{{ social.meta(page, config) }}
+      {% endblock meta%}
+   </head>
+   <body>
+      <main>
+         <header class='site-header'>
+            <h1 class='site-title'>
+               <a href='/'>
+                  {{config.title.stylized}}
+               </a>
+            </h1>
+            <h2 class='site-subtitle'>
+               by
+               <a href='/about' class='site-about-link'>Chris Krycho</a>
+            </h2>
+         </header>
+
+         <div class='content'>
+            {% block main %}{% endblock main %}
+         </div>
+      </main>
+
+      <nav class='site-nav'>
+         <ul>
+            {%- for entry in pages -%}
+               {%- if entry.type === 'page' -%}
+                  {{nav.item(entry, pageUrl=page.url)}}
+               {%- elif entry.type === 'separator' -%}
+                  <li role='separator'><hr></li>
+               {%- endif -%}
+            {%- endfor -%}
+         </ul>
+      </nav>
+   </body>
+</html>
