@@ -1,4 +1,4 @@
-use std::{fmt::format, path::PathBuf};
+use std::path::PathBuf;
 
 use json5;
 
@@ -12,5 +12,17 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
         .map_err(|e| format!("could not parse '{}':\n{}", &data_file.display(), e))?;
 
     dbg!("{}", config);
+
+    let content_dir = in_dir.join("content");
+    let content_glob = content_dir.to_string_lossy() + "/**/*.md";
+    let all_contents: Vec<Result<String, String>> = glob::glob(&content_glob)
+        .expect(&format!("bad glob: '{}'", &content_glob))
+        .map(|result| {
+            result
+                .map_err(|e| format!("{}", e))
+                .and_then(|file| std::fs::read_to_string(file).map_err(|e| format!("{}", e)))
+        })
+        .collect();
+    println!("{}", all_contents.len());
     Ok(())
 }
