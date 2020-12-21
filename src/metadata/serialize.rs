@@ -14,6 +14,7 @@ pub(super) struct Page {
     tags: Vec<String>,
     featured: bool,
     layout: Option<String>,
+    series: Option<Series>,
 }
 
 #[derive(Deserialize)]
@@ -61,4 +62,10 @@ impl std::fmt::Display for Rating {
             }
         )
     }
+}
+
+#[derive(Deserialize)]
+struct Series {
+    name: String,
+    part: u8,
 }
