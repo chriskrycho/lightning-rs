@@ -1,8 +1,9 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 
 use json5;
 
 use crate::config::Config;
+use crate::page::Page;
 
 pub fn build(in_dir: PathBuf) -> Result<(), String> {
     let data_file = in_dir.join("_data/config.json5");
@@ -25,5 +26,15 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
         .collect();
 
     dbg!("{}", &all_contents[0]);
+    let (path, contents) = all_contents
+        .into_iter()
+        .next()
+        .expect("srsly tho")
+        .expect("no but for real");
+
+    let page = Page::from_str(&contents)
+        .map_err(|e| format!("could not render '{}': {}", path.display(), e));
+
+    dbg!(page);
     Ok(())
 }

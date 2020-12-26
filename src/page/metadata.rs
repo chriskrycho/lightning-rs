@@ -1,7 +1,7 @@
 use chrono::{DateTime, FixedOffset};
 use serde_derive::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub(super) struct Metadata {
     pub(super) title: Option<String>,
     pub(super) subtitle: Option<String>,
@@ -20,13 +20,13 @@ pub(super) struct Metadata {
     pub(super) series: Option<Series>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub(super) struct Qualifiers {
     audience: Option<String>,
     epistemic: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub(super) struct Book {
     title: String,
     author: String,
@@ -38,13 +38,13 @@ pub(super) struct Book {
     review: Review,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub(super) struct Review {
     rating: Rating,
     summary: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 enum Rating {
     NotRecommended,
     WithQualifications,
@@ -67,7 +67,7 @@ impl std::fmt::Display for Rating {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub(super) struct Series {
     name: String,
     part: u8,

@@ -1,10 +1,12 @@
+mod components;
 mod metadata;
 
-use std::{path::PathBuf, unimplemented};
+use std::{convert::TryFrom, path::PathBuf, unimplemented};
 
 use chrono::{format::ParseError, FixedOffset};
 use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime};
 
+use components::Components;
 use metadata::Metadata;
 
 use crate::config::Config;
@@ -18,7 +20,8 @@ use self::metadata::{Book, Qualifiers, Series};
 /// templating engine and my typography tooling. It is render to render into the
 /// target layout template specified by its `metadata: ResolvedMetadata` and
 /// then to print to the file system.
-struct Page {
+#[derive(Debug)]
+pub(crate) struct Page {
     /// Mapped from the input file name, useful for permalinks.
     file_slug: String,
 
@@ -35,6 +38,16 @@ struct Page {
     contents: String,
 }
 
+impl std::str::FromStr for Page {
+    type Err = String;
+
+    fn from_str(md_src: &str) -> Result<Self, Self::Err> {
+        let Components { header, body } = Components::try_from(md_src)?;
+        todo!()
+    }
+}
+
+#[derive(Debug)]
 pub(crate) enum RequiredFields {
     Title(String),
     Date(DateTime<FixedOffset>),
@@ -44,6 +57,7 @@ pub(crate) enum RequiredFields {
     },
 }
 
+#[derive(Debug)]
 pub(crate) struct ResolvedMetadata {
     /// The date, title, or both (every item must have one or the other)
     required: RequiredFields,
@@ -71,13 +85,8 @@ pub(crate) struct ResolvedMetadata {
 }
 
 impl ResolvedMetadata {
-    fn new(
-        src_path: PathBuf,
-        header_contents: String,
-        config: Config,
-    ) -> Result<ResolvedMetadata, String> {
-        let metadata: Metadata =
-            serde_yaml::from_str(&header_contents).map_err(|e| format!("{}", e))?;
+    fn new(src_path: PathBuf, header: &str, config: Config) -> Result<ResolvedMetadata, String> {
+        let metadata: Metadata = serde_yaml::from_str(header).map_err(|e| format!("{}", e))?;
 
         let required_fields = match (metadata.title, metadata.date) {
             (None, None) => {
