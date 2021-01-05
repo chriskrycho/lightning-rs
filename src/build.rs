@@ -1,8 +1,9 @@
-use std::{path::PathBuf, str::FromStr};
+use std::{convert::TryFrom, path::PathBuf};
 
 use json5;
 
 use crate::config::Config;
+use crate::page::source::Source;
 use crate::page::Page;
 
 pub fn build(in_dir: PathBuf) -> Result<(), String> {
@@ -14,26 +15,25 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
 
     let content_dir = in_dir.join("content");
     let content_glob = content_dir.to_string_lossy() + "/**/*.md";
-    let all_contents: Vec<Result<(PathBuf, String), String>> = glob::glob(&content_glob)
+    let all_contents = glob::glob(&content_glob)
         .expect(&format!("bad glob: '{}'", &content_glob))
         .map(|result| {
-            result.map_err(|e| format!("{}", e)).and_then(|file| {
-                std::fs::read_to_string(&file)
-                    .map(|content| (file, content))
-                    .map_err(|e| format!("{}", e))
-            })
+            result
+                .map_err(|e| format!("{}", e))
+                .and_then(|path| {
+                    std::fs::read_to_string(&path)
+                        .map(|contents| Source { path, contents })
+                        .map_err(|e| format!("{}", e))
+                })
+                .and_then(|source| Page::try_from(&source))
         })
-        .collect();
+        .collect::<Vec<Result<Page, String>>>();
 
-    dbg!("{}", &all_contents[0]);
-    let (path, contents) = all_contents
+    let page = all_contents
         .into_iter()
         .next()
         .expect("srsly tho")
-        .expect("no but for real");
-
-    let page = Page::from_str(&contents)
-        .map_err(|e| format!("could not render '{}': {}", path.display(), e));
+        .expect("PLS");
 
     dbg!(page);
     Ok(())

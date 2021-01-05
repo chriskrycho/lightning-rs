@@ -1,5 +1,6 @@
-mod components;
-mod metadata;
+pub(crate) mod components;
+pub(crate) mod metadata;
+pub(crate) mod source;
 
 use std::{convert::TryFrom, path::PathBuf, unimplemented};
 
@@ -11,7 +12,10 @@ use metadata::Metadata;
 
 use crate::config::Config;
 
-use self::metadata::{Book, Qualifiers, Series};
+use self::{
+    metadata::{Book, Qualifiers, Series},
+    source::Source,
+};
 
 /// A fully-resolved representation of a page.
 ///
@@ -38,11 +42,13 @@ pub(crate) struct Page {
     contents: String,
 }
 
-impl std::str::FromStr for Page {
-    type Err = String;
+impl<'s, 'p> TryFrom<&Source<'s, 'p>> for Page {
+    type Error = String;
 
-    fn from_str(md_src: &str) -> Result<Self, Self::Err> {
-        let Components { header, body } = Components::try_from(md_src)?;
+    fn try_from(source: &Source) -> Result<Self, Self::Error> {
+        let Components { header, body } = Components::try_from(source.contents.as_ref())?;
+        let metadata: Metadata = serde_yaml::from_str(header).map_err(|e| format!("{}", e))?;
+
         todo!()
     }
 }
@@ -55,6 +61,14 @@ pub(crate) enum RequiredFields {
         title: String,
         date: DateTime<FixedOffset>,
     },
+}
+
+impl TryFrom<&Metadata> for RequiredFields {
+    type Error = String;
+
+    fn try_from(metadata: &Metadata) -> Result<Self, Self::Error> {
+        todo!()
+    }
 }
 
 #[derive(Debug)]
