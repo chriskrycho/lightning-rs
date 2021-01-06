@@ -25,7 +25,7 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
                         .map(|contents| Source { path, contents })
                         .map_err(|e| format!("{}", e))
                 })
-                .and_then(|source| Page::try_from(&source))
+                .and_then(|source| Page::new(source, &config))
         })
         .collect::<Vec<Result<Page, String>>>();
 

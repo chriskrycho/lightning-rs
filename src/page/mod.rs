@@ -25,7 +25,7 @@ use self::{
 /// target layout template specified by its `metadata: ResolvedMetadata` and
 /// then to print to the file system.
 #[derive(Debug)]
-pub(crate) struct Page {
+pub(crate) struct Page<'s> {
     /// Mapped from the input file name, useful for permalinks.
     file_slug: String,
 
@@ -36,48 +36,48 @@ pub(crate) struct Page {
     date: DateTime<FixedOffset>,
 
     /// The fully-parsed metadata associated with the page.
-    metadata: ResolvedMetadata,
+    metadata: ResolvedMetadata<'s>,
 
     /// The fully-rendered contents of the page.
     contents: String,
 }
 
-impl<'s, 'p> TryFrom<&Source<'s, 'p>> for Page {
-    type Error = String;
-
-    fn try_from(source: &Source) -> Result<Self, Self::Error> {
+impl<'s> Page<'s> {
+    pub(crate) fn new(source: Source, config: &Config) -> Result<Self, String> {
         let Components { header, body } = Components::try_from(source.contents.as_ref())?;
-        let metadata: Metadata = serde_yaml::from_str(header).map_err(|e| format!("{}", e))?;
+        let resolved_metadata = ResolvedMetadata::new(&source.path, header, config)?;
 
         todo!()
     }
 }
 
 #[derive(Debug)]
-pub(crate) enum RequiredFields {
-    Title(String),
-    Date(DateTime<FixedOffset>),
+pub(crate) enum RequiredFields<'a> {
+    Title(&'a str),
+    Date(&'a DateTime<FixedOffset>),
     Both {
-        title: String,
-        date: DateTime<FixedOffset>,
+        title: &'a str,
+        date: &'a DateTime<FixedOffset>,
     },
 }
 
-impl TryFrom<&Metadata> for RequiredFields {
+impl<'m> TryFrom<&'m Metadata> for RequiredFields<'m> {
     type Error = String;
 
-    fn try_from(metadata: &Metadata) -> Result<Self, Self::Error> {
-        todo!()
+    fn try_from(metadata: &'m Metadata) -> Result<Self, Self::Error> {
+        match (metadata.title.as_ref(), metadata.date.as_ref()) {
+            (Some(title), Some(date)) => Ok(RequiredFields::Both { title, date }),
+            (None, Some(date)) => Ok(RequiredFields::Date(date)),
+            (Some(title), None) => Ok(RequiredFields::Title(title)),
+            (None, None) => Err(String::from("missing date and title")),
+        }
     }
 }
 
 #[derive(Debug)]
-pub(crate) struct ResolvedMetadata {
+pub(crate) struct ResolvedMetadata<'source> {
     /// The date, title, or both (every item must have one or the other)
-    required: RequiredFields,
-
-    /// Mapped from the input file name, useful for permalinks.
-    file_slug: String,
+    required: RequiredFields<'source>,
 
     /// Url used to link to this piece of content.
     url: String,
@@ -98,35 +98,16 @@ pub(crate) struct ResolvedMetadata {
     series: Option<Series>,
 }
 
-impl ResolvedMetadata {
-    fn new(src_path: PathBuf, header: &str, config: Config) -> Result<ResolvedMetadata, String> {
+impl<'h> ResolvedMetadata<'h> {
+    fn new(
+        src_path: &PathBuf,
+        header: &'h str,
+        config: &Config,
+    ) -> Result<ResolvedMetadata<'h>, String> {
         let metadata: Metadata = serde_yaml::from_str(header).map_err(|e| format!("{}", e))?;
 
-        let required_fields = match (metadata.title, metadata.date) {
-            (None, None) => {
-                return Err(format!(
-                    "missing required fields (title|date) in {}",
-                    src_path.display()
-                ));
-            }
-            (Some(title), None) => RequiredFields::Title(title),
-            (None, Some(date)) => RequiredFields::Date(date),
-            (Some(title), Some(date)) => RequiredFields::Both { title, date },
-        };
+        let required_fields = RequiredFields::try_from(&metadata)?;
 
         unimplemented!()
     }
-}
-
-impl Page {
-    pub(crate) fn new(src_path: PathBuf, contents: String) -> Page {
-        let (header, body) = to_header_and_body(&contents);
-        // - parse header into yaml
-        // -
-        unimplemented!()
-    }
-}
-
-fn to_header_and_body(s: &str) -> (String, String) {
-    unimplemented!()
 }

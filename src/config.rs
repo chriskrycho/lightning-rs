@@ -1,7 +1,7 @@
 use serde_derive::Deserialize;
 
 #[derive(Deserialize, Debug)]
-pub(crate) struct Config {
+pub struct Config {
     url: String,
     repo: String,
     title: Title,
