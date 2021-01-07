@@ -2,12 +2,12 @@ use serde_derive::Deserialize;
 
 #[derive(Deserialize, Debug)]
 pub struct Config {
-    url: String,
-    repo: String,
-    title: Title,
-    subtitle: String,
-    description: String,
-    author: Author,
+    pub url: String,
+    pub repo: String,
+    pub title: Title,
+    pub subtitle: String,
+    pub description: String,
+    pub author: Author,
 }
 
 #[derive(Deserialize, Debug)]
