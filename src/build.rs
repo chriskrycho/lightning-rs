@@ -43,17 +43,22 @@ fn get_files_to_load(in_dir: PathBuf) -> Vec<PathBuf> {
     let content_dir = in_dir.join("content");
     let content_glob = content_dir.to_string_lossy() + "/**/*.md";
 
-    type Partitioned = Vec<Result<PathBuf, String>>;
-    let (ok_files, err_files): (Partitioned, Partitioned) = glob::glob(&content_glob)
+    let (ok_files, err_files): (Vec<PathBuf>, Vec<String>) = glob::glob(&content_glob)
         .unwrap_or_else(|_| panic!("bad glob: '{}'", &content_glob))
-        .map(|result| result.map_err(|e| format!("{}", e)))
-        .partition(Result::is_ok);
+        .fold((vec![], vec![]), |(mut good, mut bad), result| {
+            match result {
+                Ok(path) => good.push(path),
+                Err(e) => bad.push(e.to_string()),
+            };
+
+            (good, bad)
+        });
 
     for err in err_files {
-        eprintln!("problem with {}", err.unwrap_err());
+        eprintln!("problem with {}", err);
     }
 
-    ok_files.into_iter().map(|result| result.unwrap()).collect()
+    ok_files
 }
 
 fn load_syntaxes() -> SyntaxSet {
