@@ -1,14 +1,16 @@
 pub(crate) mod components;
+pub(crate) mod markdown;
 pub(crate) mod metadata;
 pub(crate) mod source;
 
-use std::{convert::TryFrom, path::PathBuf, unimplemented};
+use std::{convert::TryFrom, path::PathBuf};
 
-use chrono::{format::ParseError, FixedOffset};
-use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::{DateTime, FixedOffset};
 
 use components::Components;
+use markdown::render_markdown;
 use metadata::Metadata;
+use syntect::parsing::SyntaxSet;
 
 use crate::config::Config;
 
@@ -32,9 +34,6 @@ pub(crate) struct Page {
     /// Url used to link to this piece of content.
     url: String,
 
-    /// The resolved date.
-    date: DateTime<FixedOffset>,
-
     /// The fully-parsed metadata associated with the page.
     metadata: ResolvedMetadata,
 
@@ -45,9 +44,29 @@ pub(crate) struct Page {
 impl Page {
     pub(crate) fn new(source: Source, config: &Config) -> Result<Self, String> {
         let Components { header, body } = Components::try_from(source.contents.as_ref())?;
-        let resolved_metadata = ResolvedMetadata::new(&source.path, header, config)?;
+        let metadata = ResolvedMetadata::new(&source.path, header, config)?;
 
-        todo!()
+        let mut extra_syntaxes_dir = std::env::current_dir().map_err(|e| format!("{}", e))?;
+        extra_syntaxes_dir.push("syntaxes");
+
+        let syntax_builder = SyntaxSet::load_defaults_newlines().into_builder();
+        // let mut syntax_builder = SyntaxSet::load_defaults_newlines().into_builder();
+        // syntax_builder
+        //     .add_from_folder(&extra_syntaxes_dir, false)
+        //     .map_err(|e| format!("could not load {}: {}", &extra_syntaxes_dir.display(), e))?;
+        let syntax_set = syntax_builder.build();
+
+        let contents = render_markdown(body, &syntax_set)?;
+
+        let file_slug = String::from(""); // TODO: something reasonable
+        let url = String::from(""); // TODO: something reasonable
+
+        Ok(Page {
+            file_slug,
+            url,
+            metadata,
+            contents,
+        })
     }
 }
 
@@ -61,6 +80,8 @@ pub(crate) enum RequiredFields {
     },
 }
 
+/// Metadata after combining the header config with all items in data hierarchy,
+/// including the root config.
 #[derive(Debug)]
 pub(crate) struct ResolvedMetadata {
     /// The date, title, or both (every item must have one or the other)
@@ -82,12 +103,8 @@ pub(crate) struct ResolvedMetadata {
     series: Option<Series>,
 }
 
-impl<'h> ResolvedMetadata {
-    fn new(
-        src_path: &PathBuf,
-        header: &'h str,
-        config: &Config,
-    ) -> Result<ResolvedMetadata, String> {
+impl ResolvedMetadata {
+    fn new(src_path: &PathBuf, header: &str, config: &Config) -> Result<ResolvedMetadata, String> {
         let item_metadata: Metadata = serde_yaml::from_str(header).map_err(|e| format!("{}", e))?;
 
         let required = (match (item_metadata.title, item_metadata.date) {

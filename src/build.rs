@@ -1,4 +1,4 @@
-use std::{convert::TryFrom, path::PathBuf};
+use std::path::PathBuf;
 
 use json5;
 
@@ -31,7 +31,7 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
 
     let page = all_contents
         .into_iter()
-        .next()
+        .nth(25)
         .expect("srsly tho")
         .expect("PLS");
 

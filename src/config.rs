@@ -11,13 +11,13 @@ pub struct Config {
 }
 
 #[derive(Deserialize, Debug)]
-struct Title {
+pub struct Title {
     normal: String,
     stylized: String,
 }
 
 #[derive(Deserialize, Debug)]
-struct Author {
+pub struct Author {
     name: String,
     #[serde(deserialize_with = "email::de_from_str")]
     email: email::Email,
@@ -32,8 +32,8 @@ mod email {
     use serde::{de, Deserialize, Deserializer};
     use serde_derive::Deserialize;
 
-    /// An incredibly stupid email-"parsing" regex.
     lazy_static! {
+        /// An incredibly stupid email-"parsing" regex.
         static ref EMAIL_RE: Regex = Regex::new(r"([^@]+)@([^@]+)").unwrap();
     }
 
