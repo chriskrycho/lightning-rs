@@ -1,7 +1,7 @@
 pub(crate) mod components;
 pub(crate) mod markdown;
 pub(crate) mod metadata;
-pub(crate) mod source;
+pub mod source;
 
 use std::{convert::TryFrom, path::PathBuf};
 
@@ -29,34 +29,28 @@ use self::{
 #[derive(Debug)]
 pub(crate) struct Page {
     /// Mapped from the input file name, useful for permalinks.
-    file_slug: String,
+    pub(crate) file_slug: String,
 
     /// Url used to link to this piece of content.
-    url: String,
+    pub(crate) url: String,
 
     /// The fully-parsed metadata associated with the page.
-    metadata: ResolvedMetadata,
+    pub(crate) metadata: ResolvedMetadata,
 
     /// The fully-rendered contents of the page.
-    contents: String,
+    pub(crate) contents: String,
 }
 
 impl Page {
-    pub(crate) fn new(source: Source, config: &Config) -> Result<Self, String> {
+    pub(crate) fn new(
+        source: Source,
+        config: &Config,
+        syntax_set: &SyntaxSet,
+    ) -> Result<Self, String> {
         let Components { header, body } = Components::try_from(source.contents.as_ref())?;
         let metadata = ResolvedMetadata::new(&source.path, header, config)?;
 
-        let mut extra_syntaxes_dir = std::env::current_dir().map_err(|e| format!("{}", e))?;
-        extra_syntaxes_dir.push("syntaxes");
-
-        let syntax_builder = SyntaxSet::load_defaults_newlines().into_builder();
-        // let mut syntax_builder = SyntaxSet::load_defaults_newlines().into_builder();
-        // syntax_builder
-        //     .add_from_folder(&extra_syntaxes_dir, false)
-        //     .map_err(|e| format!("could not load {}: {}", &extra_syntaxes_dir.display(), e))?;
-        let syntax_set = syntax_builder.build();
-
-        let contents = render_markdown(body, &syntax_set)?;
+        let contents = render_markdown(body, syntax_set)?;
 
         let file_slug = String::from(""); // TODO: something reasonable
         let url = String::from(""); // TODO: something reasonable

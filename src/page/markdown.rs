@@ -13,7 +13,7 @@ pub(super) fn render_markdown(src: &str, syntax_set: &SyntaxSet) -> Result<Strin
     let parser = Parser::new_ext(src, Options::all());
     let mut state = ParseState::NotInCodeBlock;
 
-    let mut events = Vec::<Event>::with_capacity(src.len());
+    let mut events = Vec::<Event>::with_capacity(src.len() * 2);
     for event in parser {
         match event {
             Event::Text(text) => match &mut state {
