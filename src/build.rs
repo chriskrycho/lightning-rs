@@ -16,7 +16,7 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
 
     let syntax_set = load_syntaxes();
 
-    let all_contents = get_files_to_load(in_dir)
+    get_files_to_load(in_dir)
         .into_par_iter()
         .map(|path| {
             std::fs::read_to_string(&path)
@@ -24,19 +24,21 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
                 .map_err(|e| format!("{}", e))
         })
         .map(|result| result.and_then(|source| Page::new(source, &config, &syntax_set)))
-        .collect::<Vec<Result<Page, String>>>();
-
-    let page = all_contents
-        .into_iter()
-        .find(|result| match result {
-            Ok(page) => page.contents.contains("lightweight reactivity system"),
-            _ => false,
+        .map(|result| {
+            result.and_then(|page| {
+                std::fs::write(page.path(&config), page.contents).map_err(|e| e.to_string())
+            })
         })
-        .expect("srsly tho")
-        .expect("PLS");
-
-    std::fs::write("/Users/chris/Desktop/cool.html", page.contents).expect("YEAH");
-    Ok(())
+        .fold(
+            || Ok(()),
+            |so_far, result| match (so_far, result) {
+                (Ok(_), Ok(_)) => Ok(()),
+                (Err(s), Ok(_)) => Err(s),
+                (Ok(_), Err(e)) => Err(e),
+                (Err(s), Err(e)) => Err(s + &e),
+            },
+        )
+        .collect()
 }
 
 fn get_files_to_load(in_dir: PathBuf) -> Vec<PathBuf> {

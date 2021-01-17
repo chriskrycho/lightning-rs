@@ -23,4 +23,5 @@
       "https://stackoverflow.com/users/564181/chris-krycho",
     ],
   },
+  output: "../../output",
 }

@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use serde_derive::Deserialize;
 
 #[derive(Deserialize, Debug)]
@@ -8,6 +10,7 @@ pub struct Config {
     pub subtitle: String,
     pub description: String,
     pub author: Author,
+    pub output: PathBuf,
 }
 
 #[derive(Deserialize, Debug)]

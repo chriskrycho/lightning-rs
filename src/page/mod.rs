@@ -28,9 +28,6 @@ use self::{
 /// then to print to the file system.
 #[derive(Debug)]
 pub(crate) struct Page {
-    /// Mapped from the input file name, useful for permalinks.
-    pub(crate) file_slug: String,
-
     /// Url used to link to this piece of content.
     pub(crate) url: String,
 
@@ -52,15 +49,22 @@ impl Page {
 
         let contents = render_markdown(body, syntax_set)?;
 
-        let file_slug = String::from(""); // TODO: something reasonable
-        let url = String::from(""); // TODO: something reasonable
+        let url = config.url.to_string() + &metadata.slug;
 
         Ok(Page {
-            file_slug,
             url,
             metadata,
             contents,
         })
+    }
+
+    pub(crate) fn path(&self, config: &Config) -> PathBuf {
+        config.output.join(&self.metadata.slug)
+    }
+
+    /// Given a config, generate the URL for the page
+    pub(crate) fn url(&self, config: &Config) -> String {
+        String::from(config.url.trim_end_matches('/')) + "/" + &self.metadata.slug
     }
 }
 
@@ -81,8 +85,8 @@ pub(crate) struct ResolvedMetadata {
     /// The date, title, or both (every item must have one or the other)
     required: RequiredFields,
 
-    /// Url used to link to this piece of content.
-    url: String,
+    /// The path to this piece of content.
+    slug: String,
 
     layout: String,
 
@@ -108,17 +112,15 @@ impl ResolvedMetadata {
             (None, None) => Err(String::from("missing date and title")),
         })?;
 
-        // TODO: less dumb than this. Including, you know, slugifying it.
-        let url_from_src = config.url.to_string()
-            + src_path
-                .to_str()
-                .expect("why *wouldn't* the src_path be legit here?");
-
-        let url = item_metadata.permalink.unwrap_or(url_from_src);
+        let slug = item_metadata.permalink.unwrap_or_else(|| {
+            slug::slugify(src_path.to_str().unwrap_or_else(|| {
+                panic!("it should be impossible to get here without a valid source path")
+            }))
+        });
 
         Ok(ResolvedMetadata {
             required,
-            url, // looool TODO: something less dumb
+            slug,
             subtitle: item_metadata.subtitle,
             layout: String::from("base.html"), // TODO: not this!
             summary: item_metadata.summary,
