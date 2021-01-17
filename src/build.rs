@@ -23,7 +23,7 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
                 .map(|contents| Source { path, contents })
                 .map_err(|e| format!("{}", e))
         })
-        .map(|result| result.and_then(|source| Page::new(source, &config, &syntax_set)))
+        .map(|result| result.and_then(|source| Page::new(source, &syntax_set)))
         .map(|result| {
             result.and_then(|page| {
                 std::fs::write(page.path(&config), page.contents).map_err(|e| e.to_string())

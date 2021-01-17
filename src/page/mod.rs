@@ -28,9 +28,6 @@ use self::{
 /// then to print to the file system.
 #[derive(Debug)]
 pub(crate) struct Page {
-    /// Url used to link to this piece of content.
-    pub(crate) url: String,
-
     /// The fully-parsed metadata associated with the page.
     pub(crate) metadata: ResolvedMetadata,
 
@@ -39,30 +36,20 @@ pub(crate) struct Page {
 }
 
 impl Page {
-    pub(crate) fn new(
-        source: Source,
-        config: &Config,
-        syntax_set: &SyntaxSet,
-    ) -> Result<Self, String> {
+    pub(crate) fn new(source: Source, syntax_set: &SyntaxSet) -> Result<Self, String> {
         let Components { header, body } = Components::try_from(source.contents.as_ref())?;
-        let metadata = ResolvedMetadata::new(&source.path, header, config)?;
+        let metadata = ResolvedMetadata::new(&source.path, header)?;
 
         let contents = render_markdown(body, syntax_set)?;
 
-        let url = config.url.to_string() + &metadata.slug;
-
-        Ok(Page {
-            url,
-            metadata,
-            contents,
-        })
+        Ok(Page { metadata, contents })
     }
 
     pub(crate) fn path(&self, config: &Config) -> PathBuf {
         config.output.join(&self.metadata.slug)
     }
 
-    /// Given a config, generate the URL for the page
+    /// Given a config, generate the (canonicalized) URL for the page
     pub(crate) fn url(&self, config: &Config) -> String {
         String::from(config.url.trim_end_matches('/')) + "/" + &self.metadata.slug
     }
@@ -102,7 +89,7 @@ pub(crate) struct ResolvedMetadata {
 }
 
 impl ResolvedMetadata {
-    fn new(src_path: &PathBuf, header: &str, config: &Config) -> Result<ResolvedMetadata, String> {
+    fn new(src_path: &PathBuf, header: &str) -> Result<ResolvedMetadata, String> {
         let item_metadata: Metadata = serde_yaml::from_str(header).map_err(|e| format!("{}", e))?;
 
         let required = (match (item_metadata.title, item_metadata.date) {
