@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-use json5;
 use rayon::prelude::*;
 use syntect::parsing::SyntaxSet;
 
@@ -43,11 +42,12 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
 fn get_files_to_load(in_dir: PathBuf) -> Vec<PathBuf> {
     let content_dir = in_dir.join("content");
     let content_glob = content_dir.to_string_lossy() + "/**/*.md";
-    let (ok_files, err_files): (Vec<Result<PathBuf, String>>, Vec<Result<PathBuf, String>>) =
-        glob::glob(&content_glob)
-            .expect(&format!("bad glob: '{}'", &content_glob))
-            .map(|result| result.map_err(|e| format!("{}", e)))
-            .partition(Result::is_ok);
+
+    type Partitioned = Vec<Result<PathBuf, String>>;
+    let (ok_files, err_files): (Partitioned, Partitioned) = glob::glob(&content_glob)
+        .unwrap_or_else(|_| panic!("bad glob: '{}'", &content_glob))
+        .map(|result| result.map_err(|e| format!("{}", e)))
+        .partition(Result::is_ok);
 
     for err in err_files {
         eprintln!("problem with {}", err.unwrap_err());
@@ -65,6 +65,6 @@ fn load_syntaxes() -> SyntaxSet {
     // syntax_builder
     //     .add_from_folder(&extra_syntaxes_dir, false)
     //     .map_err(|e| format!("could not load {}: {}", &extra_syntaxes_dir.display(), e))?;
-    let syntax_set = syntax_builder.build();
-    syntax_set
+
+    syntax_builder.build()
 }
