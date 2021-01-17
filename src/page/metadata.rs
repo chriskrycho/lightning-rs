@@ -18,6 +18,7 @@ pub(super) struct Metadata {
     pub(super) layout: Option<String>,
     pub(super) book: Option<Book>,
     pub(super) series: Option<Series>,
+    pub(super) subscribe: Option<Subscribe>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -27,11 +28,17 @@ pub(super) struct Qualifiers {
 }
 
 #[derive(Deserialize, Debug)]
+pub(super) struct Subscribe {
+    atom: Option<String>,
+    json: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
 pub(super) struct Book {
     title: String,
     author: String,
-    editors: Vec<String>,
-    translators: Vec<String>,
+    editors: Option<Vec<String>>,
+    translators: Option<Vec<String>>,
     cover: Option<String>,
     link: Option<String>,
     year: u16,

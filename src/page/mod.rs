@@ -3,13 +3,16 @@ pub(crate) mod markdown;
 pub(crate) mod metadata;
 pub mod source;
 
-use std::{convert::TryFrom, path::PathBuf};
+use std::{
+    convert::TryFrom,
+    path::{Path, PathBuf},
+};
 
 use chrono::{DateTime, FixedOffset};
 
 use components::Components;
 use markdown::render_markdown;
-use metadata::Metadata;
+use metadata::{Metadata, Subscribe};
 use syntect::parsing::SyntaxSet;
 
 use crate::config::Config;
@@ -36,7 +39,7 @@ pub(crate) struct Page {
 }
 
 impl Page {
-    pub(crate) fn new(source: Source, syntax_set: &SyntaxSet) -> Result<Self, String> {
+    pub(crate) fn new(source: &Source, syntax_set: &SyntaxSet) -> Result<Self, String> {
         let Components { header, body } = Components::try_from(source.contents.as_ref())?;
         let metadata = ResolvedMetadata::new(&source.path, header)?;
 
@@ -45,8 +48,8 @@ impl Page {
         Ok(Page { metadata, contents })
     }
 
-    pub(crate) fn path(&self, config: &Config) -> PathBuf {
-        config.output.join(&self.metadata.slug)
+    pub(crate) fn path(&self, output_dir: &Path) -> PathBuf {
+        output_dir.join(&self.metadata.slug)
     }
 
     /// Given a config, generate the (canonicalized) URL for the page
@@ -73,7 +76,7 @@ pub(crate) struct ResolvedMetadata {
     required: RequiredFields,
 
     /// The path to this piece of content.
-    slug: String,
+    pub(crate) slug: String,
 
     layout: String,
 
@@ -86,9 +89,12 @@ pub(crate) struct ResolvedMetadata {
     featured: bool,
     book: Option<Book>,
     series: Option<Series>,
+    subscribe: Option<Subscribe>,
 }
 
 impl ResolvedMetadata {
+    // TODO: need to include root dir so that this can generate the slug
+    // correctly.
     fn new(src_path: &PathBuf, header: &str) -> Result<ResolvedMetadata, String> {
         let item_metadata: Metadata = serde_yaml::from_str(header).map_err(|e| format!("{}", e))?;
 
@@ -99,11 +105,19 @@ impl ResolvedMetadata {
             (None, None) => Err(String::from("missing date and title")),
         })?;
 
-        let slug = item_metadata.permalink.unwrap_or_else(|| {
-            slug::slugify(src_path.to_str().unwrap_or_else(|| {
-                panic!("it should be impossible to get here without a valid source path")
-            }))
-        });
+        let slug = item_metadata
+            .permalink
+            .map(|permalink| {
+                permalink
+                    .trim_start_matches('/')
+                    .trim_end_matches('/')
+                    .to_string()
+            })
+            .unwrap_or_else(|| {
+                slug::slugify(src_path.to_str().unwrap_or_else(|| {
+                    panic!("it should be impossible to get here without a valid source path")
+                }))
+            });
 
         Ok(ResolvedMetadata {
             required,
@@ -118,6 +132,7 @@ impl ResolvedMetadata {
             featured: item_metadata.featured,
             book: item_metadata.book,
             series: item_metadata.series,
+            subscribe: item_metadata.subscribe,
         })
     }
 }

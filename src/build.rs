@@ -8,11 +8,9 @@ use crate::page::source::Source;
 use crate::page::Page;
 
 pub fn build(in_dir: PathBuf) -> Result<(), String> {
-    let data_file = in_dir.join("_data/config.json5");
-    let data = std::fs::read_to_string(&data_file)
-        .map_err(|e| format!("could not read '{}'\n{}", &data_file.to_string_lossy(), e))?;
-    let config: Config = json5::from_str(&data)
-        .map_err(|e| format!("could not parse '{}':\n{}", &data_file.display(), e))?;
+    let in_dir = std::fs::canonicalize(in_dir).map_err(|e| e.to_string())?;
+    let config_path = in_dir.join(PathBuf::from("_data/config.json5"));
+    let config = Config::from_file(&config_path)?;
 
     let syntax_set = load_syntaxes();
 
@@ -20,13 +18,35 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
         .into_par_iter()
         .map(|path| {
             std::fs::read_to_string(&path)
-                .map(|contents| Source { path, contents })
-                .map_err(|e| format!("{}", e))
+                .map(|contents| Source {
+                    path: path.clone(),
+                    contents,
+                })
+                .map_err(|e| format!("{}: {}", path.display(), e))
         })
-        .map(|result| result.and_then(|source| Page::new(source, &syntax_set)))
+        .map(|result| {
+            result.and_then(|source| {
+                Page::new(&source, &syntax_set)
+                    .map_err(|e| format!("{}: {}", source.path.display(), e))
+            })
+        })
         .map(|result| {
             result.and_then(|page| {
-                std::fs::write(page.path(&config), page.contents).map_err(|e| e.to_string())
+                let path = page.path(&config.output);
+                println!(
+                    "built final path {} from {} and {}",
+                    &path.display(),
+                    &page.metadata.slug,
+                    &config.output.display()
+                );
+                let containing_dir = path
+                    .parent()
+                    .ok_or_else(|| format!("{} should have a containing dir!", path.display()))?;
+                std::fs::create_dir_all(containing_dir)
+                    .map_err(|e| format!("{}: {}", path.display(), e.to_string()))?;
+                println!("writing {}", path.display());
+                std::fs::write(&path, page.contents)
+                    .map_err(|e| format!("{}: {}", path.display(), e))
             })
         })
         .fold(
