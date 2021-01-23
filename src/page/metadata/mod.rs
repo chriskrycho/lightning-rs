@@ -46,7 +46,7 @@ pub(super) struct Book {
     cover: Option<String>,
     link: Option<String>,
     year: u16,
-    review: Review,
+    review: Option<Review>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -55,6 +55,10 @@ pub(super) struct Review {
     summary: String,
 }
 
+// TODO: right now this assumes it can be deserialized from the associated text,
+// but in fact it should be derived from the same text as its `Display`
+// implementation below. (A later enhancement: converting "****" etc. to it or
+// something cool like that.)
 #[derive(Deserialize, Debug)]
 enum Rating {
     NotRecommended,
