@@ -45,7 +45,7 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
                 std::fs::create_dir_all(containing_dir)
                     .map_err(|e| format!("{}: {}", path.display(), e.to_string()))?;
                 println!("writing {}", path.display());
-                std::fs::write(&path, page.contents)
+                std::fs::write(&path.with_extension("html"), page.contents)
                     .map_err(|e| format!("{}: {}", path.display(), e))
             })
         })
