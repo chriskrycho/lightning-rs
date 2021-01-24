@@ -1,3 +1,7 @@
+//! The serialization inputs for metadata. Covers both YAML metadata in headers
+//! and associated data from JSON/TOML/YAML/JSON5/whatever else I decide to
+//! support in data files.
+
 use chrono::{DateTime, FixedOffset};
 use serde_derive::Deserialize;
 
@@ -41,11 +45,14 @@ pub(super) struct Subscribe {
 pub(super) struct Book {
     title: String,
     author: String,
+    /// Year is a `String`, rather than something like a `u16`, because years
+    /// are a lot more complicated than a number represents. If I write "400
+    /// B.C.", for example, the system should still work.
+    year: String,
     editors: Option<Vec<String>>,
     translators: Option<Vec<String>>,
     cover: Option<String>,
     link: Option<String>,
-    year: u16,
     review: Option<Review>,
 }
 

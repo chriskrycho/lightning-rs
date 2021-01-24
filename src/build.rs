@@ -4,8 +4,7 @@ use rayon::prelude::*;
 use syntect::parsing::SyntaxSet;
 
 use crate::config::Config;
-use crate::page::source::Source;
-use crate::page::Page;
+use crate::page::{Page, Source};
 
 pub fn build(in_dir: PathBuf) -> Result<(), String> {
     let in_dir = std::fs::canonicalize(in_dir).map_err(|e| e.to_string())?;
@@ -14,7 +13,7 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
 
     let syntax_set = load_syntaxes();
 
-    get_files_to_load(in_dir)
+    get_files_to_load(&in_dir)
         .into_par_iter()
         .map(|path| {
             std::fs::read_to_string(&path)
@@ -26,13 +25,13 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
         })
         .map(|result| {
             result.and_then(|source| {
-                Page::new(&source, &syntax_set)
+                Page::new(&source, &in_dir, &syntax_set)
                     .map_err(|e| format!("{}: {}", source.path.display(), e))
             })
         })
         .map(|result| {
             result.and_then(|page| {
-                let path = page.path(&config.output);
+                let path = page.path(&config.output).with_extension("html");
                 println!(
                     "built final path {} from {} and {}",
                     &path.display(),
@@ -45,7 +44,7 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
                 std::fs::create_dir_all(containing_dir)
                     .map_err(|e| format!("{}: {}", path.display(), e.to_string()))?;
                 println!("writing {}", path.display());
-                std::fs::write(&path.with_extension("html"), page.contents)
+                std::fs::write(&path, page.contents)
                     .map_err(|e| format!("{}: {}", path.display(), e))
             })
         })
@@ -61,7 +60,7 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
         .collect()
 }
 
-fn get_files_to_load(in_dir: PathBuf) -> Vec<PathBuf> {
+fn get_files_to_load(in_dir: &PathBuf) -> Vec<PathBuf> {
     let content_dir = in_dir.join("content");
     let content_glob = content_dir.to_string_lossy() + "/**/*.md";
 
