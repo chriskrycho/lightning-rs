@@ -2,7 +2,8 @@
 title: Sympolymathesy
 layout: index.njk
 standalonePage: true
-summary: {{config.description}}
+summary: "{{config.description}}"
+
 ---
 
 Hello!
