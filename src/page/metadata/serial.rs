@@ -95,6 +95,9 @@ impl std::fmt::Display for Rating {
 
 #[derive(Deserialize, Debug)]
 pub(super) struct Series {
-    name: String,
+    // The name is optional: it could be supplied via the data file somewhere up
+    // the tree.
+    name: Option<String>,
+    // The *part* has to be supplied, though.
     part: u8,
 }
