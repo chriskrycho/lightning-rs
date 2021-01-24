@@ -32,18 +32,11 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
         .map(|result| {
             result.and_then(|page| {
                 let path = page.path(&config.output).with_extension("html");
-                println!(
-                    "built final path {} from {} and {}",
-                    &path.display(),
-                    &page.metadata.slug,
-                    &config.output.display()
-                );
                 let containing_dir = path
                     .parent()
                     .ok_or_else(|| format!("{} should have a containing dir!", path.display()))?;
                 std::fs::create_dir_all(containing_dir)
                     .map_err(|e| format!("{}: {}", path.display(), e.to_string()))?;
-                println!("writing {}", path.display());
                 std::fs::write(&path, page.contents)
                     .map_err(|e| format!("{}: {}", path.display(), e))
             })
