@@ -2,7 +2,10 @@
 //! and associated data from JSON/TOML/YAML/JSON5/whatever else I decide to
 //! support in data files.
 
+use std::str::FromStr;
+
 use chrono::{DateTime, FixedOffset};
+use serde::{de, Deserialize, Deserializer};
 use serde_derive::Deserialize;
 
 #[derive(Deserialize, Debug)]
@@ -43,12 +46,12 @@ pub(super) struct Subscribe {
 // and then the final merged data fewer.
 #[derive(Deserialize, Debug)]
 pub(super) struct Book {
-    title: String,
-    author: String,
+    title: Option<String>,
+    author: Option<String>,
     /// Year is a `String`, rather than something like a `u16`, because years
     /// are a lot more complicated than a number represents. If I write "400
     /// B.C.", for example, the system should still work.
-    year: String,
+    year: Option<String>,
     editors: Option<Vec<String>>,
     translators: Option<Vec<String>>,
     cover: Option<String>,
@@ -68,9 +71,13 @@ pub(super) struct Review {
 // something cool like that.)
 #[derive(Deserialize, Debug)]
 enum Rating {
+    #[serde(rename = "Not recommended")]
     NotRecommended,
+    #[serde(rename = "Recommended with qualifications")]
     WithQualifications,
+    #[serde(rename = "Recommended")]
     Recommended,
+    #[serde(rename = "Required")]
     Required,
 }
 
