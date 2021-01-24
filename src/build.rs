@@ -25,7 +25,7 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
         })
         .map(|result| {
             result.and_then(|source| {
-                Page::new(&source, &in_dir, &syntax_set)
+                Page::new(&source, &in_dir.join("content"), &syntax_set)
                     .map_err(|e| format!("{}: {}", source.path.display(), e))
             })
         })
