@@ -2,10 +2,7 @@
 //! and associated data from JSON/TOML/YAML/JSON5/whatever else I decide to
 //! support in data files.
 
-use std::str::FromStr;
-
 use chrono::{DateTime, FixedOffset};
-use serde::{de, Deserialize, Deserializer};
 use serde_derive::Deserialize;
 
 #[derive(Deserialize, Debug)]
