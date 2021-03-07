@@ -313,6 +313,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc6f3ad7b9d11a0c00842ff8de1b60ee58661048eb8049ed33c73594f359d7e6"
 
 [[package]]
+name = "json-feed"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "json5"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -348,6 +356,7 @@ dependencies = [
  "chrono",
  "clap",
  "glob",
+ "json-feed",
  "json5",
  "lazy_static",
  "pulldown-cmark",
@@ -661,6 +670,9 @@ name = "serde"
 version = "1.0.118"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06c64263859d87aa2eb554587e2d23183398d617427327cf2b3d0ed8c69e4800"
+dependencies = [
+ "serde_derive",
+]
 
 [[package]]
 name = "serde_derive"

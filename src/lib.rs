@@ -2,6 +2,7 @@
 
 mod build;
 pub mod config;
+mod feed;
 pub mod page;
 
 pub use build::build;
