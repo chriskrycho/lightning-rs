@@ -11,7 +11,7 @@ trait FeedVersion {
 }
 
 #[derive(Serialize)]
-pub struct JsonFeed<'a> {
+pub struct JSONFeed<'a> {
     /// The URL of the version of the format the feed uses. This should appear
     /// at the very top, though we recognize that not all JSON generators allow
     /// for ordering.
@@ -88,7 +88,7 @@ pub struct JsonFeed<'a> {
     items: &'a [FeedItem],
 }
 
-impl<'a> FeedVersion for JsonFeed<'a> {
+impl<'a> FeedVersion for JSONFeed<'a> {
     const VERSION: &'static str = "https://jsonfeed.org/version/1";
 }
 

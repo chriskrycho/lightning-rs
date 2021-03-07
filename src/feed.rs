@@ -1,6 +1,6 @@
 mod json;
 
-use json_feed::JsonFeed;
+use json_feed::JSONFeed;
 
 use crate::page::Page;
 
@@ -20,7 +20,7 @@ impl<'a> Feed<'a> {
     }
 }
 
-impl<'a> From<Feed<'a>> for JsonFeed<'a> {
+impl<'a> From<Feed<'a>> for JSONFeed<'a> {
     fn from(feed: Feed<'a>) -> Self {
         todo!()
     }
