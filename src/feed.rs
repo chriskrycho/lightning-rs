@@ -31,6 +31,8 @@ impl<'a> Feed<'a> {
 
 impl<'a> From<Feed<'a>> for JSONFeed<'a> {
     fn from(feed: Feed<'a>) -> Self {
-        todo!()
+        JSONFeed {
+            author: Some(feed.site_config.author),
+        }
     }
 }

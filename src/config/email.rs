@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use lazy_static::lazy_static;
 use regex::Regex;
-use serde::{de, Deserialize, Deserializer};
+use serde::{de, Deserializer};
 use serde_derive::Deserialize;
 
 lazy_static! {
