@@ -85,7 +85,7 @@ pub struct JSONFeed {
 }
 
 impl JSONFeed {
-    fn builder(title: &str, items: &[FeedItem]) -> Builder {
+    pub fn builder(title: &str, items: Vec<FeedItem>) -> Builder {
         Builder::new(title, items)
     }
 }
@@ -221,16 +221,11 @@ pub struct AuthorOptions<'a, 'n, 'u> {
     pub url: Option<&'u str>,
 }
 
-pub struct BuilderResult {
-    feed: JSONFeed,
-    warnings: Vec<String>,
-}
-
 impl Builder {
-    pub fn new(title: &str, items: &[FeedItem]) -> Builder {
+    pub fn new(title: &str, items: Vec<FeedItem>) -> Builder {
         Builder {
             title: title.into(),
-            items: items.to_vec(),
+            items: items,
             ..Default::default()
         }
     }
@@ -280,7 +275,7 @@ impl Builder {
         self
     }
 
-    pub fn build(&self) -> BuilderResult {
+    pub fn build(&self) -> JSONFeed {
         let Self {
             home_page_url,
             feed_url,
@@ -289,30 +284,32 @@ impl Builder {
         let mut warnings = vec![];
 
         if home_page_url.is_none() {
-            warnings.push("missing home_page_url for feed".into());
+            warnings.push("missing home_page_url for feed");
         }
 
         if feed_url.is_none() {
-            warnings.push("missing feed_url for feed".into())
+            warnings.push("missing feed_url for feed");
         }
 
-        BuilderResult {
-            feed: JSONFeed {
-                version: VERSION,
-                title: self.title.clone(),
-                author: self.author.clone(),
-                home_page_url: home_page_url.clone(),
-                feed_url: feed_url.clone(),
-                description: self.description.clone(),
-                user_comment: self.user_comment.clone(),
-                next_url: self.next_url.clone(),
-                icon: self.icon.clone(),
-                favicon: self.favicon.clone(),
-                expired: self.expired,
-                hubs: self.hubs.clone(),
-                items: self.items.clone(),
-            },
-            warnings,
+        // TODO: use real logging!
+        if warnings.len() > 0 {
+            dbg!(warnings);
+        }
+
+        JSONFeed {
+            version: VERSION,
+            title: self.title.clone(),
+            author: self.author.clone(),
+            home_page_url: home_page_url.clone(),
+            feed_url: feed_url.clone(),
+            description: self.description.clone(),
+            user_comment: self.user_comment.clone(),
+            next_url: self.next_url.clone(),
+            icon: self.icon.clone(),
+            favicon: self.favicon.clone(),
+            expired: self.expired,
+            hubs: self.hubs.clone(),
+            items: self.items.clone(),
         }
     }
 }

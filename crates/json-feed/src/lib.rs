@@ -13,7 +13,7 @@ use std::{collections::HashMap, convert::TryFrom};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub use v1_1::{AuthorOptions, Builder as JSONFeedBuilder, JSONFeed};
+pub use v1_1::{AuthorOptions, Builder as JSONFeedBuilder, FeedItem, JSONFeed};
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub enum Version {

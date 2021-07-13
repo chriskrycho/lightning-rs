@@ -62,3 +62,9 @@ impl Page {
         String::from(config.url.trim_end_matches('/')) + "/" + &self.metadata.slug
     }
 }
+
+impl From<&Page> for lx_json_feed::FeedItem {
+    fn from(_: &Page) -> Self {
+        unimplemented!()
+    }
+}
