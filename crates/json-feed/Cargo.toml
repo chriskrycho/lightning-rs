@@ -1,5 +1,5 @@
 [package]
-name = "json-feed"
+name = "lx-json-feed"
 version = "0.1.0"
 authors = ["Chris Krycho <hello@chriskrycho.com>"]
 edition = "2018"

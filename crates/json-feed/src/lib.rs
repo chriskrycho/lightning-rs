@@ -1,21 +1,43 @@
-mod v1_0;
+//! A Rust implementation of [JSON Feed](https://jsonfeed.org) v1.1. (Since v1.1
+//! is totally backwards compatible with v1.0, there is no particular reason to
+//! supply a v1.0 implementation.)
+
+// NOTE: the above comment notwithstanding, the crate is organized using common
+// types in the root here and then a `v1_1` module so that if it *becomes*
+// useful to extract a separate `v1_0` interface, it's trivial to do so.
+
 mod v1_1;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, convert::TryFrom};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-trait FeedVersion {
-    /// The URL of the version of the format the feed uses. This should appear
-    /// at the very top, though we recognize that not all JSON generators allow
-    /// for ordering.
-    const VERSION: &'static str;
+pub use v1_1::{AuthorOptions, Builder as JSONFeedBuilder, JSONFeed};
+
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
+pub enum Version {
+    /// The feed is [v1](https://jsonfeed.org/version/1).
+    V1_0,
+    /// The feed is [v1.1](https://jsonfeed.org/version/1.1).
+    V1_1,
 }
 
-#[derive(Deserialize, Serialize)]
+impl TryFrom<&str> for Version {
+    type Error = String;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        match s {
+            "https://jsonfeed.org/version/1" => Ok(Version::V1_0),
+            "https://jsonfeed.org/version/1.1" => Ok(Version::V1_1),
+            bad_version => Err(format!("Bad JSON Feed `version` field: '{}'", bad_version)),
+        }
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(untagged)]
-enum Author {
+pub enum Author {
     AvatarOnly {
         avatar: String,
     },
@@ -31,7 +53,7 @@ enum Author {
     },
     AvatarAndUrl {
         avatar: String,
-        name: String,
+        url: String,
     },
     NameAndUrl {
         name: String,
@@ -59,12 +81,32 @@ enum Author {
 ///
 /// **NOTE:** This definition is *extremely* incomplete; it represents only the
 /// tiny bits from the JSON Feed website
-#[derive(Deserialize, Serialize)]
-struct Hub {
+#[derive(Clone, Deserialize, Serialize)]
+pub struct Hub {
     #[serde(alias = "type")]
     r#type: String,
     topic: String,
 
     #[serde(flatten)]
     extra: HashMap<String, Value>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_version() {
+        let v1 = "https://jsonfeed.org/version/1";
+        assert_eq!(Version::try_from(v1), Ok(Version::V1_0));
+
+        let v1_1 = "https://jsonfeed.org/version/1.1";
+        assert_eq!(Version::try_from(v1_1), Ok(Version::V1_1));
+
+        let bad = "whatever";
+        assert_eq!(
+            Version::try_from(bad),
+            Err(format!("Bad JSON Feed `version` field: '{}'", bad))
+        );
+    }
 }

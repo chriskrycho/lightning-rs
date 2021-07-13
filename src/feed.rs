@@ -1,6 +1,8 @@
 mod json;
 
-use json_feed::JSONFeed;
+use std::convert::TryFrom;
+
+use lx_json_feed::{AuthorOptions, JSONFeed, JSONFeedBuilder};
 
 use crate::{config::Config, page::Page};
 
@@ -29,10 +31,18 @@ impl<'a> Feed<'a> {
     }
 }
 
-impl<'a> From<Feed<'a>> for JSONFeed<'a> {
-    fn from(feed: Feed<'a>) -> Self {
-        JSONFeed {
-            author: Some(feed.site_config.author),
-        }
+impl<'a> TryFrom<Feed<'a>> for JSONFeed {
+    type Error = String;
+
+    fn try_from(feed: Feed<'a>) -> Result<Self, Self::Error> {
+        let feed = JSONFeedBuilder::new()
+            .author(&AuthorOptions {
+                name: Some(&feed.site_config.author.name),
+                url: None,
+                avatar: None,
+            })?
+            .build();
+
+        Ok(feed)
     }
 }

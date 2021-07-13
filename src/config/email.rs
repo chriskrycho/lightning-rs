@@ -2,8 +2,7 @@ use std::str::FromStr;
 
 use lazy_static::lazy_static;
 use regex::Regex;
-use serde::{de, Deserializer};
-use serde_derive::Deserialize;
+use serde::{de, Deserialize, Deserializer};
 
 lazy_static! {
     /// An incredibly stupid email-"parsing" regex.

@@ -8,13 +8,13 @@ use email::Email;
 
 #[derive(Deserialize, Debug)]
 pub struct Config {
-    pub url: String,
-    pub repo: String,
-    pub title: Title,
-    pub subtitle: String,
-    pub description: String,
-    pub author: Author,
-    pub output: PathBuf,
+    pub(crate) url: String,
+    pub(crate) repo: String,
+    pub(crate) title: Title,
+    pub(crate) subtitle: String,
+    pub(crate) description: String,
+    pub(crate) author: Author,
+    pub(crate) output: PathBuf,
 }
 
 impl Config {
@@ -43,8 +43,8 @@ pub struct Title {
 
 #[derive(Deserialize, Debug)]
 pub struct Author {
-    name: String,
+    pub(crate) name: String,
     #[serde(deserialize_with = "Email::de_from_str")]
-    email: Email,
-    links: Vec<String>,
+    pub(crate) email: Email,
+    pub(crate) links: Vec<String>,
 }
