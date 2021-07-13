@@ -1,0 +1,436 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"fig",
+				"figcaption"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "crates/json-feed/src/lib.rs",
+			"redo_stack":
+			[
+				[
+					7,
+					1,
+					"insert",
+					{
+						"characters": "a"
+					},
+					"AQAAAMsJAAAAAAAAywkAAAAAAAABAAAAYQ",
+					"AQAAAAAAAAABAAAAzAkAAAAAAADMCQAAAAAAAAAAAAAAAPC/"
+				]
+			],
+			"settings":
+			{
+				"buffer_size": 2798,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			},
+			"undo_stack":
+			[
+			]
+		}
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"project",
+				"Project: Save As"
+			],
+			[
+				"ui",
+				"UI: Select Color Scheme"
+			],
+			[
+				"markd",
+				"Set Syntax: Markdown"
+			],
+			[
+				"color",
+				"UI: Select Color Scheme"
+			],
+			[
+				"install",
+				"Package Control: Install Package"
+			],
+			[
+				"package control: list pac",
+				"Package Control: List Packages"
+			],
+			[
+				"wrap plus",
+				"Wrap Plus: Wrap Lines"
+			],
+			[
+				"keyb",
+				"Preferences: Key Bindings"
+			],
+			[
+				"wrap ",
+				"Wrap at Ruler"
+			],
+			[
+				"git comm",
+				"Set Syntax: Git Commit"
+			],
+			[
+				"fish",
+				"Set Syntax: Friendly Interactive Shell (fish)"
+			],
+			[
+				"instal",
+				"Package Control: Install Package"
+			],
+			[
+				"rena",
+				"Rename File"
+			],
+			[
+				"hex",
+				"HexViewer: Toggle Hex View"
+			],
+			[
+				"format",
+				"TypeScript: Paste And Format"
+			],
+			[
+				"signature",
+				"TypeScript: Signature Info"
+			],
+			[
+				"show",
+				"TypeScript: Show Error List"
+			],
+			[
+				"ui: ",
+				"UI: Select Color Scheme"
+			],
+			[
+				"key",
+				"Preferences: Key Bindings"
+			]
+		],
+		"width": 0.0
+	},
+	"console":
+	{
+		"height": 106.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/Users/chris/dev/chriskrycho/lightning-rs",
+		"/Users/chris/dev/chriskrycho/lightning-rs/crates",
+		"/Users/chris/dev/chriskrycho/lightning-rs/crates/json-feed",
+		"/Users/chris/dev/chriskrycho/lightning-rs/crates/json-feed/src"
+	],
+	"file_history":
+	[
+		"/Users/chris/dev/chriskrycho/v5.chriskrycho.com/.git/COMMIT_EDITMSG",
+		"/Users/chris/dev/chriskrycho/v5.chriskrycho.com/.git/rebase-merge/git-rebase-todo",
+		"/Users/chris/dev/chriskrycho/v5.chriskrycho.com/site/notes/2021/07/07-1320.md",
+		"/Users/chris/dev/chriskrycho/twist-exporter/.git/COMMIT_EDITMSG",
+		"/Users/chris/dev/chriskrycho/twist-exporter/src/api/mod.rs",
+		"/Users/chris/dev/chriskrycho/twist-exporter/src/api/comment.rs",
+		"/Users/chris/dev/chriskrycho/twist-exporter/src/api/thread.rs",
+		"/Users/chris/dev/chriskrycho/twist-exporter/src/api/reactions.rs",
+		"/Users/chris/dev/chriskrycho/twist-exporter/src/main.rs",
+		"/Users/chris/dev/chriskrycho/twist-exporter/src/api/workspace.rs",
+		"/Users/chris/dev/chriskrycho/twist-exporter/.git/rebase-merge/git-rebase-todo",
+		"/Users/chris/.gitconfig",
+		"/Users/chris/dev/chriskrycho/v5.chriskrycho.com/site/notes/2021/06/12-1525.md",
+		"/Users/chris/Library/Application Support/Sublime Text/Packages/Default/Preferences.sublime-settings",
+		"/Users/chris/Library/Application Support/Sublime Text/Packages/User/Preferences.sublime-settings",
+		"/Users/chris/Library/Application Support/Sublime Text/Packages/User/Git Commit.sublime-settings",
+		"/Users/chris/dev/chriskrycho/v5.chriskrycho.com/public/feed-without-notes.json",
+		"/Users/chris/dev/chriskrycho/v5.chriskrycho.com/site/notes/2021/05/26-2050.md",
+		"/Users/chris/dev/chriskrycho/v5.chriskrycho.com/site/notes/2021/05/29-0831.md",
+		"/Users/chris/dev/chriskrycho/ember-simple-state-helper/.git/rebase-merge/git-rebase-todo",
+		"/Users/chris/dev/emberjs/rfcs/.git/COMMIT_EDITMSG",
+		"/Users/chris/.config/fish/config.fish",
+		"/Users/chris/dev/chriskrycho/v5.chriskrycho.com/site/notes/2021/05/18-2053.md",
+		"/Users/chris/dev/chriskrycho/v5.chriskrycho.com/site/library/God Without Measure/Volume I/not the imposition of an alien will.md",
+		"/Users/chris/dev/chriskrycho/v5.chriskrycho.com/package.json",
+		"/Users/chris/Desktop/Evernote notes in Bear/10 Essential Classics.bearnote",
+		"/Users/chris/dev/chriskrycho/title-notes/src/main.rs",
+		"/Users/chris/Desktop/untitled.js",
+		"/Users/chris/dev/chriskrycho/tracked-queue/dist/assets/vendor-5cc69019d7077fe50ddba933643cf8ce.js",
+		"/Users/chris/dev/chriskrycho/tracked-queue/dist/assets/tracked-queue.min.js",
+		"/Users/chris/dev/chriskrycho/tracked-queue/addon/index.ts",
+		"/Users/chris/dev/chriskrycho/tracked-queue/tests/unit/index-test.ts"
+	],
+	"find":
+	{
+		"height": 38.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+			"struct",
+			"**"
+		],
+		"reverse": false,
+		"scrollbar_highlights": true,
+		"show_context": true,
+		"use_buffer2": true,
+		"use_gitignore": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "crates/json-feed/src/lib.rs",
+					"selected": true,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 2798,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2662,
+								2662
+							]
+						],
+						"settings":
+						{
+							"auto_complete_triggers":
+							[
+								{
+									"characters": ".:",
+									"selector": "source.rust"
+								},
+								{
+									"characters": ":.",
+									"selector": "meta.tag, source - comment - string.quoted.double.block - string.quoted.single.block - string.unquoted.heredoc",
+									"server": "rust-analyzer"
+								}
+							],
+							"lsp_active": true,
+							"lsp_hover_provider_count": 1,
+							"lsp_uri": "file:///Users/chris/dev/chriskrycho/lightning-rs/crates/json-feed/src/lib.rs",
+							"show_definitions": false,
+							"syntax": "Packages/Rust Enhanced/RustEnhanced.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 954.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"stack_multiselect": false,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 23.0
+	},
+	"input":
+	{
+		"height": 35.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.diagnostics":
+	{
+		"height": 102.0
+	},
+	"output.doc":
+	{
+		"height": 0.0
+	},
+	"output.errorlist":
+	{
+		"height": 257.0
+	},
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"output.hex_viewer_inspector":
+	{
+		"height": 253.0
+	},
+	"output.language servers":
+	{
+		"height": 0.0
+	},
+	"output.mdpopups":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "",
+	"project": "lx.sublime-project",
+	"replace":
+	{
+		"height": 42.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"crates/",
+				"crates/json-feed/src/lib.rs"
+			],
+			[
+				"notes/2021/07/07",
+				"site/notes/2021/07/07-1320.md"
+			],
+			[
+				"thread",
+				"src/api/thread.rs"
+			],
+			[
+				"comment",
+				"src/api/comment.rs"
+			],
+			[
+				"react",
+				"src/api/reactions.rs"
+			],
+			[
+				"api/mod",
+				"src/api/mod.rs"
+			],
+			[
+				"api.rs",
+				"src/api/mod.rs"
+			],
+			[
+				"api/worksp",
+				"src/api/workspace.rs"
+			],
+			[
+				"main",
+				"src/main.rs"
+			],
+			[
+				"librar/god without",
+				"site/library/God Without Measure/_index.md"
+			],
+			[
+				"package",
+				"package.json"
+			],
+			[
+				"index.ts",
+				"addon/index.ts"
+			],
+			[
+				"index-t",
+				"tests/unit/index-test.ts"
+			]
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 264.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}
