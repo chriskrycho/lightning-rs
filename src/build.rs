@@ -1,4 +1,3 @@
-use std::borrow::Borrow;
 use std::path::PathBuf;
 
 use rayon::prelude::*;
