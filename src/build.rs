@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::path::PathBuf;
 
 use rayon::prelude::*;
@@ -13,7 +14,9 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
 
     let syntax_set = load_syntaxes();
 
-    get_files_to_load(&in_dir)
+    let SiteFiles { configs, content } = get_files_to_load(&in_dir);
+
+    content
         .into_par_iter()
         .map(|path| {
             std::fs::read_to_string(&path)
@@ -53,12 +56,25 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
         .collect()
 }
 
-fn get_files_to_load(in_dir: &PathBuf) -> Vec<PathBuf> {
-    let content_dir = in_dir.join("content");
-    let content_glob = content_dir.to_string_lossy() + "/**/*.md";
+struct SiteFiles {
+    configs: Vec<PathBuf>,
+    content: Vec<PathBuf>,
+}
 
-    let (ok_files, err_files): (Vec<PathBuf>, Vec<String>) = glob::glob(&content_glob)
-        .unwrap_or_else(|_| panic!("bad glob: '{}'", &content_glob))
+fn get_files_to_load(in_dir: &PathBuf) -> SiteFiles {
+    let content_dir = in_dir.join("content");
+    let dir_for_glob = content_dir.display();
+
+    SiteFiles {
+        configs: get_files(format!("{}/**/config.lx.yaml", dir_for_glob)),
+        content: get_files(format!("{}/**/config.lx.yaml", dir_for_glob)),
+    }
+}
+
+fn get_files<S: AsRef<str>>(glob_src: S) -> Vec<PathBuf> {
+    let src = glob_src.as_ref();
+    let (ok_files, err_files): (Vec<PathBuf>, Vec<String>) = glob::glob(src)
+        .unwrap_or_else(|_| panic!("bad glob: '{}'", src))
         .fold((vec![], vec![]), |(mut good, mut bad), result| {
             match result {
                 Ok(path) => good.push(path),

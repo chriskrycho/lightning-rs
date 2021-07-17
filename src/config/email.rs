@@ -10,7 +10,7 @@ lazy_static! {
 }
 
 #[derive(Deserialize, Debug)]
-pub(super) struct Email {
+pub(crate) struct Email {
     /// The username, the bit before the `@`
     local: String,
     /// The email host, the bit after the `@`

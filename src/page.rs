@@ -3,13 +3,17 @@ pub(crate) mod markdown;
 pub(crate) mod metadata;
 
 use std::{
+    collections::HashMap,
     convert::TryFrom,
+    hash::Hash,
     path::{Path, PathBuf},
 };
 
 use components::Components;
 use markdown::render_markdown;
+use serde::{Deserialize, Serialize};
 use syntect::parsing::SyntaxSet;
+use uuid::Uuid;
 
 use crate::config::Config;
 
@@ -23,15 +27,21 @@ pub struct Source {
     pub contents: String,
 }
 
+/// A unique identifier
+#[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Deserialize, Serialize)]
+pub(crate) struct Id(Uuid);
+
 /// A fully-resolved representation of a page.
 ///
 /// In this struct, the metadata has been parsed and resolved, and the content
 /// has been converted from Markdown to HTML and preprocessed with both the
-/// templating engine and my typography tooling. It is render to render into the
+/// templating engine and my typography tooling. It is ready to render into the
 /// target layout template specified by its `metadata: ResolvedMetadata` and
 /// then to print to the file system.
 #[derive(Debug)]
 pub(crate) struct Page {
+    pub(crate) id: Id,
+
     /// The fully-parsed metadata associated with the page.
     pub(crate) metadata: Metadata,
 
@@ -45,12 +55,21 @@ impl Page {
         root_dir: &PathBuf,
         syntax_set: &SyntaxSet,
     ) -> Result<Self, String> {
+        let id = Id(Uuid::new_v5(
+            &Uuid::NAMESPACE_OID,
+            source.contents.as_bytes(),
+        ));
+
         let Components { header, body } = Components::try_from(source.contents.as_ref())?;
         let metadata = Metadata::new(&source.path, root_dir, header)?;
 
         let contents = render_markdown(body, syntax_set)?;
 
-        Ok(Page { metadata, contents })
+        Ok(Page {
+            id,
+            metadata,
+            contents,
+        })
     }
 
     pub(crate) fn path(&self, output_dir: &Path) -> PathBuf {
@@ -68,3 +87,6 @@ impl From<&Page> for lx_json_feed::FeedItem {
         unimplemented!()
     }
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PageCollections(HashMap<Id, crate::collection::Id>);
