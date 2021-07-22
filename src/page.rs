@@ -1,6 +1,6 @@
-pub(crate) mod components;
-pub(crate) mod markdown;
-pub(crate) mod metadata;
+pub mod components;
+pub mod markdown;
+pub mod metadata;
 
 use std::{
     collections::HashMap,
@@ -29,7 +29,7 @@ pub struct Source {
 
 /// A unique identifier
 #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Deserialize, Serialize)]
-pub(crate) struct Id(Uuid);
+pub struct Id(Uuid);
 
 /// A fully-resolved representation of a page.
 ///
@@ -39,18 +39,18 @@ pub(crate) struct Id(Uuid);
 /// target layout template specified by its `metadata: ResolvedMetadata` and
 /// then to print to the file system.
 #[derive(Debug)]
-pub(crate) struct Page {
-    pub(crate) id: Id,
+pub struct Page {
+    pub id: Id,
 
     /// The fully-parsed metadata associated with the page.
-    pub(crate) metadata: Metadata,
+    pub metadata: Metadata,
 
     /// The fully-rendered contents of the page.
-    pub(crate) contents: String,
+    pub contents: String,
 }
 
 impl Page {
-    pub(crate) fn new(
+    pub fn new(
         source: &Source,
         root_dir: &PathBuf,
         syntax_set: &SyntaxSet,
@@ -72,12 +72,12 @@ impl Page {
         })
     }
 
-    pub(crate) fn path(&self, output_dir: &Path) -> PathBuf {
+    pub fn path(&self, output_dir: &Path) -> PathBuf {
         output_dir.join(&self.metadata.slug)
     }
 
     /// Given a config, generate the (canonicalized) URL for the page
-    pub(crate) fn url(&self, config: &Config) -> String {
+    pub fn url(&self, config: &Config) -> String {
         String::from(config.url.trim_end_matches('/')) + "/" + &self.metadata.slug
     }
 }

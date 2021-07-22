@@ -37,10 +37,6 @@ pub(super) struct Subscribe {
     json: Option<String>,
 }
 
-// TODO: This is correct for final output, but I *currently* have a bunch of
-// things being handled by "the cascade" in 11ty, and this *cannot* handle that.
-// As with a bunch of other things, the input from disk should have more options
-// and then the final merged data fewer.
 #[derive(Deserialize, Debug)]
 pub(super) struct Book {
     title: Option<String>,

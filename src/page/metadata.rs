@@ -6,7 +6,7 @@ use chrono::{DateTime, FixedOffset};
 use serial::{Book, Qualifiers, Series, Subscribe};
 
 #[derive(Debug)]
-pub(crate) enum RequiredFields {
+pub enum RequiredFields {
     Title(String),
     Date(DateTime<FixedOffset>),
     Both {
@@ -18,12 +18,12 @@ pub(crate) enum RequiredFields {
 /// Metadata after combining the header config with all items in data hierarchy,
 /// including the root config.
 #[derive(Debug)]
-pub(crate) struct Metadata {
+pub struct Metadata {
     /// The date, title, or both (every item must have one or the other)
     required: RequiredFields,
 
     /// The path to this piece of content.
-    pub(crate) slug: String,
+    pub slug: String,
 
     layout: String,
 
