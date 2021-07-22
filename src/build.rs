@@ -66,7 +66,7 @@ fn get_files_to_load(in_dir: &PathBuf) -> SiteFiles {
 
     SiteFiles {
         configs: get_files(format!("{}/**/config.lx.yaml", dir_for_glob)),
-        content: get_files(format!("{}/**/config.lx.yaml", dir_for_glob)),
+        content: get_files(format!("{}/**/*.md", dir_for_glob)),
     }
 }
 
