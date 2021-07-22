@@ -2,6 +2,8 @@ use pulldown_cmark::{html, CodeBlockKind, Event, Options, Parser, Tag};
 use syntect::html::{ClassStyle, ClassedHTMLGenerator};
 use syntect::parsing::SyntaxSet;
 
+use super::Preprocessed;
+
 enum ParseState<'a> {
     NotInCodeBlock,
     RequiresFirstLineParse,
@@ -9,7 +11,14 @@ enum ParseState<'a> {
     KnownSyntax(ClassedHTMLGenerator<'a>),
 }
 
-pub(super) fn render_markdown(src: &str, syntax_set: &SyntaxSet) -> Result<String, String> {
+/// The result of rendering the content.
+pub struct Processed(pub(super) String);
+
+pub(super) fn render_markdown(
+    src: Preprocessed,
+    syntax_set: &SyntaxSet,
+) -> Result<Processed, String> {
+    let src = src.as_str();
     let parser = Parser::new_ext(src, Options::all());
     let mut state = ParseState::NotInCodeBlock;
 
@@ -34,6 +43,9 @@ pub(super) fn render_markdown(src: &str, syntax_set: &SyntaxSet) -> Result<Strin
                                 &syntax_set,
                                 ClassStyle::Spaced,
                             );
+                            events.push(Event::Html(
+                                format!("<pre><code class='{}'>", definition.name).into(),
+                            ));
                             generator.parse_html_for_line_which_includes_newline(&text);
                             state = ParseState::KnownSyntax(generator);
                             events.push(Event::Text("".into()));
@@ -65,7 +77,6 @@ pub(super) fn render_markdown(src: &str, syntax_set: &SyntaxSet) -> Result<Strin
             Event::Start(Tag::CodeBlock(CodeBlockKind::Indented)) => match state {
                 ParseState::NotInCodeBlock => {
                     state = ParseState::RequiresFirstLineParse;
-                    events.push(Event::Html("<pre><code>".into()));
                 }
                 _ => {
                     unreachable!("should never be entering a codeblock when already in a codeblock")
@@ -93,5 +104,5 @@ pub(super) fn render_markdown(src: &str, syntax_set: &SyntaxSet) -> Result<Strin
 
     html::push_html(&mut html_output, events.into_iter());
 
-    Ok(html_output)
+    Ok(Processed(html_output))
 }

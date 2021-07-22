@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 
 use rayon::prelude::*;
+use syntect::highlighting::ThemeSet;
+use syntect::html::{css_for_theme_with_class_style, ClassStyle};
 use syntect::parsing::SyntaxSet;
 
 use crate::config::Config;
@@ -14,6 +16,14 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
     let syntax_set = load_syntaxes();
 
     let SiteFiles { configs, content } = get_files_to_load(&in_dir);
+    let ThemeSet { themes } = ThemeSet::load_defaults();
+
+    let style = ClassStyle::Spaced;
+    let light = css_for_theme_with_class_style(&themes["InspiredGitHub"], style);
+    let dark = css_for_theme_with_class_style(&themes["base16-ocean.dark"], style);
+
+    std::fs::write(&config.output.join("light.css"), light).expect("can write output yo!");
+    std::fs::write(&config.output.join("dark.css"), dark).expect("can write output yo!");
 
     content
         .into_par_iter()
@@ -27,7 +37,7 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
         })
         .map(|result| {
             result.and_then(|source| {
-                Page::new(&source, &in_dir.join("content"), &syntax_set)
+                Page::new(&source, &in_dir.join("content"), &syntax_set, &config)
                     .map_err(|e| format!("{}: {}", source.path.display(), e))
             })
         })
@@ -39,8 +49,23 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
                     .ok_or_else(|| format!("{} should have a containing dir!", path.display()))?;
                 std::fs::create_dir_all(containing_dir)
                     .map_err(|e| format!("{}: {}", path.display(), e.to_string()))?;
-                std::fs::write(&path, page.contents)
-                    .map_err(|e| format!("{}: {}", path.display(), e))
+                // TODO: replace with a templating engine!
+                std::fs::write(
+                    &path,
+                    format!(
+                        r#"<html>
+                            <head>
+                                <link rel="stylesheet" href="/light.css" media="(prefers-color-scheme: light)" />
+                                <link rel="stylesheet" href="/dark.css" media="(prefers-color-scheme: dark)" />
+                            </head>
+                            <body>
+                                {body}
+                            </body>
+                        </html>"#,
+                        body = page.contents
+                    ),
+                )
+                .map_err(|e| format!("{}: {}", path.display(), e))
             })
         })
         .fold(

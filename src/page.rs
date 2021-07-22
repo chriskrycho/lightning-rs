@@ -17,7 +17,7 @@ use uuid::Uuid;
 
 use crate::config::Config;
 
-use self::metadata::Metadata;
+use self::{markdown::Processed, metadata::Metadata};
 
 /// Source data for a file: where it came from, and its original contents.
 pub struct Source {
@@ -46,7 +46,7 @@ pub struct Page {
     pub metadata: Metadata,
 
     /// The fully-rendered contents of the page.
-    pub contents: String,
+    pub contents: PostProcessed,
 }
 
 impl Page {
@@ -54,6 +54,7 @@ impl Page {
         source: &Source,
         root_dir: &PathBuf,
         syntax_set: &SyntaxSet,
+        config: &Config,
     ) -> Result<Self, String> {
         let id = Id(Uuid::new_v5(
             &Uuid::NAMESPACE_OID,
@@ -63,7 +64,9 @@ impl Page {
         let Components { header, body } = Components::try_from(source.contents.as_ref())?;
         let metadata = Metadata::new(&source.path, root_dir, header)?;
 
+        let body = preprocess(body.into(), &config, &metadata);
         let contents = render_markdown(body, syntax_set)?;
+        let contents = postprocess(contents, &config, &metadata);
 
         Ok(Page {
             id,
@@ -90,3 +93,40 @@ impl From<&Page> for lx_json_feed::FeedItem {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PageCollections(HashMap<Id, crate::collection::Id>);
+
+pub struct Preprocessed(String);
+
+impl<'a> Preprocessed {
+    fn as_str(&'a self) -> &'a str {
+        self.0.as_str()
+    }
+}
+
+/// Ready the text for rendering as markdown
+fn preprocess(text: String, config: &Config, metadata: &Metadata) -> Preprocessed {
+    // TODO: implement *actual* preprocessing using the data:
+    //
+    // -
+    // - substitute all references from metadata
+    Preprocessed(text)
+}
+
+#[derive(Debug)]
+pub struct PostProcessed(String);
+
+impl AsRef<[u8]> for PostProcessed {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+}
+
+impl std::fmt::Display for PostProcessed {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+fn postprocess(processed: Processed, config: &Config, metadata: &Metadata) -> PostProcessed {
+    // TODO: use the config and metadata to substitute the values
+    PostProcessed(processed.0)
+}
