@@ -10,7 +10,5 @@ pub struct Id(uuid::Uuid);
 pub struct Collection {
     pub id: Id,
     pub name: String,
+    pub pages: HashMap<Id, crate::page::Id>,
 }
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct CollectionPages(HashMap<Id, crate::page::Id>);
