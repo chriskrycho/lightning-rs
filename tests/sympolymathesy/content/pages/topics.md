@@ -1,4 +1,6 @@
 ---
+title: >
+  Topic: {{tag}}
 pagination:
   data: collections
   addAllPagesToCollections: true
