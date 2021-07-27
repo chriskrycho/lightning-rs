@@ -1,6 +1,6 @@
 pub mod components;
 pub mod markdown;
-mod markdown_comrak;
+mod markdown;
 pub mod metadata;
 
 use std::{
@@ -11,8 +11,7 @@ use std::{
 };
 
 use components::Components;
-// use markdown::render_markdown as render_pulldown;
-use markdown_comrak::render_markdown as render_comrak;
+use markdown::render_markdown;
 use serde::{Deserialize, Serialize};
 use syntect::parsing::SyntaxSet;
 use uuid::Uuid;
@@ -67,7 +66,7 @@ impl Page {
         let metadata = Metadata::new(&source.path, root_dir, header)?;
 
         let body = preprocess(body.into(), &config, &metadata);
-        let contents = render_comrak(body, syntax_set)?;
+        let contents = render_markdown(body, syntax_set)?;
         let contents = postprocess(contents, &config, &metadata);
 
         Ok(Page {

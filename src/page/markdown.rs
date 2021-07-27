@@ -1,105 +1,153 @@
-use pulldown_cmark::{html, CodeBlockKind, Event, Options, Parser, Tag};
-use syntect::html::{ClassStyle, ClassedHTMLGenerator};
-use syntect::parsing::SyntaxSet;
+use comrak::{
+    format_html,
+    nodes::{AstNode, NodeCodeBlock, NodeHtmlBlock, NodeValue},
+    parse_document, Arena, ComrakExtensionOptions, ComrakOptions, ComrakParseOptions,
+    ComrakRenderOptions,
+};
+use html_escape::encode_text_to_string;
+use lazy_static::lazy_static;
+use syntect::{
+    html::{ClassStyle, ClassedHTMLGenerator},
+    parsing::{SyntaxReference, SyntaxSet},
+};
 
 use super::{Preprocessed, Processed};
 
-enum ParseState<'a> {
-    NotInCodeBlock,
-    RequiresFirstLineParse,
-    UnknownSyntax,
-    KnownSyntax(ClassedHTMLGenerator<'a>),
+lazy_static! {
+    static ref OPTIONS: ComrakOptions = ComrakOptions {
+        extension: ComrakExtensionOptions {
+            autolink: true,
+            description_lists: true,
+            footnotes: true,
+            front_matter_delimiter: None,
+            header_ids: Some(String::from("")),
+            strikethrough: true,
+            superscript: false,
+            table: true,
+            tagfilter: false,
+            tasklist: true,
+        },
+        parse: ComrakParseOptions {
+            default_info_string: None,
+            smart: true,
+        },
+        render: ComrakRenderOptions {
+            github_pre_lang: true,
+            hardbreaks: false,
+            width: 80,
+            // I control the Markdown source for the site entirely. So I'm going to
+            // render all the HTML in my source!
+            unsafe_: true,
+            // And I also don't want to escape it!
+            escape: false,
+        },
+    };
 }
 
-pub(super) fn render_markdown(
-    src: Preprocessed,
-    syntax_set: &SyntaxSet,
-) -> Result<Processed, String> {
-    let src = src.as_str();
-    let parser = Parser::new_ext(src, Options::all());
-    let mut state = ParseState::NotInCodeBlock;
+pub fn render_markdown(src: Preprocessed, syntax_set: &SyntaxSet) -> Result<Processed, String> {
+    let arena = Arena::new();
 
-    let mut events = Vec::<Event>::with_capacity(src.len() * 2);
-    for event in parser {
-        match event {
-            Event::Text(text) => match &mut state {
-                // This is a little quirky: it hands off the text to the highlighter
-                // and relies on correctly calling `highlighter.finalize()` when we
-                // reach the end of the code block.
-                ParseState::KnownSyntax(ref mut generator) => {
-                    generator.parse_html_for_line_which_includes_newline(text.as_ref());
-                    events.push(Event::Text("".into()));
-                }
-                // This has the same constraint as `KnownSyntax`, but requires that
-                // we also try to get a
-                ParseState::RequiresFirstLineParse => {
-                    match syntax_set.find_syntax_by_first_line(&text) {
-                        Some(definition) => {
-                            let mut generator = ClassedHTMLGenerator::new_with_class_style(
-                                definition,
-                                &syntax_set,
-                                ClassStyle::Spaced,
-                            );
-                            events.push(Event::Html(
-                                format!("<pre><code class='{}'>", definition.name).into(),
-                            ));
-                            generator.parse_html_for_line_which_includes_newline(&text);
-                            state = ParseState::KnownSyntax(generator);
-                            events.push(Event::Text("".into()));
-                        }
-                        None => {
-                            state = ParseState::UnknownSyntax;
-                            events.push(Event::Text(text));
-                        }
-                    }
-                }
-                ParseState::UnknownSyntax | ParseState::NotInCodeBlock => {
-                    events.push(Event::Text(text))
-                }
-            },
-            Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(name))) => {
-                if let Some(looked_up) = syntax_set.find_syntax_by_token(name.as_ref()) {
-                    state = ParseState::KnownSyntax(ClassedHTMLGenerator::new_with_class_style(
-                        looked_up,
-                        &syntax_set,
-                        ClassStyle::Spaced,
-                    ));
-                    let html = format!("<pre><code class='{}'>", looked_up.name);
-                    events.push(Event::Html(html.into()));
+    let doc_root = parse_document(&arena, src.as_str(), &OPTIONS);
+
+    iter_nodes(doc_root, &|node| {
+        let result: Result<Option<String>, String> =
+            if let &mut NodeValue::CodeBlock(NodeCodeBlock {
+                fenced,
+                ref mut info,
+                ref mut literal,
+                ..
+            }) = &mut node.data.borrow_mut().value
+            {
+                let orig = std::mem::replace(literal, vec![]);
+                let data = String::from_utf8(orig).map_err(|e| {
+                    format!(
+                        "error {}\n\nwhile trying to parse as utf8:\n{:?}",
+                        e, &literal
+                    )
+                })?;
+
+                let mut lines = data.split_inclusive(|c| c == '\n').peekable();
+
+                let specified_syntax = if fenced {
+                    let token = String::from_utf8(info.clone()).map_err(|e| {
+                        format!("error {}\nwhile attempting to parse token:\n{:?}", e, info)
+                    })?;
+                    syntax_set.find_syntax_by_token(&token)
                 } else {
-                    state = ParseState::UnknownSyntax;
-                    events.push(Event::Html("<pre><code>".into()));
-                }
+                    None
+                };
+
+                let result = specified_syntax
+                    .or_else(|| {
+                        lines
+                            .peek()
+                            .and_then(|first_line| syntax_set.find_syntax_by_first_line(first_line))
+                    })
+                    .map(|syntax| {
+                        let body = highlight(&syntax, &syntax_set, lines.into_iter());
+                        format!(r#"<pre lang="{}"><code>{}</pre></code>"#, syntax.name, body)
+                    })
+                    .or_else(|| {
+                        let mut encoded = String::with_capacity(data.len());
+                        encode_text_to_string(data, &mut encoded);
+                        let text = format!(r#"<pre><code>{}</pre></code>"#, encoded);
+                        Some(text)
+                    });
+
+                Ok(result)
+            } else {
+                Ok(None)
+            };
+
+        match result {
+            Ok(Some(highlighted)) => {
+                let mut new_node = NodeHtmlBlock::default();
+                new_node.literal = highlighted.as_bytes().to_vec();
+                let mut ast = node.data.borrow_mut();
+                ast.value = NodeValue::HtmlBlock(new_node);
+                Ok(())
             }
-            Event::Start(Tag::CodeBlock(CodeBlockKind::Indented)) => match state {
-                ParseState::NotInCodeBlock => {
-                    state = ParseState::RequiresFirstLineParse;
-                }
-                _ => {
-                    unreachable!("should never be entering a codeblock when already in a codeblock")
-                }
-            },
-            Event::End(Tag::CodeBlock(_)) => match state {
-                ParseState::KnownSyntax(generator) => {
-                    let highlighted = generator.finalize();
-                    state = ParseState::NotInCodeBlock;
-                    events.push(Event::Html((highlighted + "</code></pre>").into()));
-                }
-                ParseState::UnknownSyntax | ParseState::RequiresFirstLineParse => {
-                    state = ParseState::NotInCodeBlock;
-                    events.push(Event::Html("</code></pre>".into()));
-                }
-                ParseState::NotInCodeBlock => {
-                    unreachable!("Cannot *not* be in a code block when ending a coceblock")
-                }
-            },
-            _ => events.push(event),
+            Ok(None) => Ok(()),
+            Err(e) => Err(e),
+        }
+    })
+    .map_err(|errs| errs.join("\n"))?;
+
+    let mut output = Vec::with_capacity(src.len());
+    format_html(doc_root, &OPTIONS, &mut output).map_err(|e| format!("{}", e))?;
+    let output = String::from_utf8(output).map_err(|e| format!("{}", e))?;
+    Ok(Processed(output))
+}
+
+fn highlight<'l, L>(syntax: &SyntaxReference, syntax_set: &SyntaxSet, lines: L) -> String
+where
+    L: Iterator<Item = &'l str>,
+{
+    let mut generator =
+        ClassedHTMLGenerator::new_with_class_style(syntax, &syntax_set, ClassStyle::Spaced);
+    for line in lines {
+        generator.parse_html_for_line_which_includes_newline(&line);
+    }
+    generator.finalize()
+}
+
+fn iter_nodes<'a, F>(node: &'a AstNode<'a>, f: &F) -> Result<(), Vec<String>>
+where
+    F: Fn(&'a AstNode<'a>) -> Result<(), String>,
+{
+    let mut errors = vec![];
+    if let Err(e) = f(node) {
+        errors.push(e);
+    }
+    for c in node.children() {
+        if let Err(ref mut e) = iter_nodes(c, f) {
+            errors.append(e);
         }
     }
 
-    let mut html_output = String::with_capacity(src.len() * 2);
-
-    html::push_html(&mut html_output, events.into_iter());
-
-    Ok(Processed(html_output))
+    if errors.len() == 0 {
+        Ok(())
+    } else {
+        Err(errors)
+    }
 }
