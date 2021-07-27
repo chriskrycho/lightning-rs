@@ -44,13 +44,18 @@ pub(super) fn render_markdown(
                                 ClassStyle::Spaced,
                             );
                             events.push(Event::Html(
-                                format!("<pre><code class='{}'>", definition.name).into(),
+                                format!(
+                                    "<pre lang='{name}'><code class='{name}'>",
+                                    name = definition.name
+                                )
+                                .into(),
                             ));
                             generator.parse_html_for_line_which_includes_newline(&text);
                             state = ParseState::KnownSyntax(generator);
                             events.push(Event::Text("".into()));
                         }
                         None => {
+                            events.push(Event::Html("<pre><code>".to_string().into()));
                             state = ParseState::UnknownSyntax;
                             events.push(Event::Text(text));
                         }
@@ -93,7 +98,7 @@ pub(super) fn render_markdown(
                     events.push(Event::Html("</code></pre>".into()));
                 }
                 ParseState::NotInCodeBlock => {
-                    unreachable!("Cannot *not* be in a code block when ending a coceblock")
+                    unreachable!("Cannot *not* be in a code block when ending a code block")
                 }
             },
             _ => events.push(event),
