@@ -1,6 +1,5 @@
 pub mod components;
 pub mod markdown;
-mod markdown;
 pub mod metadata;
 
 use std::{
