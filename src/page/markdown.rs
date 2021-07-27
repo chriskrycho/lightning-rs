@@ -96,6 +96,14 @@ pub(super) fn render_markdown(
                     unreachable!("Cannot *not* be in a code block when ending a coceblock")
                 }
             },
+            Event::FootnoteReference(fn_ref) => {
+                let backlink_target = format!(r#"<a name="{}"></a>"#, fn_ref);
+                events.push(Event::Html(backlink_target.into()));
+                events.push(Event::FootnoteReference(fn_ref));
+            }
+            Event::Start(Tag::FootnoteDefinition(fn_def)) => {
+                events.push(Event::FootnoteReference(fn_def));
+            }
             _ => events.push(event),
         }
     }
