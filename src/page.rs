@@ -75,8 +75,8 @@ impl Page {
         })
     }
 
-    pub fn path(&self, output_dir: &Path) -> PathBuf {
-        output_dir.join(&self.metadata.slug)
+    pub fn path_from_root(&self, root_dir: &Path) -> PathBuf {
+        root_dir.join(&self.metadata.slug)
     }
 
     /// Given a config, generate the (canonicalized) URL for the page

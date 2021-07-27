@@ -43,7 +43,7 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
         })
         .map(|result| {
             result.and_then(|page| {
-                let path = page.path(&config.output).with_extension("html");
+                let path = page.path_from_root(&config.output).with_extension("html");
                 let containing_dir = path
                     .parent()
                     .ok_or_else(|| format!("{} should have a containing dir!", path.display()))?;
