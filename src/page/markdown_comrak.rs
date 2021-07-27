@@ -22,7 +22,7 @@ lazy_static! {
             front_matter_delimiter: None,
             header_ids: Some(String::from("")),
             strikethrough: true,
-            superscript: true,
+            superscript: false,
             table: true,
             tagfilter: false,
             tasklist: true,
