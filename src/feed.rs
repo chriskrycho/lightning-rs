@@ -2,7 +2,7 @@ mod json;
 
 use std::convert::TryFrom;
 
-use lx_json_feed::{AuthorOptions, FeedItem, JSONFeed};
+use lx_json_feed::{AuthorOptions, JSONFeed};
 
 use crate::{config::Config, page::Page};
 

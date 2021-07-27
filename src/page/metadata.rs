@@ -1,6 +1,6 @@
 mod serial;
 
-use std::path::PathBuf;
+use std::path::Path;
 
 use chrono::{DateTime, FixedOffset};
 use serial::{Book, Qualifiers, Series, Subscribe};
@@ -40,11 +40,7 @@ pub struct Metadata {
 }
 
 impl Metadata {
-    pub(super) fn new(
-        src_path: &PathBuf,
-        root_dir: &PathBuf,
-        header: &str,
-    ) -> Result<Metadata, String> {
+    pub(super) fn new(src_path: &Path, root_dir: &Path, header: &str) -> Result<Metadata, String> {
         let item_metadata: serial::Metadata =
             serde_yaml::from_str(header).map_err(|e| format!("{}", e))?;
 

@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use rayon::prelude::*;
 use syntect::highlighting::ThemeSet;
@@ -15,7 +15,11 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
 
     let syntax_set = load_syntaxes();
 
-    let SiteFiles { configs, content } = get_files_to_load(&in_dir);
+    let SiteFiles {
+        // TODO: generate collections/taxonomies/whatever from configs
+        configs: _configs,
+        content,
+    } = get_files_to_load(&in_dir);
     let ThemeSet { themes } = ThemeSet::load_defaults();
 
     let style = ClassStyle::Spaced;
@@ -85,7 +89,7 @@ struct SiteFiles {
     content: Vec<PathBuf>,
 }
 
-fn get_files_to_load(in_dir: &PathBuf) -> SiteFiles {
+fn get_files_to_load(in_dir: &Path) -> SiteFiles {
     let content_dir = in_dir.join("content");
     let dir_for_glob = content_dir.display();
 
