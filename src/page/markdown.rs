@@ -50,54 +50,53 @@ pub fn render_markdown(src: Preprocessed, syntax_set: &SyntaxSet) -> Result<Proc
     let doc_root = parse_document(&arena, src.as_str(), &OPTIONS);
 
     iter_nodes(doc_root, &|node| {
-        let result: Result<Option<String>, String> =
-            if let &mut NodeValue::CodeBlock(NodeCodeBlock {
-                fenced,
-                ref mut info,
-                ref mut literal,
-                ..
-            }) = &mut node.data.borrow_mut().value
-            {
-                let orig = std::mem::replace(literal, vec![]);
-                let data = String::from_utf8(orig).map_err(|e| {
-                    format!(
-                        "error {}\n\nwhile trying to parse as utf8:\n{:?}",
-                        e, &literal
-                    )
+        let result: Result<Option<String>, String> = if let NodeValue::CodeBlock(NodeCodeBlock {
+            fenced,
+            ref mut info,
+            ref mut literal,
+            ..
+        }) = node.data.borrow_mut().value
+        {
+            let orig = std::mem::take(literal);
+            let data = String::from_utf8(orig).map_err(|e| {
+                format!(
+                    "error {}\n\nwhile trying to parse as utf8:\n{:?}",
+                    e, &literal
+                )
+            })?;
+
+            let mut lines = data.split_inclusive(|c| c == '\n').peekable();
+
+            let specified_syntax = if fenced {
+                let token = String::from_utf8(info.clone()).map_err(|e| {
+                    format!("error {}\nwhile attempting to parse token:\n{:?}", e, info)
                 })?;
-
-                let mut lines = data.split_inclusive(|c| c == '\n').peekable();
-
-                let specified_syntax = if fenced {
-                    let token = String::from_utf8(info.clone()).map_err(|e| {
-                        format!("error {}\nwhile attempting to parse token:\n{:?}", e, info)
-                    })?;
-                    syntax_set.find_syntax_by_token(&token)
-                } else {
-                    None
-                };
-
-                let result = specified_syntax
-                    .or_else(|| {
-                        lines
-                            .peek()
-                            .and_then(|first_line| syntax_set.find_syntax_by_first_line(first_line))
-                    })
-                    .map(|syntax| {
-                        let body = highlight(&syntax, &syntax_set, lines.into_iter());
-                        format!(r#"<pre lang="{}"><code>{}</pre></code>"#, syntax.name, body)
-                    })
-                    .or_else(|| {
-                        let mut encoded = String::with_capacity(data.len());
-                        encode_text_to_string(data, &mut encoded);
-                        let text = format!(r#"<pre><code>{}</pre></code>"#, encoded);
-                        Some(text)
-                    });
-
-                Ok(result)
+                syntax_set.find_syntax_by_token(&token)
             } else {
-                Ok(None)
+                None
             };
+
+            let result = specified_syntax
+                .or_else(|| {
+                    lines
+                        .peek()
+                        .and_then(|first_line| syntax_set.find_syntax_by_first_line(first_line))
+                })
+                .map(|syntax| {
+                    let body = highlight(&syntax, &syntax_set, lines);
+                    format!(r#"<pre lang="{}"><code>{}</pre></code>"#, syntax.name, body)
+                })
+                .or_else(|| {
+                    let mut encoded = String::with_capacity(data.len());
+                    encode_text_to_string(data, &mut encoded);
+                    let text = format!(r#"<pre><code>{}</pre></code>"#, encoded);
+                    Some(text)
+                });
+
+            Ok(result)
+        } else {
+            Ok(None)
+        };
 
         match result {
             Ok(Some(highlighted)) => {
@@ -145,7 +144,7 @@ where
         }
     }
 
-    if errors.len() == 0 {
+    if errors.is_empty() {
         Ok(())
     } else {
         Err(errors)
