@@ -52,7 +52,7 @@ pub struct Page {
 impl Page {
     pub fn new(
         source: &Source,
-        root_dir: &PathBuf,
+        root_dir: &Path,
         syntax_set: &SyntaxSet,
         config: &Config,
     ) -> Result<Self, String> {
@@ -103,7 +103,7 @@ impl<'a> Preprocessed {
 }
 
 /// Ready the text for rendering as markdown
-fn preprocess(text: String, config: &Config, metadata: &Metadata) -> Preprocessed {
+fn preprocess(text: String, _config: &Config, _metadata: &Metadata) -> Preprocessed {
     // TODO: implement *actual* preprocessing using the data:
     //
     // -
@@ -126,7 +126,7 @@ impl std::fmt::Display for PostProcessed {
     }
 }
 
-fn postprocess(processed: Processed, config: &Config, metadata: &Metadata) -> PostProcessed {
+fn postprocess(processed: Processed, _config: &Config, _metadata: &Metadata) -> PostProcessed {
     // TODO: use the config and metadata to substitute the values
     PostProcessed(processed.0)
 }
