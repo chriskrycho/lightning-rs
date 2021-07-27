@@ -7,7 +7,9 @@ edition = "2018"
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 clap = "3.0.0-beta.2"
+comrak = "0.11"
 glob = "0.3"
+html-escape = "0.2"
 json5 = "0.3"
 lazy_static = "1.4"
 lx-json-feed = { path = "./crates/json-feed" }

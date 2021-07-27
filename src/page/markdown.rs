@@ -2,7 +2,7 @@ use pulldown_cmark::{html, CodeBlockKind, Event, Options, Parser, Tag};
 use syntect::html::{ClassStyle, ClassedHTMLGenerator};
 use syntect::parsing::SyntaxSet;
 
-use super::Preprocessed;
+use super::{Preprocessed, Processed};
 
 enum ParseState<'a> {
     NotInCodeBlock,
@@ -10,9 +10,6 @@ enum ParseState<'a> {
     UnknownSyntax,
     KnownSyntax(ClassedHTMLGenerator<'a>),
 }
-
-/// The result of rendering the content.
-pub struct Processed(pub(super) String);
 
 pub(super) fn render_markdown(
     src: Preprocessed,

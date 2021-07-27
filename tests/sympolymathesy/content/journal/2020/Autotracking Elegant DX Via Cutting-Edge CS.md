@@ -82,7 +82,7 @@ This can look like magic when you first encounter it—especially the way undeco
 
 ## How getters work
 
-First, let’s make sure we have a clear handle on how getters work in JavaScript in general. Once you understand this, seeing how autotracking works will be much easier. (If you already have a good understanding of the semantics and behavior of getters vs. assignment, feel free to [skip to the next section](#autotracking).) We’ll start by looking at the exact same class we started with, but with all of the Glimmer and DOM details removed, a constructor added, and continuing to use the same function style for `updateName`:[^updateName-style]
+First, let’s make sure we have a clear handle on how getters work in JavaScript in general. Once you understand this, seeing how autotracking works will be much easier. (If you already have a good understanding of the semantics and behavior of getters vs. assignment, feel free to [skip to the next section](#autotracking).) We’ll start by looking at the exact same class we started with, but with all of the Glimmer and <abbr title="document object model">DOM</abbr> details removed, a constructor added, and continuing to use the same function style for `updateName`:[^updateName-style]
 
 ```js
 const MAX_LENGTH = 10;
@@ -278,7 +278,7 @@ evaluating `nameLength`
 true
 ```
 
-In this example, the JavaScript I’ve written evaluates the values directly when logging them. When we use a value in a template in Ember or Glimmer apps, the template engine (the Glimmer VM) evaluates those values. The VM uses a lightweight reactivity system called *autotracking* to track which items in the UI need to be updated in any render. The next step, then, is understanding autotracking.
+In this example, the JavaScript I’ve written evaluates the values directly when logging them. When we use a value in a template in Ember or Glimmer apps, the template engine (the Glimmer <abbr title="virtual machine">VM</abbr>) evaluates those values. The <abbr title="virtual machine">VM</abbr> uses a lightweight reactivity system called *autotracking* to track which items in the <abbr title="user interface">UI</abbr> need to be updated in any render. The next step, then, is understanding autotracking.
 
 [^updateName-style]: We could switch to a class method here, but we’d just have to switch back later when we come back to the component code again. For Ember users reading this: yes, you *can* use this approach, although it’s currently idiomatic to use `@action`. 
 
@@ -390,7 +390,7 @@ class Person {
 This is *not* the actual implementation—for one thing, you can’t use a decorator to change imports like this!—but it *is* the right mental model.[^actual-impl] Reading a tracked property always invokes `markAsUsed`, and setting it always invokes `markAsChanged`. (This is no different from the logging we added manually in the `PersonInfo` example earlier!)
 
 [^actual-impl]:
-    In the actual implementation, `@tracked` is actually implemented using a closure in another module, which uses functions named `consumeTag` and `dirtyTagFor`. The “tags” referenced in the functions’ names are lightweight objects which store the global clock value for a given piece of tracked data. For a walkthrough of the implementation, see the [Tracking in the Glimmer VM][walkthrough-video] video that [Chris Garrett][cg] and I recorded as he helped me fill in some of my gaps in understanding around all of this.
+    In the actual implementation, `@tracked` is actually implemented using a closure in another module, which uses functions named `consumeTag` and `dirtyTagFor`. The “tags” referenced in the functions’ names are lightweight objects which store the global clock value for a given piece of tracked data. For a walkthrough of the implementation, see the [Tracking in the Glimmer <abbr title="virtual machine">VM</abbr>][walkthrough-video] video that [Chris Garrett][cg] and I recorded as he helped me fill in some of my gaps in understanding around all of this.
 
 ```js
 let person = new PersonInfo();
@@ -503,21 +503,21 @@ Using `this.name` in the template directly evaluates `name`, which is the getter
 
 Triggering `updateName` by typing into the input invokes the setter for `name` installed by `@tracked`, and the setter calls `markAsChanged(this, 'name')`. Calling `markAsChanged` increments the global clock value, stores the updated clock value as the new clock value for `this.name`, and schedules a re-render.
 
-With these pieces in place, we can start to see how the system works as a whole. Reading a `@tracked` property while evaluating a value in the template informs the Glimmer VM that it was used in computing that template value. Changing a `@tracked` property bumps the global and property clock values and schedules a new render. This leads us to idea (3): using the global clock values to know when to recompute values in templates.
+With these pieces in place, we can start to see how the system works as a whole. Reading a `@tracked` property while evaluating a value in the template informs the Glimmer <abbr title="virtual machine">VM</abbr> that it was used in computing that template value. Changing a `@tracked` property bumps the global and property clock values and schedules a new render. This leads us to idea (3): using the global clock values to know when to recompute values in templates.
 
 ### (3) Recomputing
 
-When rendering templates,[^reactive-again] the runtime sets up what is called a *tracking frame* for each new “computation” in the UI—values, components, helpers, modifiers, etc. A tracking frame is basically just a list of all the tracked properties that called `markAsUsed` while computing any particular value in the template. Since each tracking frame corresponds to a dynamic element of the UI, evaluating the entire UI the first time it is rendered produces a tree of tracking frames which corresponds exactly to the tree of UI components. Critically, though, a tracking frame doesn’t store the *values* of the tracked properties referenced during its computation. Instead, the frame stores only a reference to each property along with the property’s current and previous global clock values.
+When rendering templates,[^reactive-again] the runtime sets up what is called a *tracking frame* for each new “computation” in the <abbr title="user interface">UI</abbr>—values, components, helpers, modifiers, etc. A tracking frame is basically just a list of all the tracked properties that called `markAsUsed` while computing any particular value in the template. Since each tracking frame corresponds to a dynamic element of the <abbr title="user interface">UI</abbr>, evaluating the entire <abbr title="user interface">UI</abbr> the first time it is rendered produces a tree of tracking frames which corresponds exactly to the tree of <abbr title="user interface">UI</abbr> components. Critically, though, a tracking frame doesn’t store the *values* of the tracked properties referenced during its computation. Instead, the frame stores only a reference to each property along with the property’s current and previous global clock values.
 
 In a normal JavaScript invocation, there is no active tracking frame, so calling `markAsUsed` is a no-op. When rendering, a tracking frame *does* exist, and it ends up populated with the clock values for all the tracked properties used while calculating that value. When a given tracking frame “closes”, as at the close of a component invocation, it computes its *own* clock value. A tracking frame’s clock value is the maximum clock value of any of the properties marked as used in that frame. Since clock values are integers, this maximum clock value can be computed very simply: by using `Math.max`.[^math-max]
 
-As we saw above, changes enter the system by setting tracked properties. Recall that invoking `markAsChanged` bumps both the overall global clock value and the clock value for that property, and schedules a new render.[^coalescing] When the Glimmer VM re-renders, it can traverse the tree in a [depth-first search](https://medium.com/basecs/demystifying-depth-first-search-a7c14cccf056), comparing each frame’s current and cached clock values. If the clock value for a given frame hasn’t changed, nothing below it in the UI tree has changed, either—so we know we don’t need to re-render it. Checking whether that clock value has changed is literally just an integer equality check. At the nodes which *have* changed, the VM computes the new value and updates the DOM with the result.
+As we saw above, changes enter the system by setting tracked properties. Recall that invoking `markAsChanged` bumps both the overall global clock value and the clock value for that property, and schedules a new render.[^coalescing] When the Glimmer <abbr title="virtual machine">VM</abbr> re-renders, it can traverse the tree in a [depth-first search](https://medium.com/basecs/demystifying-depth-first-search-a7c14cccf056), comparing each frame’s current and cached clock values. If the clock value for a given frame hasn’t changed, nothing below it in the <abbr title="user interface">UI</abbr> tree has changed, either—so we know we don’t need to re-render it. Checking whether that clock value has changed is literally just an integer equality check. At the nodes which *have* changed, the <abbr title="virtual machine">VM</abbr> computes the new value and updates the <abbr title="document object model">DOM</abbr> with the result.
 
 [^math-max]: There are some details about how it checks the tree and makes sure that it manages its internal state correctly, but it really is [using `Math.max`](https://github.com/glimmerjs/glimmer-vm/blob/e8e2fc6f39a60baac2b72c1a19aea9585b162c47/packages/%40glimmer/validator/lib/validators.ts#L130:L172).
 
 [^reactive-again]: or when using a “reactive function” via [the upcoming `invokeHelper` functionality][invoke-helper]
 
-[^coalescing]: The VM coalesces these bumps so if you set a bunch of values in response to user action or API responses or other inputs, it only triggers *one* re-render, not *many*.
+[^coalescing]: The <abbr title="virtual machine">VM</abbr> coalesces these bumps so if you set a bunch of values in response to user action or <abbr title="application programming interface">API</abbr> responses or other inputs, it only triggers *one* re-render, not *many*.
 
 ## Summary
 
@@ -533,11 +533,11 @@ There are a handful of really delightful consequences of this system:
 
 Hopefully this has give you a good idea how autotracking works in general, and specifically how it simultaneously enables most of our code to be “just JavaScript” *and* gives us a very low-cost reactivity.
 
-:::callout
+<div class='callout'>
 
 You can discuss this [Hacker News](https://news.ycombinator.com/item?id=24560106), [lobste.rs](https://lobste.rs/s/amklz3/autotracking_elegant_dx_via_cutting_edge), or [Ember Discuss](https://discuss.emberjs.com/t/autotracking-elegant-dx-via-cutting-edge-cs/18231).
 
-If you’d like to see some of the details of how these pieces are implemented, check out [the video][walkthrough-video] of my conversation with Ember core team member and Glimmer VM contributor [Chris Garrett][cg] ([@pzuraq](https://github.com/pzuraq/)). Chris also gave a [great talk on autotracking](https://www.youtube.com/watch?v=HDBSU2HCLbU) at EmberConf 2020, and wrote up a series of blog posts on the subject:
+If you’d like to see some of the details of how these pieces are implemented, check out [the video][walkthrough-video] of my conversation with Ember core team member and Glimmer <abbr title="virtual machine">VM</abbr> contributor [Chris Garrett][cg] ([@pzuraq](https://github.com/pzuraq/)). Chris also gave a [great talk on autotracking](https://www.youtube.com/watch?v=HDBSU2HCLbU) at EmberConf 2020, and wrote up a series of blog posts on the subject:
 
 1. [What is Reactivity?](https://www.pzuraq.com/what-is-reactivity/)
 2. [What Makes a Good Reactive System?](https://www.pzuraq.com/what-makes-a-good-reactive-system/)
@@ -546,17 +546,8 @@ If you’d like to see some of the details of how these pieces are implemented, 
 
 Readers interested in the underpinnings of autotracking may want to take a look at [Adapton](http://adapton.org), the original research implementation of the specific theory of “incremental computation” underpinning autotracking. For another “real-world” implementation of the same ideas, check out [salsa](https://salsa-rs.github.io/salsa/): a [Rust](https://www.rust-lang.org) implementation of incremental computation which powers the [rust-analyzer](https://rust-analyzer.github.io) language server.
 
-:::
+</div>
 
 [walkthrough-video]: https://www.youtube.com/watch?v=BjKERSRpPeI&amp;feature=youtu.be
 [cg]: https://www.pzuraq.com
 [invoke-helper]: https://emberjs.github.io/rfcs/0626-invoke-helper.html
-
-*[VM]: virtual machine
-
-*[API]: application programming interface
-
-*[UI]: user interface
-
-*[DOM]: document object model
-

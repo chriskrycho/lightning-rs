@@ -1,5 +1,6 @@
 pub mod components;
 pub mod markdown;
+mod markdown_comrak;
 pub mod metadata;
 
 use std::{
@@ -10,14 +11,15 @@ use std::{
 };
 
 use components::Components;
-use markdown::render_markdown;
+// use markdown::render_markdown as render_pulldown;
+use markdown_comrak::render_markdown as render_comrak;
 use serde::{Deserialize, Serialize};
 use syntect::parsing::SyntaxSet;
 use uuid::Uuid;
 
 use crate::config::Config;
 
-use self::{markdown::Processed, metadata::Metadata};
+use self::metadata::Metadata;
 
 /// Source data for a file: where it came from, and its original contents.
 pub struct Source {
@@ -65,7 +67,7 @@ impl Page {
         let metadata = Metadata::new(&source.path, root_dir, header)?;
 
         let body = preprocess(body.into(), &config, &metadata);
-        let contents = render_markdown(body, syntax_set)?;
+        let contents = render_comrak(body, syntax_set)?;
         let contents = postprocess(contents, &config, &metadata);
 
         Ok(Page {
@@ -100,6 +102,10 @@ impl<'a> Preprocessed {
     fn as_str(&'a self) -> &'a str {
         self.0.as_str()
     }
+
+    fn len(&'a self) -> usize {
+        self.0.len()
+    }
 }
 
 /// Ready the text for rendering as markdown
@@ -110,6 +116,9 @@ fn preprocess(text: String, _config: &Config, _metadata: &Metadata) -> Preproces
     // - substitute all references from metadata
     Preprocessed(text)
 }
+
+/// The result of rendering the content.
+pub struct Processed(String);
 
 #[derive(Debug)]
 pub struct PostProcessed(String);
