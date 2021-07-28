@@ -22,7 +22,7 @@ pub(crate) struct Feed<'a> {
 }
 
 impl<'a> Feed<'a> {
-    pub(crate) fn new(title: String, site_config: &'a Config, items: &'a [Page]) -> Feed<'a> {
+    pub(crate) fn _new(title: String, site_config: &'a Config, items: &'a [Page]) -> Feed<'a> {
         Feed {
             title,
             site_config,

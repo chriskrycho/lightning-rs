@@ -80,7 +80,7 @@ impl Page {
     }
 
     /// Given a config, generate the (canonicalized) URL for the page
-    pub fn url(&self, config: &Config) -> String {
+    pub fn _url(&self, config: &Config) -> String {
         String::from(config.url.trim_end_matches('/')) + "/" + &self.metadata.slug
     }
 }
