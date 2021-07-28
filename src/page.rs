@@ -17,7 +17,7 @@ use uuid::Uuid;
 
 use crate::config::Config;
 
-use self::{markdown::Processed, metadata::Metadata};
+use self::metadata::Metadata;
 
 /// Source data for a file: where it came from, and its original contents.
 pub struct Source {
@@ -64,9 +64,9 @@ impl Page {
         let Components { header, body } = Components::try_from(source.contents.as_ref())?;
         let metadata = Metadata::new(&source.path, root_dir, header)?;
 
-        let body = preprocess(body.into(), &config, &metadata);
-        let contents = render_markdown(body, syntax_set)?;
-        let contents = postprocess(contents, &config, &metadata);
+        let preprocessed = Preprocessed::from_str(body, &config, &metadata);
+        let rendered_as_html = render_markdown(preprocessed, syntax_set)?;
+        let contents = postprocess(rendered_as_html, &config, &metadata);
 
         Ok(Page {
             id,
@@ -94,22 +94,25 @@ impl From<&Page> for lx_json_feed::FeedItem {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PageCollections(HashMap<Id, crate::collection::Id>);
 
-pub struct Preprocessed(String);
+struct Preprocessed<'s>(&'s str);
 
-impl<'a> Preprocessed {
-    fn as_str(&'a self) -> &'a str {
-        self.0.as_str()
+impl<'a> Preprocessed<'a> {
+    fn from_str(text: &'a str, _config: &Config, _metadata: &Metadata) -> Preprocessed<'a> {
+        // TODO: implement *actual* preprocessing using the data:
+        //
+        // - substitute all references from metadata
+        Preprocessed(text)
     }
 }
 
-/// Ready the text for rendering as markdown
-fn preprocess(text: String, _config: &Config, _metadata: &Metadata) -> Preprocessed {
-    // TODO: implement *actual* preprocessing using the data:
-    //
-    // -
-    // - substitute all references from metadata
-    Preprocessed(text)
+impl<'a> AsRef<str> for Preprocessed<'a> {
+    fn as_ref(&self) -> &str {
+        self.0
+    }
 }
+
+/// The result of rendering the content.
+pub(self) struct Processed(pub(self) String);
 
 #[derive(Debug)]
 pub struct PostProcessed(String);
