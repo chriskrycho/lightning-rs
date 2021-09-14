@@ -22,6 +22,11 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
     } = get_files_to_load(&in_dir);
     let ThemeSet { themes } = ThemeSet::load_defaults();
 
+    // TODO: generate these as a one-and-done with the themes I *actually* want,
+    // and build a tool that lets me trivially do that on command, but which I
+    // don't need to do unless I'm changing those themes! The output from that
+    // tool (which basically just does this) can just be checked into the repo
+    // and then updated only when needed.
     let style = ClassStyle::Spaced;
     let light = css_for_theme_with_class_style(&themes["InspiredGitHub"], style);
     let dark = css_for_theme_with_class_style(&themes["base16-ocean.dark"], style);
@@ -29,6 +34,14 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
     std::fs::write(&config.output.join("light.css"), light).expect("can write output yo!");
     std::fs::write(&config.output.join("dark.css"), dark).expect("can write output yo!");
 
+    // NOTES:
+    //
+    // - It's not clear how much benefit I get from parallelizing the I/O here.
+    // - The main benefit of parallelization is taking the data on disk, once it
+    //   is all read in, and processing all of the files.
+    // - At a minimum, there's a necessary choke point of collecting all of the
+    //   rendered files so do further iteration before writing things out, b/c
+    //   it's actually not possible to know what to render *without* that.
     content
         .into_par_iter()
         .map(|path| {
@@ -51,8 +64,10 @@ pub fn build(in_dir: PathBuf) -> Result<(), String> {
                 let containing_dir = path
                     .parent()
                     .ok_or_else(|| format!("{} should have a containing dir!", path.display()))?;
+
                 std::fs::create_dir_all(containing_dir)
                     .map_err(|e| format!("{}: {}", path.display(), e.to_string()))?;
+
                 // TODO: replace with a templating engine!
                 std::fs::write(
                     &path,
