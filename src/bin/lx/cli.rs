@@ -13,7 +13,8 @@ use clap::Clap;
     version = "1.0",
     author = "Chris Krycho <hello@@chriskrycho.com>",
     setting = clap::AppSettings::ArgRequiredElseHelp,
-    setting = clap::AppSettings::ColoredHelp
+    global_setting = clap::AppSettings::ColoredHelp,
+    global_setting = clap::AppSettings::ColorAuto
 )]
 pub(crate) enum Command {
     /// Build the site.
