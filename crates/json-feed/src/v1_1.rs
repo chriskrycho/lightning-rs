@@ -230,42 +230,42 @@ impl Builder {
         }
     }
 
-    pub fn with_home_page_url(&mut self, url: &str) -> &mut Self {
+    pub fn with_home_page_url(mut self, url: &str) -> Self {
         self.home_page_url = Some(url.into());
         self
     }
 
-    pub fn with_feed_url(&mut self, url: &str) -> &mut Self {
+    pub fn with_feed_url(mut self, url: &str) -> Self {
         self.feed_url = Some(url.into());
         self
     }
 
-    pub fn with_description(&mut self, description: &str) -> &mut Self {
+    pub fn with_description(mut self, description: &str) -> Self {
         self.description = Some(description.into());
         self
     }
 
-    pub fn with_user_comment(&mut self, comment: &str) -> &mut Self {
+    pub fn with_user_comment(mut self, comment: &str) -> Self {
         self.user_comment = Some(comment.into());
         self
     }
 
-    pub fn with_next_url(&mut self, next_url: &str) -> &mut Self {
+    pub fn with_next_url(mut self, next_url: &str) -> Self {
         self.next_url = Some(next_url.into());
         self
     }
 
-    pub fn with_icon(&mut self, icon: &str) -> &mut Self {
+    pub fn with_icon(mut self, icon: &str) -> Self {
         self.icon = Some(icon.into());
         self
     }
 
-    pub fn with_favicon(&mut self, favicon: &str) -> &mut Self {
+    pub fn with_favicon(mut self, favicon: &str) -> Self {
         self.favicon = Some(favicon.into());
         self
     }
 
-    pub fn with_author(&mut self, options: &AuthorOptions) -> Result<&mut Self, String> {
+    pub fn with_author(mut self, options: &AuthorOptions) -> Result<Self, String> {
         let &AuthorOptions { avatar, name, url } = options;
         let author = match (avatar, name, url) {
             (None, None, None) => {
@@ -300,12 +300,12 @@ impl Builder {
         Ok(self)
     }
 
-    pub fn with_expired(&mut self, expired: bool) -> &mut Self {
+    pub fn with_expired(mut self, expired: bool) -> Self {
         self.expired = Some(expired);
         self
     }
 
-    pub fn with_hubs(&mut self, hubs: &[Hub]) -> &mut Self {
+    pub fn with_hubs(mut self, hubs: &[Hub]) -> Self {
         self.hubs = Some(hubs.into());
         self
     }

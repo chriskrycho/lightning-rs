@@ -36,12 +36,15 @@ impl<'a> TryFrom<Feed<'a>> for JSONFeed {
 
     fn try_from(feed: Feed<'a>) -> Result<Self, Self::Error> {
         let items = feed.items.iter().map(|page| page.into()).collect();
+
+        // TODO: needs the info for the *feed* URL.
         let feed = JSONFeed::builder(&feed.title, items)
             .with_author(&AuthorOptions {
                 name: Some(&feed.site_config.author.name),
                 url: None,
                 avatar: None,
             })?
+            .with_description(&feed.site_config.description)
             .build();
 
         Ok(feed)
