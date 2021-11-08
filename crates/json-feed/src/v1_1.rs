@@ -225,9 +225,44 @@ impl Builder {
     pub fn new(title: &str, items: Vec<FeedItem>) -> Builder {
         Builder {
             title: title.into(),
-            items: items,
+            items,
             ..Default::default()
         }
+    }
+
+    pub fn with_home_page_url(&mut self, url: &str) -> &mut Self {
+        self.home_page_url = Some(url.into());
+        self
+    }
+
+    pub fn with_feed_url(&mut self, url: &str) -> &mut Self {
+        self.feed_url = Some(url.into());
+        self
+    }
+
+    pub fn with_description(&mut self, description: &str) -> &mut Self {
+        self.description = Some(description.into());
+        self
+    }
+
+    pub fn with_user_comment(&mut self, comment: &str) -> &mut Self {
+        self.user_comment = Some(comment.into());
+        self
+    }
+
+    pub fn with_next_url(&mut self, next_url: &str) -> &mut Self {
+        self.next_url = Some(next_url.into());
+        self
+    }
+
+    pub fn with_icon(&mut self, icon: &str) -> &mut Self {
+        self.icon = Some(icon.into());
+        self
+    }
+
+    pub fn with_favicon(&mut self, favicon: &str) -> &mut Self {
+        self.favicon = Some(favicon.into());
+        self
     }
 
     pub fn with_author(&mut self, options: &AuthorOptions) -> Result<&mut Self, String> {
@@ -265,29 +300,24 @@ impl Builder {
         Ok(self)
     }
 
-    pub fn with_home_page_url(&mut self, url: &str) -> &mut Self {
-        self.home_page_url = Some(url.into());
+    pub fn with_expired(&mut self, expired: bool) -> &mut Self {
+        self.expired = Some(expired);
         self
     }
 
-    pub fn with_feed_url(&mut self, url: &str) -> &mut Self {
-        self.feed_url = Some(url.into());
+    pub fn with_hubs(&mut self, hubs: &[Hub]) -> &mut Self {
+        self.hubs = Some(hubs.into());
         self
     }
 
-    pub fn build(&self) -> JSONFeed {
-        let Self {
-            home_page_url,
-            feed_url,
-            ..
-        } = self;
+    pub fn build(self) -> JSONFeed {
         let mut warnings = vec![];
 
-        if home_page_url.is_none() {
+        if self.home_page_url.is_none() {
             warnings.push("missing home_page_url for feed");
         }
 
-        if feed_url.is_none() {
+        if self.feed_url.is_none() {
             warnings.push("missing feed_url for feed");
         }
 
@@ -298,18 +328,18 @@ impl Builder {
 
         JSONFeed {
             version: VERSION,
-            title: self.title.clone(),
-            author: self.author.clone(),
-            home_page_url: home_page_url.clone(),
-            feed_url: feed_url.clone(),
-            description: self.description.clone(),
-            user_comment: self.user_comment.clone(),
-            next_url: self.next_url.clone(),
-            icon: self.icon.clone(),
-            favicon: self.favicon.clone(),
+            title: self.title,
+            author: self.author,
+            home_page_url: self.home_page_url,
+            feed_url: self.feed_url,
+            description: self.description,
+            user_comment: self.user_comment,
+            next_url: self.next_url,
+            icon: self.icon,
+            favicon: self.favicon,
             expired: self.expired,
-            hubs: self.hubs.clone(),
-            items: self.items.clone(),
+            hubs: self.hubs,
+            items: self.items,
         }
     }
 }
