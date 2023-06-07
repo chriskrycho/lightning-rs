@@ -11,11 +11,11 @@ glob = "0.3"
 json5 = "0.4"
 lazy_static = "1.4"
 lx-json-feed = { path = "./crates/json-feed" }
-pulldown-cmark = { version = "0.8", default-features = false, features = ["simd"] }
-rayon = "1.5.0"
-regex = "1.4"
-serde = "1.0"
-serde_derive = "1.0"
+pulldown-cmark = { git = "https://github.com/raphlinus/pulldown-cmark.git", default-features = false, features = ["simd"] }
+rayon = "1"
+regex = "^1"
+serde = "1"
+serde_derive = "1"
 serde_yaml = "0.9"
 slug = "0.1"
 syntect = { version = "4.5", default-features = false, features = ["default-fancy"] }
