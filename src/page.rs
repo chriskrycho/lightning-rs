@@ -1,5 +1,4 @@
 pub mod components;
-pub mod markdown;
 pub mod metadata;
 
 use std::{
@@ -9,11 +8,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use components::Components;
-use markdown::render_markdown;
 use serde::{Deserialize, Serialize};
 use syntect::parsing::SyntaxSet;
 use uuid::Uuid;
+
+use crate::markdown::{render, Rendered};
+use components::Components;
 
 use crate::config::Config;
 
@@ -65,7 +65,7 @@ impl Page {
         let metadata = Metadata::new(&source.path, root_dir, header)?;
 
         let preprocessed = Preprocessed::from_str(body, &config, &metadata);
-        let rendered_as_html = render_markdown(preprocessed, syntax_set)?;
+        let rendered_as_html = render(preprocessed, syntax_set)?;
         let contents = postprocess(rendered_as_html, &config, &metadata);
 
         Ok(Page {
@@ -111,9 +111,6 @@ impl<'a> AsRef<str> for Preprocessed<'a> {
     }
 }
 
-/// The result of rendering the content.
-pub(self) struct Processed(pub(self) String);
-
 #[derive(Debug)]
 pub struct PostProcessed(String);
 
@@ -129,7 +126,7 @@ impl std::fmt::Display for PostProcessed {
     }
 }
 
-fn postprocess(processed: Processed, _config: &Config, _metadata: &Metadata) -> PostProcessed {
+fn postprocess(rendered: Rendered, _config: &Config, _metadata: &Metadata) -> PostProcessed {
     // TODO: use the config and metadata to substitute the values
-    PostProcessed(processed.0)
+    PostProcessed(rendered.into())
 }

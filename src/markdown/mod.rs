@@ -1,8 +1,6 @@
-use pulldown_cmark::{html, CodeBlockKind, Event, Options, Parser, Tag};
+use pulldown_cmark::{html, CodeBlockKind, Event, Options, Parser, Tag, TagEnd};
 use syntect::html::{ClassStyle, ClassedHTMLGenerator};
 use syntect::parsing::SyntaxSet;
-
-use super::Processed;
 
 enum CodeHighlightingState<'a> {
     NotInCodeBlock,
@@ -11,10 +9,16 @@ enum CodeHighlightingState<'a> {
     KnownSyntax(ClassedHTMLGenerator<'a>),
 }
 
-pub(super) fn render_markdown<S: AsRef<str>>(
-    src: S,
-    syntax_set: &SyntaxSet,
-) -> Result<Processed, String> {
+/// The result of rendering the content with Markdown.
+pub struct Rendered(String);
+
+impl From<Rendered> for String {
+    fn from(value: Rendered) -> Self {
+        value.0
+    }
+}
+
+pub(super) fn render<S: AsRef<str>>(src: S, syntax_set: &SyntaxSet) -> Result<Rendered, String> {
     let src = src.as_ref();
     let parser = Parser::new_ext(src, Options::all());
     let mut state = CodeHighlightingState::NotInCodeBlock;
@@ -89,7 +93,7 @@ pub(super) fn render_markdown<S: AsRef<str>>(
                     unreachable!("should never be entering a codeblock when already in a codeblock")
                 }
             },
-            Event::End(Tag::CodeBlock(_)) => match state {
+            Event::End(TagEnd::CodeBlock) => match state {
                 CodeHighlightingState::KnownSyntax(generator) => {
                     let highlighted = generator.finalize();
                     state = CodeHighlightingState::NotInCodeBlock;
@@ -112,5 +116,5 @@ pub(super) fn render_markdown<S: AsRef<str>>(
 
     html::push_html(&mut html_output, events.into_iter());
 
-    Ok(Processed(html_output))
+    Ok(Rendered(html_output))
 }

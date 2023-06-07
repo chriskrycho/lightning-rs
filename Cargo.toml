@@ -11,7 +11,7 @@ glob = "0.3"
 json5 = "0.4"
 lazy_static = "1.4"
 lx-json-feed = { path = "./crates/json-feed" }
-pulldown-cmark = { git = "https://github.com/raphlinus/pulldown-cmark.git", default-features = false, features = ["simd"] }
+pulldown-cmark = { git = "https://github.com/raphlinus/pulldown-cmark.git", default-features = false, features = ["simd", "html"] }
 rayon = "1"
 regex = "^1"
 serde = "1"
