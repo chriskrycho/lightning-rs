@@ -63,17 +63,20 @@ pub(super) fn render_markdown<S: AsRef<str>>(
                 }
             },
             Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(name))) => {
+                println!("syntax being parsed by token: '{name}'");
                 if let Some(looked_up) = syntax_set.find_syntax_by_token(name.as_ref()) {
+                    println!("\tsyntax '{name}' found!");
                     state = CodeHighlightingState::KnownSyntax(
                         ClassedHTMLGenerator::new_with_class_style(
                             looked_up,
-                            &syntax_set,
+                            syntax_set,
                             ClassStyle::Spaced,
                         ),
                     );
                     let html = format!("<pre><code class='{}'>", looked_up.name);
                     events.push(Event::Html(html.into()));
                 } else {
+                    println!("\tsyntax '{name}' not found!");
                     state = CodeHighlightingState::UnknownSyntax;
                     events.push(Event::Html("<pre><code>".into()));
                 }
