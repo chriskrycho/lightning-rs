@@ -4,18 +4,16 @@
 use std::path::PathBuf;
 
 // Third party
-use clap::Clap;
+use clap::Parser;
 
-#[derive(Clap)]
+#[derive(Parser, Debug)]
 #[clap(
     name = "Lightning (lx)",
     about = "A very fast, very opinionated static site generator",
     version = "1.0",
-    author = "Chris Krycho <hello@@chriskrycho.com>",
-    setting = clap::AppSettings::ArgRequiredElseHelp,
-    global_setting = clap::AppSettings::ColoredHelp,
-    global_setting = clap::AppSettings::ColorAuto
+    author = "Chris Krycho <hello@@chriskrycho.com>"
 )]
+#[command(arg_required_else_help(true))]
 pub(crate) enum Command {
     /// Build the site.
     #[clap(name = "build")]

@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
-clap = "4"
+clap = { version = "4", features = ["derive"] }
 glob = "0.3"
 json5 = "0.4"
 lazy_static = "1.4"
