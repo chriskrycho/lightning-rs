@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use syntect::parsing::SyntaxSet;
 use uuid::Uuid;
 
-use crate::markdown::{render, Rendered};
+use crate::markdown::{self, Rendered};
 use components::Components;
 
 use crate::config::Config;
@@ -64,9 +64,9 @@ impl Page {
         let Components { header, body } = Components::try_from(source.contents.as_ref())?;
         let metadata = Metadata::new(&source.path, root_dir, header)?;
 
-        let preprocessed = Preprocessed::from_str(body, &config, &metadata);
-        let rendered_as_html = render(preprocessed, syntax_set)?;
-        let contents = postprocess(rendered_as_html, &config, &metadata);
+        let preprocessed = Preprocessed::from_str(body, config, &metadata);
+        let rendered_as_html = markdown::render(preprocessed, syntax_set)?;
+        let contents = postprocess(rendered_as_html, config, &metadata);
 
         Ok(Page {
             id,
