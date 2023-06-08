@@ -1,0 +1,248 @@
+<html>
+                            <head>
+                                <link rel="stylesheet" href="/light.css" media="(prefers-color-scheme: light)" />
+                                <link rel="stylesheet" href="/dark.css" media="(prefers-color-scheme: dark)" />
+                            </head>
+                            <body>
+                                <p>:::note</p>
+<p>There has been some interesting discussion about switching away from the use of <code>master</code> as the name of the main development branch for projects like this, due to its associations with slavery (from which the terms “master” and “slave,” with all their very wretched history). For good or for ill, <code>master</code> is the traditional name, and I’ve left it as that in this discussion. However, you easily could—and very possibly <em>should</em>!—substitute <code>main</code> throughout wherever the samples have <code>master</code>. I’ve left it this way here largely to make this post as easy as possible to find via web search.</p>
+<p>:::</p>
+<h2>Overview</h2>
+<p>When working with long-running projects (like difficult dependency upgrades), it’s helpful to land as many changes as possible on the main development branch instead of landing them all at once in a big bang. In at least some cases, we can accomplish this by making good use of the capabilities of distributed version control systems (<abbr>DVCS</abbr>s) like Git: clones, remotes, cherry-picking, and branches.</p>
+<h2>Motivation</h2>
+<p>Large software dependency upgrades—whether landing a new version of the dependency, or opting into new behavior by toggling feature flags—often involves making a <em>lot</em> of changes across an application. Perhaps there are formally breaking changes; perhaps your app was using private API; perhaps there are just subtle changes in the unspecified behavior of the app which you were incidentally relying on. Whatever the reason, it’s often the case that landing an upgrade against any sufficiently large code base is a long-running task which requires <em>many</em> changes to existing code.</p>
+<p>There are two basic ways to make those kinds of changes:</p>
+<ul>
+<li>make all of them in a single long-lived branch, with the change at the root of that branch, and merge it all into the main development branch at the end</li>
+<li>make as many as possible in small changes against the main development, landing as few as possible alongside the upgrade</li>
+</ul>
+<p>When I’m making these changes, I <em>strongly</em> favor the second approach for several reasons.</p>
+<p>First, and most importantly, it minimizes the risk of the final merge breaking things and having to be reverted. If there are a lot of changes, even genuinely great test coverage won’t necessarily guarantee you’ve covered <em>every</em> scenario. Splitting out the changes makes it much easier to identify if it was the upgrade itself that caused little variations in behavior, or if it was another change you made along the way.</p>
+<p>Second, it decreases the difficulty of keeping the branch up to date and working. This may not matter much if you’re the only one working on a project (though even there, everything above still applies). If you’re working with others, however, and they’re continuing to make changes to the same code base, keeping in sync becomes more difficult in proportion to the number of changes you’ve made and the rate of change in the code base at large. Every change someone else makes is a change you have to merge into your branch and verify <em>again</em> that nothing is broken. That’s hard enough if those are in the same modules you’re working with; it becomes even more complicated if they’re just in modules your changes interact with, where subtle misalignments can creep in over time.</p>
+<p>For the rest of this post, I want to share a practical mechanic I use for actually accomplishing this (in Git, but you can apply the exact same ideas in Mercurial or other version control systems).</p>
+<h2>Implementation</h2>
+<p>The key to making this work well is taking advantage of modern distributed version control systems’ ability to have multiple full<sup class="footnote-reference"><a href="#full">1</a></sup> copies of the repository and that there is no <em>absolute</em> single source of truth (even if your organization, like most, tends to operate as though a particular copy <em>is</em> the source of truth).</p>
+<div class="footnote-definition" id="full"><sup class="footnote-definition-label">1</sup>
+<p>or partial, if you like: Git’s <a href="https://github.blog/2020-01-17-bring-your-monorepo-down-to-size-with-sparse-checkout/">sparse checkouts</a> are super neat!</p>
+</div>
+<h3>Setup</h3>
+<p>First up, I create two clones of the repository. If these are long lived, I’ll often name them both for the name of the project, but with <code>-alt</code> tacked onto the end of one of them. For example, if I were working on a project named <code>new-horizons</code>,<sup class="footnote-reference"><a href="#space">2</a></sup> I’d have <code>new-horizons</code> and <code>new-horizons-alt</code>.<sup class="footnote-reference"><a href="#disk-layout">3</a></sup></p>
+<p>Once I have both of them cloned, I take advantage of the fact that Git will happily let you have as many “remotes” as you like. A “remote” is just Git’s name for a copy of the repository that is somewhere else than the copy you’re working with. Most of the time, that remote is someplace like GitHub or GitLab or Bitbucket or some internal-to-our-company Git server. It doesn’t <em>have</em> to be, though. It can also be another copy on disk!</p>
+<p>To add a remote, you use the command <code>git remote add</code> and then give it a path to the location of the repository and a name to use when referring to it. By default, wherever you initially clone the repository from is a remote named <code>origin</code>. You can rename remotes however you like, and names aren’t really all that important to Git. Branches will normally get set up to push and pull from whatever is the default remote (which you <a href="https://git-scm.com/docs/git-config#Documentation/git-config.txt-remotepushDefault">can configure</a>), but even that you can override.</p>
+<p>In this case, I start by cloning both from the same <code>origin</code>—it makes it way easier for later steps. Let’s say I was cloning <code>new-horizons</code> from a GitHub repository under <a href="https://github.com/chriskrycho">my profile</a>. I’d do this:</p>
+<pre><code class='Bourne Again Shell (bash)'><span class="source shell bash"><span class="meta function-call shell"><span class="variable function shell">$</span></span><span class="meta function-call arguments shell"> cd <span class="meta group expansion tilde"><span class="variable language tilde shell">~</span></span>/dev/chriskrycho</span>
+<span class="meta function-call shell"><span class="variable function shell">$</span></span><span class="meta function-call arguments shell"> git clone git@github:chriskrycho/new-horizons</span>
+<span class="meta function-call shell"><span class="variable function shell">$</span></span><span class="meta function-call arguments shell"> git clone git@github:chriskrycho/new-horizons new-horizons-alt</span>
+</span></code></pre>
+<p>That second clone is just repeating the first one, but putting it in the <code>new-horizons-alt</code> directory.</p>
+<p>Once I have both clones, I’ll add each as a remote to the other:<sup class="footnote-reference"><a href="#local">4</a></sup></p>
+<pre><code class='Bourne Again Shell (bash)'><span class="source shell bash"><span class="meta function-call shell"><span class="variable function shell">$</span></span><span class="meta function-call arguments shell"> cd new-horizons</span>
+<span class="meta function-call shell"><span class="variable function shell">$</span></span><span class="meta function-call arguments shell"> git remote add alt ../new-horizons-alt</span>
+<span class="meta function-call shell"><span class="variable function shell">$</span></span><span class="meta function-call arguments shell"> cd ../new-horizons-alt</span>
+<span class="meta function-call shell"><span class="variable function shell">$</span></span><span class="meta function-call arguments shell"> git remote add local ../new-horizons</span>
+</span></code></pre>
+<p>Now, if I list the remotes in either using <code>git remote --verbose</code>, I’ll see <code>origin</code> listed, but also the other local copy! Assuming I’m in <code>~/dev/chriskrycho/new-horizons</code>:</p>
+<pre><code class='Bourne Again Shell (bash)'><span class="source shell bash"><span class="meta function-call shell"><span class="variable function shell">$</span></span><span class="meta function-call arguments shell"> git remote<span class="variable parameter option shell"><span class="punctuation definition parameter shell"> --</span>verbose</span></span>
+<span class="meta function-call shell"><span class="variable function shell">alt</span></span><span class="meta function-call arguments shell">	../new-horizons-alt/ (fetch</span><span class="meta function-call shell"></span><span class="meta post-cmd shell">)</span>
+<span class="meta function-call shell"><span class="variable function shell">alt</span></span><span class="meta function-call arguments shell">	../new-horizons-alt/ (push</span><span class="meta function-call shell"></span><span class="meta post-cmd shell">)</span>
+<span class="meta function-call shell"><span class="variable function shell">origin</span></span><span class="meta function-call arguments shell">	git@github.com:chriskrycho/new-horizons.git (fetch</span><span class="meta function-call shell"></span><span class="meta post-cmd shell">)</span>
+<span class="meta function-call shell"><span class="variable function shell">origin</span></span><span class="meta function-call arguments shell">	git@github.com:chriskrycho/new-horizons.git (push</span><span class="meta function-call shell"></span><span class="meta post-cmd shell">)</span>
+</span></code></pre>
+<p>Once I have both clones in place, I keep one of them tracking the main development branch and the other a branch for the long-running task I’m working on. (Usually I will track the main development branch in the <code>-alt</code> clone, but it doesn’t actually matter, just as long as you know which is which.) For the sake of discussion, I’ll refer to the main development branch as <code>master</code> and the task branch as <code>pluto</code> for the rest of the post.</p>
+<div class="footnote-definition" id="space"><sup class="footnote-definition-label">2</sup>
+<p>Space nerds unite! The New Horizons mission was just <em>so good</em>!</p>
+</div>
+<div class="footnote-definition" id="disk-layout"><sup class="footnote-definition-label">3</sup>
+<p>I habitually locate all my repositories in a folder named after the organization that owns them (whatever their hosting), inside my <code>~/dev</code> folder. For example, the <a href="https://github.com/typed-ember/ember-cli-typescript">ember-cli-typescript</a> repo lives at <code>~/dev/typed-ember/ember-cli-typescript</code>. So if <code>new-horizons</code> were a LinkedIn project, these would live in <code>~/dev/linkedin/new-horizons</code> and <code>~/dev/linkedin/new-horizons-alt</code>.</p>
+</div>
+<div class="footnote-definition" id="local"><sup class="footnote-definition-label">4</sup>
+<p>When working in a pull-request-oriented flow for open-source software development, I often name the “central” remote <code>upstream</code> and my own fork <code>origin</code>. This workflow is a little different from that, as will become clear.</p>
+</div>
+<h3>Workflow</h3>
+<p>The next step is to actually make progress on the upgrade or other long-running task! From here on out I’ll both <em>describe</em> what I do and show the result in terms of the graph of Git commits that result.</p>
+<p>Initially, both <code>new-horizons</code> and <code>new-horizons-alt</code> with the same Git commit graph. It looks like this:</p>
+<figure>
+    <picture>
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/initial-light.png" media="(prefers-color-scheme: light)">
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/initial-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/initial-light.png">
+    </picture>
+    <figcaption>initial state</figcaption>
+</figure>
+<p>Then I create a new branch named <code>pluto</code> on the main clone (<code>new-horizons</code>):<sup class="footnote-reference"><a href="#branch-create">5</a></sup></p>
+<pre><code class='Bourne Again Shell (bash)'><span class="source shell bash"><span class="meta function-call shell"><span class="variable function shell">$</span></span><span class="meta function-call arguments shell"> git branch<span class="variable parameter option shell"><span class="punctuation definition parameter shell"> --</span>create</span> pluto</span>
+</span></code></pre>
+<p>The result is identical, except that I now have a working branch:</p>
+<figure>
+    <picture>
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/with-pluto-light.png" media="(prefers-color-scheme: light)">
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/with-pluto-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/with-pluto-light.png">
+    </picture>
+    <figcaption>with <code>pluto</code></figcaption>
+</figure>
+<p>I start by adding the baseline for the large change—upgrading the dependency:</p>
+<figure>
+    <picture>
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/with-upgrade-light.png" media="(prefers-color-scheme: light)">
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/with-upgrade-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/with-upgrade-light.png">
+    </picture>
+    <figcaption>with upgrade commit on <code>pluto</code></figcaption>
+</figure>
+<p>Then I get the test suite running against that change, and identify a failure in the test suite and start working on fixing it.<sup class="footnote-reference"><a href="#test-suite">6</a></sup> Once I have a fix done, I commit it on the <code>pluto</code> branch in that clone:</p>
+<figure>
+    <picture>
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/with-first-fix-light.png" media="(prefers-color-scheme: light)">
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/with-first-fix-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/with-first-fix-light.png">
+    </picture>
+    <figcaption>with first fix on <code>pluto</code></figcaption>
+</figure>
+<p>Now I need a way to apply that change back to the other copy of the repository, but <em>without</em> the upgrade. For this, I use the <code>git cherry-pick</code> command, which lets you take a single commit or a range of commit from another part of Git history and apply it to the current state of your repository.</p>
+<p>In the <code>new-horizons-alt</code> repo—usually in another terminal view that I have open in parallel—I apply the change, <em>without</em> the upgrade fix in place. I do this in four steps:</p>
+<ol>
+<li>
+<p>Update to the latest <code>master</code> from <code>origin</code>, so that I can minimize the possibility of merge or rebase conflicts.</p>
+<pre><code class='Bourne Again Shell (bash)'><span class="source shell bash"><span class="meta function-call shell"><span class="variable function shell">$</span></span><span class="meta function-call arguments shell"> git pull  <span class="comment line number-sign shell"><span class="punctuation definition comment begin shell">#</span></span><span class="comment line number-sign shell"> or git pull origin/master</span><span class="comment line number-sign shell">
+</span></span></span></code></pre></li>
+<li>
+<p>Fetch my updates from <code>new-horizons</code>. So, in <code>new-horizons-alt</code>:</p>
+<pre><code class='Bourne Again Shell (bash)'><span class="source shell bash"><span class="meta function-call shell"><span class="variable function shell">$</span></span><span class="meta function-call arguments shell"> git fetch local</span>
+</span></code></pre></li>
+<li>
+<p>Create a branch for the one single change I just made in <code>new-horizons</code>.</p>
+<pre><code class='Bourne Again Shell (bash)'><span class="source shell bash"><span class="meta function-call shell"><span class="variable function shell">git</span></span><span class="meta function-call arguments shell"> branch<span class="variable parameter option shell"><span class="punctuation definition parameter shell"> --</span>create</span> some-pluto-fix</span>
+</span></code></pre></li>
+<li>
+<p>Grab the top-most commit from the <code>pluto</code> branch on <code>local</code>, using Git’s <code>cherry-pick</code> command:</p>
+<pre><code class='Bourne Again Shell (bash)'><span class="source shell bash"><span class="meta function-call shell"><span class="variable function shell">git</span></span><span class="meta function-call arguments shell"> cherry-pick local/pluto</span>
+</span></code></pre>
+<p>This will grab <em>just</em> the commit at the very tip of <code>pluto</code> in <code>new-horizons</code> and apply it as a single commit on the <code>some-pluto-fix</code> branch in <code>new-horizons-alt</code>.</p>
+</li>
+</ol>
+<p>Now <code>pluto</code> in the <code>new-horizons</code> clone has the upgrade and a fix in place, while <code>some-pluto-fix</code> in the <code>new-horizons-alt</code> clone has <em>just</em> the fix in place. </p>
+<figure>
+    <picture>
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/after-cherry-picking-light.png" media="(prefers-color-scheme: light)">
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/after-cherry-picking-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/after-cherry-picking-light.png">
+    </picture>
+    <figcaption>after cherry picking</figcaption>
+</figure>
+<p>I can run the test suite again in <em>this</em> copy of the code and make sure that my change works the way I expect it to <em>without</em> the upgrade in place. If it doesn’t, I keep working on it till my implementation <em>does</em> work in both the <code>pluto</code> and <code>some-pluto-fix</code> branches.<sup class="footnote-reference"><a href="#rarely">7</a></sup> Then I put it up for review and land it in the <code>master</code> branch of the codebase!</p>
+<p>Once it lands on <code>master</code>, I update both repositories. In <code>new-horizons-alt</code>, this just means checking out <code>master</code> and pulling:</p>
+<pre><code class='Bourne Again Shell (bash)'><span class="source shell bash"><span class="meta function-call shell"><span class="variable function shell">$</span></span><span class="meta function-call arguments shell"> git checkout master</span>
+<span class="meta function-call shell"><span class="variable function shell">$</span></span><span class="meta function-call arguments shell"> git pull</span>
+</span></code></pre>
+<p>In <code>new-horizons</code>, it means updating <em>both</em> <code>master</code> and <code>pluto</code>—by pulling the commits into each, with a <a href="https://git-scm.com/docs/git-rebase">rebase</a> for <code>pluto</code>:</p>
+<pre><code class='Bourne Again Shell (bash)'><span class="source shell bash"><span class="meta function-call shell"><span class="variable function shell">$</span></span><span class="meta function-call arguments shell"> git checkout master</span>
+<span class="meta function-call shell"><span class="variable function shell">$</span></span><span class="meta function-call arguments shell"> git pull</span>
+<span class="meta function-call shell"><span class="variable function shell">$</span></span><span class="meta function-call arguments shell"> git checkout pluto</span>
+<span class="meta function-call shell"><span class="variable function shell">$</span></span><span class="meta function-call arguments shell"> git pull<span class="variable parameter option shell"><span class="punctuation definition parameter shell"> --</span>rebase</span> origin master</span>
+</span></code></pre>
+<p>Doing the <code>pull</code> on <code>master</code> in both clones will get it up to date with the fix I landed now that it has been merged. Doing the <code>pull --rebase</code> on <code>pluto</code> in the <code>new-horizons</code> clone also gets it up to date—but that’s a more significant change for that branch. In this case, it looks at the difference between <code>pluto</code> and how <code>master</code> looks on <code>origin</code>, and <em>re-applies</em> any changes that aren’t present on <code>pluto</code>. Since the exact same patch corresponding to the fix previously at the tip of <code>pluto</code> is now in the history of <code>master</code>, Git drops it from the tip of the <code>pluto</code> branch, leaving me with just one commit on <code>pluto</code> ahead of <code>master</code>: the upgrade.<sup class="footnote-reference"><a href="#origin-master">8</a></sup> Here’s what we have on the two branches now:</p>
+<figure>
+    <picture>
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/after-pulling-and-rebasing-light.png" media="(prefers-color-scheme: light)">
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/after-pulling-and-rebasing-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/after-pulling-and-rebasing-light.png">
+    </picture>
+    <figcaption>after pulling and rebasing</figcaption>
+</figure>
+<p>Note that the commit representing the upgrade—the tip of <code>pluto</code>—now has a new SHA value, because commit hashes don’t just represent the set of the changes included in that commit (i.e. the <i>patch</i>) but also the history to which the patch was applied. If you apply the same patch to two different histories, you’ll always get two different hashes. Even though the SHA values for the fix were different, though, Git can recognize that the <em>patches</em> applied were the same, and drop the now-unnecessary commit.</p>
+<p>Depending on the merge strategy used, there’s one additional step to do back in <code>new-horizons-alt</code>: clean up the <code>some-pluto-fix</code> branch. If the commit was merged in a way that preserved its original hashes—that is, by a <em>merge</em> (fast-forward or not), and <em>not</em> by cherry-picking or rebasing—then you can just delete the branches, because Git will recognize that they are already part of <code>master</code>.</p>
+<p>If it was cherry-picked or rebased, though, it will have a new commit hash. Git is smart enough to drop identical patches from a branch (which is how <code>pluto</code> ended up with the right shape above), but it is <em>not</em> smart enough to recognize that identical patches on different branches means the branches have been merged. In that case, I would need to <em>force</em> delete the branch: Git protects us from deleting branches that haven’t been merged by default, since that’s <em>often</em> a mistake.</p>
+<pre><code class='Bourne Again Shell (bash)'><span class="source shell bash"><span class="comment line number-sign shell"><span class="punctuation definition comment begin shell">#</span></span><span class="comment line number-sign shell"> the long form</span><span class="comment line number-sign shell">
+</span><span class="meta function-call shell"><span class="variable function shell">$</span></span><span class="meta function-call arguments shell"> git branch<span class="variable parameter option shell"><span class="punctuation definition parameter shell"> --</span>delete</span><span class="variable parameter option shell"><span class="punctuation definition parameter shell"> --</span>force</span> some-pluto-fix
+<span class="comment line number-sign shell"><span class="punctuation definition comment begin shell">#</span></span><span class="comment line number-sign shell"> the short form</span><span class="comment line number-sign shell">
+</span>$ git branch<span class="variable parameter option shell"><span class="punctuation definition parameter shell"> -</span>D</span> some-pluto-fix</span>
+</span></code></pre>
+<p>That’s the whole workflow! From this point forward, I just repeat until the upgrade is done: adding commits that fix bugs onto <code>pluto</code> in <code>new-horizons</code>, fetching into <code>new-horizons-alt</code> and cherry-picking those fixes into their own individual branches, landing them, and rebasing.</p>
+<div class="footnote-definition" id="branch-create"><sup class="footnote-definition-label">5</sup>
+<p>I’m using the <code>git branch --create</code> command introduced in Git 2.23. If using an earlier version of Git, you can use the command <code>git checkout --branch</code>, which accomplishes the same thing but was a bit more confusing.</p>
+</div>
+<div class="footnote-definition" id="test-suite"><sup class="footnote-definition-label">6</sup>
+<p>This whole strategy hinges entirely on having a useful test suite. If you don’t have reasonably good test coverage, good luck making large changes of <em>any</em> kind to an app of any size without breaking things.</p>
+</div>
+<div class="footnote-definition" id="origin-master"><sup class="footnote-definition-label">8</sup>
+<p>I could also do <code>git rebase master</code>, but I tend to do a <code>pull --rebase</code> against the upstream because I work in fast-moving repositories <em>and</em> this way I don’t <em>have</em> to keep my local <code>master</code> up to date. I can if it’s helpful… but <em>only</em> if it’s </p>
+</div>
+<div class="footnote-definition" id="rarely"><sup class="footnote-definition-label">7</sup>
+<p>Rarely, there are times when I hit a thing I can’t fix safely against both <code>master</code> and <code>pluto</code>. In those cases, I don’t try to cherry-pick it over as described here. I emphasize, though, that this is genuinely <em>very</em> rare in most cases.</p>
+</div>
+<h3>Efficiency</h3>
+<p>You might be thinking that constantly bouncing back and forth like this could get old. You would be right! In practice, I often work in a slight <em>variation</em> on the above approach, which makes it much more efficient.</p>
+<p>Instead of landing changes one commit at a time, I will land a series of discrete fixes on the <code>pluto</code> branch, and then cherry-pick each of them into their own branches and pull requests for review once I have stocked up a series of them. This is especially helpful when I am in a <a href="https://en.wikipedia.org/wiki/Flow_(psychology)">flow state</a>: I can just keep landing fixes until I run out of steam, and then switch to the more mechanical work of pulling them into branches and creating pull requests.</p>
+<p>Here’s how that works. Everything <em>starts</em> the same as in the previous flow: with the upgrade sitting on top of <code>master</code> in the <code>pluto</code> branch in <code>new-horizons</code>:</p>
+<figure>
+    <picture>
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/initial-light.png" media="(prefers-color-scheme: light)">
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/initial-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/initial-light.png">
+    </picture>
+    <figcaption>the same initial state</figcaption>
+</figure>
+<p>Now, instead of fixing just <em>one</em> bug before switching back over, I fix several in a row—but each in a discrete commit. For convenience, I’ll refer to these as <code>A</code>, <code>B</code>, and <code>C</code>; in reality these would be Git SHA values. Here, the <code>pluto</code> branch contains <code>A</code>, then <code>B</code>, then <code>C</code>.</p>
+<figure>
+    <picture>
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/series-of-fixes-light.png" media="(prefers-color-scheme: light)">
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/series-of-fixes-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/series-of-fixes-light.png">
+    </picture>
+    <figcaption>a series of fixes on <code>pluto</code></figcaption>
+</figure>
+<p>Keeping them in discrete commits like this means I can <code>cherry-pick</code> them individually into their own branches. Switching back to <code>new-horizon-alt</code>, I create <code>fix-a</code>, <code>fix-b</code>, and <code>fix-c</code> branches from <code>master</code>, and cherry-pick the corresponding commits onto them: <code>fix-a</code> <em>only</em> has <code>A</code>, <code>fix-b</code> <em>only</em> has <code>B</code>, and <code>fix-c</code> <em>only</em> has <code>C</code>:</p>
+<figure>
+    <picture>
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/fixes-separate-branches-light.png" media="(prefers-color-scheme: light)">
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/fixes-separate-branches-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/fixes-separate-branches-light.png">
+    </picture>
+    <figcaption>fixes applied to separate branches</figcaption>
+</figure>
+<p>Each of these will merge in its own time, after being reviewed and passing tests on CI. Once the commits are merged, I’ll update to the current <code>master</code> on <code>new-horizons-alt</code>, just as before:</p>
+<pre><code>$ git checkout master
+$ git pull
+</code></pre>
+<p>Now <code>master</code> contains all of the changes I made. They’re not necessarily in the same order they were in the original upgrade branch that I cherry-picked them from—but that’s fine. After all, that’s exactly why they were broken out into discrete commits! The commit graph might end up being the <em>previous</em> <code>HEAD</code> on <code>master</code>, then <code>C</code>, then <code>A</code>, then <code>B</code>—the order will just be whatever order they happened to land it:</p>
+<figure>
+    <picture>
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/multiple-commits-master-light.png" media="(prefers-color-scheme: light)">
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/multiple-commits-master-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/multiple-commits-master-light.png">
+    </picture>
+    <figcaption>multiple commits on <code>master</code></figcaption>
+</figure>
+<p>At this point, <code>master</code> contains all the fixes I made on <code>pluto</code> in the <code>new-horizons</code> branch. I can now rebase so once again my working copy <em>only</em> contains the <code>upgrade</code> commit on top of <code>master</code>.</p>
+<pre><code>$ git pull --rebase origin master
+</code></pre>
+<p>Now, my commit graph for <code>pluto</code> is once again just <code>master</code> with one extra commit, the upgrade, all sitting on top of the changes I made in <code>A</code>, <code>B</code>, and <code>C</code>:</p>
+<figure>
+    <picture>
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/fully-merged-light.png" media="(prefers-color-scheme: light)">
+        <source srcset="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/fully-merged-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="https://cdn.chriskrycho.com/file/chriskrycho-com/images/essays/git-workflow/fully-merged-light.png">
+    </picture>
+    <figcaption>after rebasing with <code>A</code>, <code>B</code>, and <code>C</code>.</figcaption>
+</figure>
+<p>Finally, I clean up the branches I created for the fixes.</p>
+<pre><code class='Bourne Again Shell (bash)'><span class="source shell bash"><span class="comment line number-sign shell"><span class="punctuation definition comment begin shell">#</span></span><span class="comment line number-sign shell"> the long form</span><span class="comment line number-sign shell">
+</span><span class="meta function-call shell"><span class="variable function shell">$</span></span><span class="meta function-call arguments shell"> git branch<span class="variable parameter option shell"><span class="punctuation definition parameter shell"> --</span>delete</span> fix-a fix-b fix-c
+<span class="comment line number-sign shell"><span class="punctuation definition comment begin shell">#</span></span><span class="comment line number-sign shell"> the short form</span><span class="comment line number-sign shell">
+</span>$ git branch<span class="variable parameter option shell"><span class="punctuation definition parameter shell"> -</span>d</span> fix-a fix-b fix-c</span>
+</span></code></pre>
+<p>And that’s it! Then I start again—and repeat until it’s done.</p>
+<h2>Conclusion</h2>
+<p>In general, it’s really helpful to avoid getting into the situation where this kind of thing is required in the first place—</p>
+<ul>
+<li>have your test suite run against every canary, beta, and stable release of your dependencies, and file bugs internally or upstream. F</li>
+<li>figure out how to land even large, sweeping changes behind feature flags</li>
+<li>land features incrementally instead of needing to do a lot of fixing up and rebasing</li>
+</ul>
+<p>—but sometimes this kind of thing is out of your control, as it was out of mine last year. I hope if you find yourselves in the same spot I found myself last August, you now have a good handle on some of the ways you can manage this kind of large, long-running task effectively!</p>
+<p>*[CI]: continuous integration
+*[SHA]: secure hash algorithm</p>
+
+                            </body>
+                        </html>

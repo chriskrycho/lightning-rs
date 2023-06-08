@@ -1,0 +1,344 @@
+<html>
+                            <head>
+                                <link rel="stylesheet" href="/light.css" media="(prefers-color-scheme: light)" />
+                                <link rel="stylesheet" href="/dark.css" media="(prefers-color-scheme: dark)" />
+                            </head>
+                            <body>
+                                <p>One of the most important posts I’ve encountered in the last half decade was Scott Wlaschin’s <a href="https://fsharpforfunandprofit.com/posts/designing-with-types-making-illegal-states-unrepresentable/">Designing with types: Making illegal states unrepresentable</a>. The big idea is to use types—in the original blog post, in F^♯^—to make it so you <em>never</em> have to worry about a whole class of bugs in your business logic.</p>
+<p>In the rest of this post, I’m just going to take Wlaschin’s original idea and translate it fairly directly to TypeScript. Accordingly, it’s worth understanding that there is basically <em>nothing</em> original in the rest of the post. I’ve borrowed the headings directly from Wlaschin’s post, and quoted him directly in a number of cases; this is all entirely his  Wlaschin!</p>
+<h2>Making Illegal States Unrepresentable</h2>
+<p>Wlaschin starts by introducing the idea of a <code>Contact</code> type, which represents something like an entry in an address book app. Initially we might model it like this:</p>
+<pre><code>class Contact {
+  name: Name;
+  emailContactInfo: EmailContactInfo;
+  postalContactInfo: PostContactInfo;
+
+  constructor(
+    name: Name,
+    emailContactInfo: EmailContactInfo,
+    postalContactInfo: PostalContactInfo
+  ) {
+    this.name = name;
+    this.emailContactInfo = emailContactInfo;
+    this.postalContactInfo = postalContactInfo;
+  }
+};
+</code></pre>
+<p>:::note</p>
+<p>For scenarios like this where the <code>constructor</code> does nothing but set up some properties with values passed in, TypeScript provides a constructor-only shorthand which looks like this:</p>
+<pre><code>class Contact {
+  constructor(
+    public name: Name,
+    public emailContactInfo: EmailContactInfo,
+    public postalContactInfo: PostalContactInfo
+  ) {}
+}
+</code></pre>
+<p>I will be using this style throughout the rest of the post, because these classes are just a lightweight way of setting up a kind of “record” to pass around some data. For the same reason, I will also mark all of these types as <code>readonly</code>: the intent is “don’t change these in any given instance.”</p>
+<pre><code>class Contact {
+  constructor(
+    public readonly name: Name,
+    public readonly emailContactInfo: EmailContactInfo,
+    public readonly postalContactInfo: PostalContactInfo
+  ) {}
+}
+</code></pre>
+<p>:::</p>
+<h2>Background</h2>
+<p>First, a little setup. The types <code>Name</code>, <code>EmailContactInfo</code>, and <code>PostContactInfo</code> are simple types that wrap around a string, so you can’t accidentally mix them up and use them where the other one belongs. The simplest way to write these is something like this:</p>
+<pre><code>class Name {
+  constructor(private readonly value: string) {}
+}
+
+class EmailContactInfo {
+  constructor(private readonly value: string) {}
+}
+
+class PostalContactInfo {
+  constructor(private readonly value: string) {}
+}
+</code></pre>
+<p>Once you have these, things that take a <code>string</code> will not accept <code>Name</code> or <code>EmailContactInfo</code> or <code>PostalContactInfo</code>, and things that take a <code>Name</code> will not accept an <code>EmailContactInfo</code>, and so on. This works specifically because we used a <code>private</code> type; if it were public the types would be compatible because they have the same structure. If we <em>didn’t</em> do this, and just used strings, we could easily intermix these on accident. (For an alternative approach, see <a href="#appendix-tagged-unions-in-typescript"><b>Appendix: “Tagged Unions” in TypeScript</b></a> below. You can read Wlaschin’s writeup of how to do this in F^♯^ <a href="https://fsharpforfunandprofit.com/posts/designing-with-types-single-case-dus/">here</a>.)</p>
+<p>Wlaschin’s example goes one step further with <code>EmailContactInfo</code> and makes it so that you can’t actually create an invalid email—to handle things like <code>hello@potato</code>, which is not a valid email address. We can do that in TypeScript with a <em>private constructor</em> and some <em>static helper methods</em>:</p>
+<pre><code>class EmailContactInfo {
+  private constructor(private readonly value: string) {}
+
+  static create(value: string): EmailContactInfo | undefined {
+    return isValid(value)
+      ? new EmailContactInfo(value)
+      : undefined;
+  }
+
+  static isValid(value: string): boolean {
+    return /^\S+@\S+\.\S+$/.test(value);
+  }
+}
+</code></pre>
+<p>:::note</p>
+<p>That’s not an <em>especially</em> robust validation of emails, but it’s sufficient for the rest of this example.</p>
+<p>:::</p>
+<h2>Making illegal states unrepresentable</h2>
+<p>Now we’re ready to actually dig into the meat of the example. Wlaschin suggests a fairly realistic example (I’ve seen constraints just like this pretty often):</p>
+<blockquote>
+<p>Now let’s say that we have the following simple business rule: <i>“A contact must have an email or a postal address”</i>. Does our type conform to this rule?</p>
+<p>The answer is no. The business rule implies that a contact might have an email address but no postal address, or vice versa. But as it stands, our type requires that a contact must always have both pieces of information.</p>
+<p>The answer seems obvious – make the addresses optional…</p>
+</blockquote>
+<p>In TypeScript, making the two fields optional would look like this (note the <code>?</code> after the two optional fields):</p>
+<pre><code>type Contact = {
+  name: Name;
+  emailContactInfo?: EmailContactInfo;
+  postalContactInfo?: PostalContactInfo;
+};
+</code></pre>
+<p>But, as Wlaschin notes, this would let us have a <code>Contact</code> which doesn’t have <em>either</em> kind of contact info. This violates the business rule, where a contact must have one or both. It’s very tempting to reach for optional types in TypeScript, both because the syntax is super convenient, especially now that <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/undefined">optional chaining</a> and <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing_operator">nullish coalescing</a> are available, and because <em>so</em> many things in JavaScript <abbr title="application programming interface">API</abbr>s <em>are</em> optional. However, we can do better!</p>
+<p>Wlaschin points out:</p>
+<blockquote>
+<p>If we think about the business rule carefully, we realize that there are three possibilities:</p>
+<ul>
+<li>A contact only has an email address</li>
+<li>A contact only has a postal address</li>
+<li>A contact has both a email address and a postal address&gt; </li>
+</ul>
+</blockquote>
+<p>Like F^♯^—though with very different syntax and details—TypeScript supports modeling this clearly and accurately, using <a href="https://www.typescriptlang.org/docs/handbook/unions-and-intersections.html#union-types">union types</a>. Wlaschin’s original writeup uses a tuple to represent the variant where the contact has <em>both</em> email address and postal address. TypeScript <em>also</em> <a href="https://www.typescriptlang.org/docs/handbook/basic-types.html">has tuples</a>, though they’re a bit less common in TypeScript than in F^♯^, because TypeScript has to overload the meaning of array types, whereas they are first-class types in F^♯^.</p>
+<pre><code>type ContactInfo =
+  | EmailContactInfo
+  | PostalContactInfo
+  | [EmailContactInfo, PostalContactInfo]
+  ;
+</code></pre>
+<p>We could also use a lightweight object type here, but as we’ll see in a moment, the tuple is actually easier to work with for this specific case.</p>
+<p>Then the original <code>Contact</code> type becomes:</p>
+<pre><code>class Contact {
+  constructor(
+    public readonly name: Name,
+    public readonly contactInfo: ContactInfo
+  ) {}
+};
+</code></pre>
+<p>At this point, we have actually written a type that achieves the goal of making illegal states unrepresentable. What does it look like to use it in practice, though?</p>
+<h3>Constructing a <code>ContactInfo</code></h3>
+<p>We’ll start by showing how we construct a <code>Contact</code> when we have a name and an email. Remembering that we have the possibility of <code>EmailContactInfo.create</code> returning <code>undefined</code>, here’s how we’d handle that:</p>
+<pre><code>class Contact {
+  // the existing definition
+
+  static fromEmail(
+    name: string,
+    email: string
+  ): Contact | undefined {
+    let maybeEmail = EmailContactInfo.create(email);
+    if (maybeEmail) {
+      let contactName = new Name(name);
+      return new Contact(contactName, maybeEmail);
+    } else {
+      return undefined;
+    }
+  }
+
+  static fromPostalAddress(
+    name: string,
+    address: string
+  ): Contact {
+    let contactName = new Name(name);
+    let postalInfo = new PostalContactInfo(address);
+    return new Contact(contactName, postalInfo);
+  }
+  
+  static fromEmailAndPostal(
+    name: string,
+    email: string,
+    address: string
+  ): Contact | undefined {
+    let maybeEmail = EmailContactInfo.create(email);
+    if (maybeEmail) {
+      let contactName = new Name(name);
+      let postalInfo = new PostalContactInfo(address);
+      return new Contact(contactName, [email, postalInfo]);
+    } else {
+      return undefined;
+    }
+  }
+}
+</code></pre>
+<p>Now we have a variety of tools we can use to build <code>Contact</code>s. If we already have a valid <code>EmailContactInfo</code>, and/or a <code>PostalContactInfo</code>, we can use the constructor directly:</p>
+<pre><code>let fromEmailDirectly = new Contact(name, email);
+let fromPostalDirectly = new Contact(name, postal);
+let fromBothDirectly = new Contact(name, [email, postal]);
+</code></pre>
+<p>We can also do it using the static helpers, which can be convenient when we haven’t already validated the data elsewhere:</p>
+<pre><code>let fromInvalidEmail =
+  Contact.fromEmail(&quot;Chris&quot;, &quot;hello@banana&quot;);
+let fromValidEmail =
+  Contact.fromEmail(&quot;Chris&quot;, &quot;hello@chriskrycho.com&quot;);
+let fromPostal =
+  Contact.fromPostal(&quot;Chris&quot;, &quot;Colorado&quot;);
+let fromBoth =
+  Contact.fromEmailAndPostal(&quot;Chris&quot;, &quot;hello@chriskrycho.com&quot;, &quot;Colorado&quot;);
+</code></pre>
+<p>If we had similar validation for the postal address—for example, because we were making it behave like an actual address!—we would have another layer of validation in the variants that use <code>PostalContactInfo</code>. (That’s exactly what Wlaschin’s design does; I’ve left it aside here to keep things moving!)</p>
+<h3>Updating a <code>ContactInfo</code></h3>
+<p>Having made this change, we’re now in a position to see what it looks like to work with this data when it already exists. Again, the type system helps us out here, to make sure we <em>continue</em> to have valid data. As Wlaschin notes:</p>
+<blockquote>
+<p>Now… we have no choice but to handle all three possible cases:</p>
+<ul>
+<li>If a contact previously only had an email address, it now has both an email address and a postal address, so return a contact using the EmailAndPost case.</li>
+<li>If a contact previously only had a postal address, return a contact using the PostOnly case, replacing the existing address.</li>
+<li>If a contact previously had both an email address and a postal address, return a contact with using the EmailAndPost case, replacing the existing address.</li>
+</ul>
+</blockquote>
+<p>We can add a method to the <code>Contact</code> type which does this correctly.</p>
+<p>:::note</p>
+<p>There are two ways we could make this method work: it could change the item it’s working with, or it could return a new copy of the item instead. In this example, I’m treating classes not as bundles of self-contained mutable state, but as lightweight records, so I’m going to return a fresh copy. Maybe <a href="https://github.com/tc39/proposal-record-tuple">someday</a> JavaScript will actually get native records (and tuples)!</p>
+<p>:::</p>
+<pre><code>class Contact {
+  // everything we’ve seen already
+
+  updatePostalAddress(newAddress: string): Contact {
+    let postalInfo = new PostalContactInfo(newAddress);
+
+    let newContactInfo: ContactInfo;
+    if (this.contactInfo instanceof EmailContactInfo) {
+      // email only -&gt; email and postal
+      return new Contact(this.name, [this.contactInfo, postalInfo]);
+    } else if (this.contactInfo instanceof PostalContactInfo) {
+      // ignore existing address
+      return new Contact(this.name, postalInfo);
+    } else {
+      // ignore existing address
+      let [email, _] = this.contactInfo;
+      newContactInfo = [email, postalInfo];
+    }
+  }
+}
+</code></pre>
+<p>Notice here that we don’t have to worry about validating the email again: the fact that it’s present as an <code>EmailContactInfo</code> on our type means it is <em>already</em> valid. This is one of the benefits of using richer types to represent these kinds of things!</p>
+<p>We can use this code like this, given an existing <code>Contact</code>:</p>
+<pre><code>let oldAddress = &quot;North Carolina&quot;;
+let contact = Contact.fromPostal(&quot;Chris&quot;, oldAddress);
+
+let newAddress = &quot;Colorado&quot;;
+let updatedContact = contact.updatePostalAddress(&quot;Colorado&quot;);
+</code></pre><aside>
+<p>I kept these names because they make it closer to the original example, but I would actually probably use a name like <code>withNewPostalAddress</code> if I were writing the code from scratch. It reads very nicely that way:</p>
+<pre><code>let updatedContact = contact.withNewPostalAddress(&quot;Colorado&quot;);
+</code></pre></aside>
+<h2>Why bother to make these complicated types?</h2>
+<p>Here, I’ll just quote Wlaschin in full, but substituting the TypeScript example for the F^♯^ he gives:</p>
+<blockquote>
+<p>At this point, you might be saying that we have made things unnecessarily complicated. I would answer with these points:</p>
+<p>First, the business logic is complicated. There is no easy way to avoid it. If your code is not this complicated, you are not handling all the cases properly.</p>
+<p>Second, if the logic is represented by types, it is automatically self documenting. You can look at the union cases below and immediate see what the business rule is. You do not have to spend any time trying to analyze any other code.</p>
+<pre><code>type ContactInfo = 
+  | EmailContactInfo
+  | PostalContactInfo
+  | [EmailContactInfo, PostalContactInfo]
+  ;
+</code></pre>
+<p>Finally, if the logic is represented by a type, any changes to the business rules will immediately create breaking changes, which is a generally a good thing.</p>
+</blockquote>
+<h2>Conclusion</h2>
+<p>I’ve been using this approach for the last few years, and it’s really, <em>really</em> helpful! For a really helpful introduction to this way of thinking and working with types, I heartily recommend the following materials:</p>
+<ul>
+<li><a href="https://blog.janestreet.com/effective-ml-revisited/">Effective ML Revisited</a>, Yaron Minksy—the blog post that really started the modern popularization of a lot of these ideas</li>
+<li><a href="https://fsharpforfunandprofit.com/series/designing-with-types.html">Designing with Types – F^♯^ for Fun and Profit</a>—the series from which this post was adapted</li>
+<li><a href="https://www.youtube.com/watch?v=IcgmSRJHu_8">Making Impossible States Impossible</a>, Richard Feldman, Elm Conf 2016</li>
+<li><a href="https://fsharpforfunandprofit.com/books/"><cite>Domain Modeling Made Functional</cite></a>, by Scott Wlaschin</li>
+<li><a href="https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/">Parse, Don’t Validate</a>, Alexis King</li>
+</ul>
+<p>You may notice that all of these are in languages like F^♯^, Elm, and OCaml. That’s for good reason: for a long time, that family of languages was the only place that had the type systems to make this doable. Over the last decade, quite a few more have emerged, including Rust, Swift—and TypeScript!</p>
+<h2>Appendix: “Tagged Unions” in TypeScript</h2>
+<p>In this post, I just reached for bare types and used the <code>instanceof</code> operator. This works well with TypeScript’s type system, and fits fairly naturally with JavaScript, but there’s an alternative we could use that is also worth calling out: building our own “tagged unions” in TypeScript.</p>
+<p>In F^♯^, Elm, Rust, etc., the tagged union types (which are called “unions” in F^♯^, “custom types” in Elm, and “enums” in Rust) have a <em>built-in</em> tag, created by the compiler. In TypeScript, there is nothing of the sort—because there is nothing of the sort in JavaScript. However, TypeScript <em>does</em> understand the idea of unions (as we saw above). It <em>also</em> has the ability to treat literals as different types, like this:</p>
+<pre><code>type MyName = 'Chris';
+let me: MyName = 'John'; // TYPE ERROR
+</code></pre>
+<p>We could even use the literal as a type inline:</p>
+<pre><code>let me: 'Chris' = 'John'; // TYPE ERROR
+</code></pre>
+<p>We can turn this plus unions into a <em>tagged</em> union, by using a literal as the tag on a type, and then TypeScript will understand it. Earlier, we used the fact that <code>private</code> fields make TypeScript treat different classes as distinct, despite the structural type system. Here, we could make them public but readonly instead (though hiding the details might be good for <em>other</em> reasons), and use a tag to distinguish them.</p>
+<p>Two notes on this example:</p>
+<ul>
+<li>I’ve changed the wrapped values from being named <code>value</code> to be the name of the thing wrapped, <code>name</code>, <code>email</code>, and <code>address</code>. This will make the example below clearer.</li>
+<li>The <code>as const</code> syntax here says to treat the type as a literal.</li>
+</ul>
+<pre><code>class Name {
+  readonly type = 'Name';
+
+  constructor(public readonly name: string) {}
+}
+
+class EmailContactInfo {
+  readonly type = 'EmailContactInfo';
+
+  private constructor(public readonly email: Email) {}
+
+  static create(value: string): EmailContactInfo | undefined {
+    // same implementation as before
+  }
+
+  static isValid(value: string): boolean {
+    // same implementation as before
+  }
+}
+
+class PostalContactInfo {
+  readonly type = 'PostalContactInfo';
+
+  constructor(public readonly address: string) {}
+}
+</code></pre>
+<p>Here, it might also make sense to create a custom tagged type for the <code>EmailAndPostalInfo</code> variant:</p>
+<pre><code>class EmailAndPostal {
+  readonly type = 'EmailAndPostal';
+  
+  constructor(
+    public readonly data: [EmailContactInfo, PostalContactInfo]
+  ) {}
+}
+</code></pre>
+<p>Then we can define the <code>ContactInfo</code> type like this:</p>
+<pre><code>type ContactInfo =
+  | EmailContactInfo
+  | PostalContactInfo
+  | EmailAndPostal
+  ;
+</code></pre>
+<p>When using <code>ContactInfo</code>, we can now use the <code>type</code> tag to figure out which one we’re working with:</p>
+<pre><code>class Contact {
+  // the same as in the main example
+
+  describe(): string {
+    switch (this.info.type) {
+      case 'EmailContactInfo':
+        return `contact ${this.name} at ${this.info.email}`;
+
+      case 'PostalContactInfo':
+        return `${this.name} lives in ${this.info.address}`;
+
+      case 'EmailAndPostal':
+        let [email, postal] = this.info.data;
+        return `${this.name} lives in ${postal}; contact at ${email}`;
+
+      default:
+        assertNever(this.info);
+    }
+  }
+}
+</code></pre>
+<p>Two things to notice:</p>
+<ul>
+<li>
+<p>The <code>assertNever</code> type in the <code>default</code> branch comes from the TypeScript handbook; because it takes <code>never</code> as its argument, it makes sure that we have exhaustively covered every case represented by <code>this.info.type</code> here. If we added another case to the <code>ContactInfo</code> union, this would cause a type error!</p>
+</li>
+<li>
+<p>We only have access to <code>this.info.email</code> in the <code>'EmailContactInfo'</code> branch. Trying to access it in the <code>case 'PostalContactInfo':</code> branch will produce a type error:</p>
+<blockquote>
+<p>Property ‘email’ does not exist on type ‘PostalContactInfo’</p>
+</blockquote>
+</li>
+</ul>
+<p>The tradeoffs with this approach are <em>different</em> than they are with the <code>instanceof</code> approach. We have to carry around a bit more information, and while that’s not incredibly expensive, it <em>could</em> add up over time in a large app. It also requires that people working on the app actually understand these and what they’re for, and people are more likely to already know <code>instanceof</code> and how to use it. However, we get to use the <code>switch</code> approach, which can clarify things a <em>lot</em> over a chain of <code>if</code>/<code>else if</code>/<code>else</code> statements. In particular, I think it is much easier to see that we are just covering each case of the type that <code>info</code> might be in this code than in the <code>instanceof</code> code above!</p>
+
+                            </body>
+                        </html>

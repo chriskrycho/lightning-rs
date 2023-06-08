@@ -1,0 +1,29 @@
+<html>
+                            <head>
+                                <link rel="stylesheet" href="/light.css" media="(prefers-color-scheme: light)" />
+                                <link rel="stylesheet" href="/dark.css" media="(prefers-color-scheme: dark)" />
+                            </head>
+                            <body>
+                                <p>In a chat group I’m a part of online, someone asked basically this question (I’ve tightened it up a bit for the purposes of this post):</p>
+<dl>
+<dt>
+<p>I’m a complete newbie to Javascript and React, and something got my attention while I’m reading a React book: they advocate a functional programming style, which means things should be immutable. In a <a href="https://redux.js.org">Redux</a> reducer, an “add” action updates the state by generating a new state like this:</p>
+<pre><code class='JavaScript'><span class="source js"><span class="keyword control flow js">return</span> <span class="meta sequence js"><span class="punctuation section brackets js">[</span> <span class="keyword operator spread js">...</span><span class="variable other readwrite js">state</span><span class="punctuation separator comma js">,</span> <span class="variable other readwrite js">newElement</span> <span class="punctuation section brackets js">]</span></span>
+</span></code></pre>
+<p>That’s okay in Haskell, Lisp, Erlang, because those languages use linked lists, but in Javascript I would guess this will be <i>O(n)</i>,<sup class="footnote-reference"><a href="#big-o-notation">1</a></sup> right? That seems like overkill; why not just do this instead?</p>
+<pre><code class='JavaScript'><span class="source js"><span class="variable other object js">state</span><span class="punctuation accessor js">.</span><span class="meta function-call method js"><span class="support function mutator js">push</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="variable other readwrite js">newElement</span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span><span class="punctuation terminator statement js">;</span> <span class="keyword control flow js">return</span> <span class="variable other readwrite js">state</span>
+</span></code></pre></dt>
+<dd>
+<p>You’re correct; however, for many cases it doesn’t matter. If you have 30 elements in your array (or honestly even 300) that’s fine performance-wise. Creating a new array by iterating over the old one isn’t as fast as just inserting a new element, but it also is rarely the bottleneck, especially since using <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax">the spread operator</a> or using <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/concat">the <code>.concat()</code> method</a> do <em>shallow</em> copies of the data. When your arrays get large, it <em>does</em> matter, of course.</p>
+<p>Also worth note: it’s not specifically the use of linked lists that makes it safe in other contexts; it’s the use of linked lists as one means of implementing persistent data structures. Elm and others also have arrays! They just have slightly different implementations and performance characteristics.</p>
+<p>As for why you wouldn’t want to just use <code>push</code>: because doing so turns into “spooky action at a distance” pretty easily unless your whole team is exceedingly disciplined. I’ve spent non-trivial parts of the last two weeks looking at bugs (in the Ember app I work on) caused by people using push instead of functional-style updates, so this particular pain is very fresh for me.</p>
+<p>You can also do <code>return state.concat(newElement)</code>, which has the same semantics as using the spread operator does.</p>
+<p>It’s basically just a workaround for the fact that this stuff isn’t how JS natively behaves – JS kind of assumes mutation is the default at a language level.</p>
+</dd>
+</dl>
+<div class="footnote-definition" id="big-o-notation"><sup class="footnote-definition-label">1</sup>
+<p>If that <i>O(n)</i> notation is unfamiliar to you, don’t worry: it’s not as complicated as it might seem. This is an example of <a href="https://medium.com/basecs/whats-a-linked-list-anyway-part-2-131d96f71996#95e1">Big-O Notation</a>, which is just a convenient shorthand for the basic performance characteristics of an operation: “O” for the “order,” or growth rate, of the function. The thing inside the parentheses describes the relationship between the number of items <i>n</i> and that growth rate. <i>O(n)</i> means the growth rate is “linear”: it grows with the number of items involved. If it were <i>O(n<sup>2</sup>)</i> it would grow like the number of items involved <em>squared</em>; if it were <i>O(1)</i> it would be constant no matter how many items were involved.</p>
+</div>
+
+                            </body>
+                        </html>

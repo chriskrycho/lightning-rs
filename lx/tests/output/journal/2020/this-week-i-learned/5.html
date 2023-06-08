@@ -1,0 +1,26 @@
+<html>
+                            <head>
+                                <link rel="stylesheet" href="/light.css" media="(prefers-color-scheme: light)" />
+                                <link rel="stylesheet" href="/dark.css" media="(prefers-color-scheme: dark)" />
+                            </head>
+                            <body>
+                                <p>I read a <em>lot</em> of articles this week, and I’m not remotely including all of them. Just the ones that genuinely <em>taught</em> me something.</p>
+<p>Egalitarianism and complementarianism.
+:   John Ahern <a href="https://www.firstthings.com/article/2020/04/contrapuntal-order">beautifully reframes</a> male–female relationships, with the music-theoretical idea of “counterpoint” as his guide. This might be the best piece I’ve ever read on a Christian view of the beautiful mutuality that men and women offer each other—not utter discord, not total synchrony, and not a harmony that makes one subservient to the other, but <em>counterpoint</em>: both lines equally dependent on and mutually implicating and implicated by the other.</p>
+<p><abbr>ZIRP</abbr>
+:   Ranjay Roy <a href="https://themargins.substack.com/p/zirp-explains-the-world">attempts to explain</a> a lot of the odd and broken phenomena we see in Silicon Valley economics in terms of ZIRP: a <i>zero-interest-rate policy</i>. Lots of terrible behavior emerges when risk and reward get disconnected, because riskier money tends to have higher reward values. “…for the companies that attracted the money had to spend it. Salaries inflate. Cultures change. Consumers are subsidized. Sure, some technology is created, but overall, nothing operates as it would without that thirsty capital. It changes the economics for competitors that do not welcome in the dollars. The second and third-order effects are difficult to comprehend.”</p>
+<p>Everything else in the post is software-related. (There’s a reason that <a href="https://redalemeden.com">Reda Lemeden</a>, from whom I got this idea for these posts, just segregates these into non-software and software sections. I resisted that initially, but… I think I’m coming around to his way of thinking.)</p>
+<p>Distributed systems.
+:   Tristan Hume <a href="https://thume.ca/2020/05/17/pipes-kill-productivity/">nicely articulates</a> what makes distributed systems of all sorts hard. A lot of times developers who get to work on back-end systems without interacting server components look at the kinds of things front-end developers do to wrangle our complexity and assume it’s just front-end developers being idiots. Not (entirely!) so, though: any user interface which talks to a server is a <em>distributed system</em>, and so has all of the complexity Hume identifies in this post. </p>
+<p>State machines.
+:   Escriva and Sirer describe an approach to running distributed software consistently <a href="https://hackingdistributed.com/2013/12/26/introducing-replicant/">by writing C as a state machine</a>. They designed a system where, as a user of the system, you work with objects and define operations in those, rather than the then-state-of-the-art operating as if on file systems approach. After reading some of the sample code, I was <em>very</em> curious what this would look like reimplemented in Rust. HT: <a href="https://thume.ca/2020/05/17/pipes-kill-productivity/">Tristan Hume</a></p>
+<p>Design systems.
+:   Dave Rupert outlines <a href="http://daverupert.com/2020/05/5-design-system-milestones/">Five Key Milestones in the Life of a Design System</a>. I’ve been thinking about how to roll out successful design systems for a few years now, including helping design an approach while I was at <a href="https://www.olo.com">Olo</a> that I <em>hope</em> is proving scalable and sustainable. Reading folks like Rupert who are doing it <em>all the time</em> is both inspiring and challenging.</p>
+<p>TOCTOU bugs.
+:   I learned a ton from <a href="https://thoughtbot.com/blog/toctou">this post by Mike Burns at the Thoughtbot blog</a> about a subtle form of bug I haven’t personally hit before… but likely would (will?) in the months ahead as I work on <a href="https://rewrite.software">rewrite</a> (where both server and client will be vulnerable to this): time-of-check to time-of-use bugs. Threads and OS-level multitasking make everything massively more complicated; per the post, the best way to avoid bugs like this is to “ask forgiveness instead of permission”: design and prefer to use <abbr>API</abbr>s which let you attempt an operation and gracefully handle its failure, rather than checking whether you’re allowed to and then attempting to proceed—because the gap between checking and proceeding can bite you.</p>
+<p>*[HT]: hat tip, i.e. credit for bringing something to one’s attention
+*[TOCTOU]: time-of-check to time-of-use
+*[ZIRP]: zero-interest-rate policy</p>
+
+                            </body>
+                        </html>

@@ -1,0 +1,58 @@
+<html>
+                            <head>
+                                <link rel="stylesheet" href="/light.css" media="(prefers-color-scheme: light)" />
+                                <link rel="stylesheet" href="/dark.css" media="(prefers-color-scheme: dark)" />
+                            </head>
+                            <body>
+                                <p>Superscripts and subcripts should not affect the vertical rhythm of the text. That is, they should not affect its <a href="https://en.wikipedia.org/wiki/Leading"><i>leading</i></a>. As a prime example common in blogs and similar websites: the superscript style used for footnotes should not make lines with footnotes taller than lines <em>without</em> footnotes.</p>
+<p>:::note</p>
+<p>Two comments before I dive into the rest of the piece:</p>
+<ul>
+<li>Folks reading along in RSS, you may want to <a href="https://v5.chriskrycho.com/journal/superscript-and-subscript-line-heights/">click through</a>: it’s possible these examples will not display correctly in your reader!</li>
+<li>Everything I say here about how text should <em>look</em> applies equally to native apps or to print, but the mechanics will be wildly different than they are on the web.</li>
+</ul>
+<p>:::</p>
+<p>Here’s an example of how the default browser rendering will handle superscripts (it has the same effect for subscripts, but since superscripts are much more common, I’m focusing on those):</p>
+<p>:::callout</p>
+<p>This is just some running text which includes a superscript. It doesn’t say anything meaningful, it is just designed to run long enough that in every layout,<sup style="line-height: var(--line-height) !important; font-family: var(--serif) !important; font-size: smaller !important; font-weight: 300;">1</sup> the superscript appears in the middle of the running text, so that the way that the offset is visible is clear.</p>
+<p>:::</p>
+<p>Notice that the line with the superscript is pushed down and away from the preceding line—not <em>dramatically</em>, but <em>noticeably</em>.</p>
+<p>Now, here’s the same layout, using a <em>corrected</em> style (with no other tweaks to the font):</p>
+<p>:::callout</p>
+<p>This is just some running text which includes a superscript. It doesn’t say anything meaningful, it is just designed to run long enough that in every layout,<sup style="line-height:0 !important; font-family: var(--serif) !important; font-size: smaller !important; font-weight: 300;">1</sup> the superscript appears in the middle of the running text, so that the way that the offset is visible is clear.</p>
+<p>:::</p>
+<p>This still doesn’t quite look <em>right</em>—the superscript nearly crashes into the line above it—but the lines are all the same height now, which is an important first step. You can accomplish this consistently (no matter what else is happening in your styles) by setting the <a href="https://developer.mozilla.org/en-US/docs/Web/CSS/line-height"><code>line-height</code> property</a> to <code>0</code> in your <a href="https://developer.mozilla.org/en-US/docs/Web/CSS">CSS</a> declarations for <code>sub</code> and <code>sup</code>, so that they don’t have any effect on the layout of each line:</p>
+<pre><code class='CSS'><span class="source css"><span class="meta selector css"><span class="entity name tag css">sub</span>, <span class="entity name tag css">sup</span> </span><span class="meta property-list css"><span class="punctuation section property-list css">{</span>
+  <span class="meta property-name css"><span class="support type property-name css">line-height</span></span><span class="punctuation separator key-value css">:</span><span class="meta property-value css"> </span><span class="meta property-value css"><span class="constant numeric css">0</span></span><span class="punctuation terminator rule css">;</span></span>
+<span class="punctuation section property-list css">}</span>
+</span></code></pre>
+<p>However, as we saw above, we need to combine that with other tweaks to make things look <em>just right</em>—and the smaller the value of the <code>line-height</code> for your running text, the more you have to take care here to keep superscripts and subscripts from colliding with preceding or following lines respectively. For best results, tweak the combination of the size of the item via <code>font-size</code> and its layout relative to the other text with <code>vertical-align</code>.</p>
+<p>On this site, I have also swapped out font family to make them a little more visually distinctive. Here’s how <code>sup</code> items are styled today on this site (with some comments added):</p>
+<pre><code class='CSS'><span class="source css"><span class="meta selector css"><span class="entity name tag css">sup</span> </span><span class="meta property-list css"><span class="punctuation section property-list css">{</span>
+  <span class="comment block css"><span class="punctuation definition comment css">/*</span> the first rule: don&#39;t let it affect line-height <span class="punctuation definition comment css">*/</span></span>
+  <span class="meta property-name css"><span class="support type property-name css">line-height</span></span><span class="punctuation separator key-value css">:</span><span class="meta property-value css"> </span><span class="meta property-value css"><span class="constant numeric css">0</span></span><span class="punctuation terminator rule css">;</span>
+
+  <span class="comment block css"><span class="punctuation definition comment css">/*</span> decreases the size, using the site&#39;s typographical scale <span class="punctuation definition comment css">*/</span></span>
+  <span class="meta property-name css"><span class="support type property-name css">font-size</span></span><span class="punctuation separator key-value css">:</span><span class="meta property-value css"> </span><span class="meta property-value css">ms(<span class="constant numeric css">-2</span></span>);
+
+  <span class="comment block css"><span class="punctuation definition comment css">/*</span> tweak the vertical position so it looks just so <span class="punctuation definition comment css">*/</span></span>
+  <span class="meta property-name css"><span class="support type property-name css">vertical-align</span></span><span class="punctuation separator key-value css">:</span><span class="meta property-value css"> </span><span class="meta property-value css"><span class="constant numeric css">0.558<span class="keyword other unit css">em</span></span></span><span class="punctuation terminator rule css">;</span>
+
+  <span class="comment block css"><span class="punctuation definition comment css">/*</span> visually distinguish via contrasting font and weight <span class="punctuation definition comment css">*/</span></span>
+  <span class="meta property-name css"><span class="support type property-name css">font-family</span><span class="punctuation separator key-value css">:</span><span class="meta property-value css"> </span><span class="meta property-value css"><span class="meta function-call css"><span class="support function var css">var</span><span class="meta group css"><span class="punctuation definition group begin css">(</span><span class="support type custom-property css"><span class="punctuation definition custom-property css">--</span><span class="support type custom-property name css">sans</span></span></span><span class="meta group css"><span class="punctuation definition group end css">)</span></span></span></span><span class="punctuation terminator rule css">;</span></span>
+  <span class="meta property-name css"><span class="support type property-name css">font-weight</span></span><span class="punctuation separator key-value css">:</span><span class="meta property-value css"> </span><span class="meta property-value css"><span class="support constant property-value css">bold</span></span><span class="punctuation terminator rule css">;</span>
+
+  <span class="comment block css"><span class="punctuation definition comment css">/*</span> Make sure *not* to use &quot;ordinal&quot; numbers <span class="punctuation definition comment css">*/</span></span>
+  <span class="meta property-name css"><span class="support type property-name css">font-variant-numeric</span></span><span class="punctuation separator key-value css">:</span><span class="meta property-value css"> </span><span class="meta property-value css"><span class="support constant property-value css">lining-nums</span></span><span class="punctuation terminator rule css">;</span></span>
+<span class="punctuation section property-list css">}</span>
+</span></code></pre>
+<p>And here’s the resulting effect:</p>
+<p>:::callout</p>
+<p>This is just some running text which includes a superscript. It doesn’t say anything meaningful, it is just designed to run long enough that in every layout,<sup>1</sup> the superscript appears in the middle of the running text, so that the way that the offset is visible is clear.</p>
+<p>:::</p>
+<p>Much improved!</p>
+<p>*[RSS]: really simple syndication
+*<a href="https://developer.mozilla.org/en-US/docs/Web/CSS">CSS</a>: cascading style sheets</p>
+
+                            </body>
+                        </html>

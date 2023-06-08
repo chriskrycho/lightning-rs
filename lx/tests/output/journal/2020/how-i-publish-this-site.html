@@ -1,0 +1,162 @@
+<html>
+                            <head>
+                                <link rel="stylesheet" href="/light.css" media="(prefers-color-scheme: light)" />
+                                <link rel="stylesheet" href="/dark.css" media="(prefers-color-scheme: dark)" />
+                            </head>
+                            <body>
+                                <p>On seeing this site relaunch back in November, my friend <a href="https://sites.google.com/site/iamjohnshelton/home">John Shelton</a> asked if I had anywhere I’d listed out the whole of my setup for hosting this site. The answer is: I hadn’t, but as of <em>now</em> I have!</p>
+<p>If you want the <em>super</em> short version, this is it (with the topics covered in this post marked with a <b>*</b>):</p>
+<ul>
+<li><b>*</b> The domain name is registered at <a href="https://hover.com/">Hover</a>.</li>
+<li><b>*</b> The DNS runs through <a href="https://cloudflare.com/">Cloudflare.com</a>.</li>
+<li>The site is generated with  <a href="https://11ty.io/">11ty</a>, with—
+<ul>
+<li>a mix of <a href="https://mozilla.github.io/nunjucks/">Nunjucks</a>, JSON, and TypeScript for the templating</li>
+<li>a <em>very</em> light use of <a href="https://sass-lang.com">SCSS</a> to generate the CSS</li>
+<li>a bunch of custom filters and plugins, also written in TypeScript</li>
+</ul>
+</li>
+<li>The fonts are licensed from  <a href="http://fonts.com/">Fonts.com</a> (purchased and self-hosted) and  <a href="http://fonts.adobe.com/">fonts.adobe.com</a> (hosted).</li>
+<li><b>*</b> The content—written entirely in <a href="https://daringfireball.net/projects/markdown/">Markdown</a>—lives in Git repositories which I maintain on copies of on all my machines as well as on <a href="https://github.com/chriskrycho/v5.chriskrycho.com">GitHub.com</a>.</li>
+<li><b>*</b> The site is deployed via <a href="https://netlify.com/">Netlify.com</a>.</li>
+<li><b>*</b> I actually <em>write</em> using a(n ever-changing) mix of text editors, currently primarily <a href="http://1writerapp.com/">1Writer</a> on iOS and <a href="https://www.bywordapp.com">Byword</a> and <a href="https://caret.io/">Caret</a> on macOS.</li>
+</ul>
+<p>If you want the longer version, read on. In this post, I will trace out the details of how I get this site to you. In a follow-on post I will hopefully write as a follow-up sometime this year, I’ll dig into the technical details of how the site is put together. (<em>Hopefully</em>, I say, because I started <em>this</em> post three months ago!)</p>
+<p>I should clarify, before I go any further: this is <em>not</em> a stack I would recommend to anyone else who’s not a total nerd, though this same basic <em>kind</em> of stack is workable with a much lower degree of effort than I put in. You need to be willing to do a <em>small</em> amount of semi-technical work; you <em>don’t</em> have to build an entire site from scratch like I did. The support for normal CMS interfaces to this kind of setup has grown enormously in the past few years, and it can actually be a really good, very lightweight experience.<sup class="footnote-reference"><a href="#cms">1</a></sup></p>
+<p>*[DNS]: domain name system
+*[JSON]: JavaScript Object Notation
+*<a href="https://sass-lang.com">SCSS</a>: Sassy CSS
+*[CSS]: Cascading Style Sheets
+*[CMS]: content management system</p>
+<div class="footnote-definition" id="cms"><sup class="footnote-definition-label">1</sup>
+<p>I’ve experimented a bit with both <a href="https://forestry.io">Forestry</a> and <a href="https://www.netlifycms.org">Netlify CMS</a>. I mentioned in my relaunch announcement post that I was leaning toward Netlify CMS because it would in principle allow me to allow <em>anyone</em> to suggest edits to my site. That didn’t end up panning out; I explain why below.</p>
+</div>
+<!-- omit in toc -->
+<h2>Outline</h2>
+<ul>
+<li><a href="#costs">Costs</a></li>
+<li><a href="#writing">Writing</a>
+<ul>
+<li><a href="#why-markdown">Why Markdown?</a></li>
+</ul>
+</li>
+<li><a href="#workflow">Workflow</a>
+<ul>
+<li><a href="#where-the-content-lives">Where the content lives</a></li>
+<li><a href="#how-the-content-gets-to-you">How the content gets to you</a></li>
+<li><a href="#cms">CMS</a></li>
+</ul>
+</li>
+<li><a href="#domain-registration">Domain registration</a></li>
+<li><a href="#dns-cloudflare">DNS: Cloudflare</a></li>
+<li><a href="#summary">Summary</a></li>
+</ul>
+<h2>Costs</h2>
+<p>My costs are pretty low for this setup. Cloudflare is free for setups like mine. GitHub is free for setups like mine. Netlify is free for setups like mine. The code font, <a href="https://sourcefoundry.org/hack/">Hack</a>, is <em>also</em> free. (Sensing a theme here?)</p>
+<p>In terms of things I <em>do</em> actually pay for (or have in the past), though:</p>
+<ul>
+<li>
+<p>I pay $15/year for the domain at Hover.</p>
+</li>
+<li>
+<p>I paid a few hundred dollars to perpetually license <a href="https://www.fonts.com/font/linotype/sabon">Sabon</a> (the body text) a few years ago—both for the web and for desktop work. I get <a href="https://fonts.adobe.com/fonts/cronos">Cronos</a> via my $10/month for Adobe’s Lightroom package, which includes Adobe Fonts. (This is the piece here that stings the most in terms of ongoing costs, but Lightroom is <em>fabulous</em>, so I’m just rolling with it at this point.)</p>
+</li>
+<li>
+<p>As will become clear in the <em>next</em> section, I have spent a… <em>non-trivial</em>… amount of money on writing applications over the last decade.</p>
+</li>
+</ul>
+<p>In general, I’m not opposed to paying for good services—actually, very much to the contrary!—but if there is a good service with a freemium model and I fit comfortable in the free tier, I’m happy to use it.</p>
+<h2>Writing</h2>
+<p>These days I do my writing in a wild hodgepodge of tools. None of them thrill me, because all of them do <em>some</em> things really well… and leave others in a “ugh, not quite there” state. For example, this particular paragraph I’m drafting in <a href="https://www.bywordapp.com">Byword</a>—my old standby, an app I’ve been using for over half a decade now. It remains a rock-solid, very lightweight and very <em>fast</em> editor with just the right level of minimal Markdown support, and I love it for that. If I’m just writing a blog post like this, and I’m on macOS, Byword is still the app I’m most likely to reach for.</p>
+<p>However, when I am working on code samples, it leaves a few things to be desired. For that, I turn to <a href="https://caret.io/">Caret</a>—a more recent discovery, and one that lacks Byword’s light weight and phenomenal performance, but which is tuned to the writing <em>programmer</em>. At this point I’m using the <a href="https://github.com/careteditor/releases-beta/releases">latest beta</a> they released… about a year ago. They’ve since <a href="https://twitter.com/careteditor/status/1136198029357264896?s=20">declared</a> their intention to build something new and better using some of the same tech that underpins Caret. The <em>big</em> downside for Caret is that it’s an <a href="https://www.electronjs.org">Electron</a> app, and that means that it just <em>is</em> slower and heavier than Byword—inevitably.</p>
+<p>Also in the “unfortunately slower than Byword” are two other tools I reach for on both macOS and iOS: <a href="https://ia.net/writer">iA Writer</a> and <a href="https://ulysses.app">Ulysses</a>. Ulysses in particular I tend to reach for when working on <em>large projects</em>. So, for example, when I built out the teaching materials for <a href="https://v4.chriskrycho.com/2019/christology-god-with-us-and-for-us.html">the Sunday School class I taught last summer</a>, I wrote the majority of it in Ulysses. It’s a much better <em>project</em>-focused writing tool than any of the others, though iA Writer has gotten much closer in the last few years. The big differentiator between iA Writer and Ulysses is that, both for good and for ill, Ulysses does more magic. You can build out a project in iA Writer, and the ways it does it works with other tools too… but you do it <em>manually</em>. Ulysses’ way of working with Markdown is much more bespoke, but it Just Works.<sup class="footnote-reference"><a href="#just-works">2</a></sup></p>
+<p>As mentioned, though, both iA Writer and Ulysses are <em>slower</em> (and just feel heavier) than I’d like. As a result, I <em>also</em> have dedicated apps I reach for on iOS for one-off posts. While I love the experience of writing in Byword there no less than I do on macOS, I pretty much never use it, for one critical reason: it doesn’t integrate nearly as nicely as some of the other options with the <a href="https://www.macstories.net/stories/ios-11-the-macstories-review/14/">document provider locations</a> introduced and increasingly polished in the last few versions of iOS. Instead, I end up using <a href="http://1writerapp.com/">1Writer</a> almost exclusively for one-off posts like this one. It lets me much more quickly open and interact with not only iCloud folders but—and this is the real key—Git locations exposed by <a href="https://workingcopyapp.com">Working Copy</a>. (For more on this, see the <a href="#workflow"><b>Workflow</b></a> section below!)</p>
+<p>Finally, I will admit that I <em>do</em> in fact do <em>some</em> of my writing in <a href="https://code.visualstudio.com">Visual Studio Code</a>. It’s <em>really</em> not a great writing environment, but it has some really nice tools for Markdown editing. In particular, I use <a href="https://github.com/yzhang-gh/vscode-markdown">an extension</a> that automates everything from generating and maintaining a table of contents (like the one above) to table formatting. It also makes for a nice environment for working with code samples.</p>
+<h3>Why Markdown?</h3>
+<p>I have been writing <em>everything</em> in Markdown since 2012. Every blog post, every paper I wrote for seminary, every essay I have published elsewhere—even if it ended up in a Word document or published on a WordPress site, I <em>drafted</em> it in Markdown, in one of these tools. I chose Markdown a long time ago because it fits so well with the way I write. It gets out of my way by dint of its simplicity and its complete <em>lack</em> of formatting at the time of authoring. That makes the writing process much better for me, and always has. The fact that at the end I can generate <em>any</em> kind of document I need from the same source—HTML, Word, PDF, LaTeX, you name it—is all the better.</p>
+<p>Equally important to me at this point though: writing in Markdown means I am writing in a plain text document. I can write it in any text editor anywhere which handles UTF-8—and while UTF-8 isn’t <em>perfectly</em> portable as far as document formats go, it is literally the closest thing to it which exists—right down to and including the fact that it can and does handle any language I can throw at it. (καιρε, שלמ, buenos días!)</p>
+<div class="footnote-definition" id="just-works"><sup class="footnote-definition-label">2</sup>
+<p>One of the goals I have for <a href="https://rewrite.software">rewrite</a> is for it to <em>feel</em> as good to use as Ulysses while being as interoperable as iA Writer for project management, and as fast and lightweight as Byword. This may prove impossible… but it’s a goal.</p>
+</div>
+<p>*[UTF]: unicode transformation format</p>
+<h2>Workflow</h2>
+<p>My publishing work flow feels relatively straightforward to me at this point, but that’s entirely a function of the fact that I’ve been using a variant on this same approach for over half a decade now, and that it’s a <em>programmer’s</em> work flow.</p>
+<h3>Where the content lives</h3>
+<p>When I write all that Markdown material, it goes in one of two places, depending on how far along in the process I am. If it’s a big post or essay that I don’t intend to publish for a <em>long</em> time yet, I just keep it in an iCloud Drive folder which has a bunch of work-in-progress material like that. That makes it easy to work on from any of those writing tools I mentioned above. Once I’m getting closer to publishing, I move it into the <a href="https://git-scm.com">Git</a> repository where the entire site lives. I have copies of that on every machine I use, as well as <a href="https://github.com/chriskrycho/v5.chriskrycho.com">on GitHub</a>.</p>
+<aside>
+<p>I use GitHub as a convenient tool for coordination, but (and this is important to me!) it is <em>not</em> a single point of failure. If it goes away tomorrow, I’ll be fine. All of the content lives somewhere else, too. I have multiple backups of those copies—in iCloud, in Time Machine backups, and in <a href="https://www.backblaze.com">Backblaze</a>. This is another advantage to just using simple text files: backups are <em>super</em> easy. If I were hosting this in Ghost or WordPress or another CMS like that, I would need to make regular backups of those databases and set up automated exports for them. Doing it the way I do, I get backup in quintuplicate with <em>zero</em> extra effort on my part compared to what I do to back up my data in general.</p>
+</aside>
+<p>I usually create a Git <i>branch</i> for new posts before I publish them, so that I can take of some of the Netlify features described in the next section. On a Mac, I use mostly the command line and occasionally the <a href="https://fork.dev">Fork</a> Git UI for interacting with the repository. On iOS, I use <a href="https://workingcopyapp.com">Working Copy</a> to interact with the repository. It exposes the repository as a location which I can open from other apps which support document provider locations:</p>
+<figure>
+<img src="https://cdn.chriskrycho.com/file/chriskrycho-com/images/how-i-publish/document-picker.jpeg" style="max-width: 416px" />
+<figcaption>Opening a Working Copy location from 1Writer</figcaption>
+</figure>
+<p>Then I can work with it directly in any app which has mounted the folder. For example, viewing this very post in iA Writer:</p>
+<figure>
+<img src="https://cdn.chriskrycho.com/file/chriskrycho-com/images/how-i-publish/ia-writer-view.jpeg" style="max-width: 416px" />
+<figcaption>Viewing a Working Copy-supplied item in iA Writer</figcaption>
+</figure>
+<p>When I’m done, I can just commit that file to the repository on whatever branch I’m working in and push it up to GitHub, and it will trigger the publication workflow that I built with Netlify (described in the next section).</p>
+<figure>
+<img src="https://cdn.chriskrycho.com/file/chriskrycho-com/images/how-i-publish/commit.jpeg" style="max-width: 416px" />
+<figcaption>Committing a change in Working Copy</figcaption>
+</figure>
+<p>I had used a similar approach in the past for managing the content and design of the site, but it was never a <em>full</em> workflow because I couldn’t use it to <em>publish</em> the site. For that, I needed to switch up how I published the site. So: Netlify!</p>
+<aside>
+<p>If you want a <em>truly</em> deep dive on this approach with iOS, see Federico Viticci’s <a href="https://www.macstories.net/stories/ios-11-the-macstories-review/14/">writeup at MacStories</a>. This is where I originally learned this workflow was even possible!</p>
+</aside>
+<h3>How the content gets to you</h3>
+<p>I use <a href="https://netlify.com/">Netlify</a> to actually host and deploy the site. Netlify is a developer-focused tool, which makes it <em>super</em> easy to take a Git repository which defines how to build a website with some basic tools, and turn it into a deployed website.</p>
+<p>In the past, I have used <a href="https://pages.github.com">GitHub Pages</a> to publish various websites. I have also done plain-old static file hosting on a server I own, deployed via SFTP. These options are fine so far as they go; in some cases they’re actually great choices. However, for my purposes, any kind of purely static file hosting approach meant that I <em>had</em> to have access to a laptop or desktop or server machine of my own to actually <em>build</em> the site before I published it. Netlify solves that problem by supporting a <em>build</em> step before deploying the content. For me, that means running my 11ty build step (on which see <a href="#site-generator">below</a> for more details).</p>
+<p>Netlify is also just exceedingly pleasant and easy to use—the setup for my site was a matter of pointing and clicking a few buttons to tell it what GitHub repository to use, and filling in one text field to tell it how to build my site. In fact, if I weren’t <em>particular</em> about separating my DNS from my hosting/deployment setup (as discussed below), I could do <em>that</em> on Netlify as well, and that is <em>also</em> an incredibly simple setup process.</p>
+<p>One of the Netlify features I particularly love—and which I make heavy use of for <em>most</em> posts for this site, but especially for longer or more involved ones—is its <a href="https://docs.netlify.com/site-deploys/overview/#branches-and-deploys">deploy previews</a>. Each deploy preview is a specific URL that is not indexed by search engines, but which is available pretty much permanently (as long as Netlify itself is around). I can hand that URL to someone else to read the post before it’s live in the world and they can give feedback on the thing <em>exactly</em> as it will appear. For example, the preview for <em>this</em> post was <a href="https://deploy-preview-41--v5-chriskrycho-com.netlify.com/journal/how-i-publish-this-site/">here</a>.</p>
+<p>This is handy for content, of course, but it was even handier during the design process for the site, when I could set up two options with different approaches to a particular design question, each with its own URL, and share them for others to give feedback.</p>
+<p>*[SFTP]: secure file transfer protocol
+*[URL]: universal resource locator</p>
+<h3>CMS</h3>
+<p>I don’t normally <em>need</em> a CMS, but I do like to have the option. Historically, there were not great options in terms of an interface for writing and managing content… unless you wanted a setup more like WordPress or Ghost: a server application with a database, and a server to run it on. I have a preference (admittedly a bit strange) for simple text files to be the “source of truth” for the content on my website.<sup class="footnote-reference"><a href="#pdfs-etc">3</a></sup> For the last few years, I got by managing everything just via command line tools and building everything on my home machine.</p>
+<p>Two things have changed. First: as I noted above, I now deploy everything via Netlify, and I don’t <em>need</em> to build it on my local machine. Second, though, the last few years have seen the advent of some decent <abbr>CMS</abbr>es for statically-generated sites like this one! The two best options I found at this point are <a href="https://forestry.io">Forestry</a> and <a href="https://www.netlifycms.org">Netlify CMS</a>. Each has its upsides and its downsides; in the end, for these purposes, I reach for Forestry if I <em>really</em> need it… but mostly just don’t reach for either.</p>
+<p>Forestry has far and away the better UI of the two. In fact, it has such a reasonable UI that <a href="https://stephencarradini.com">my friend Stephen</a> said of it:</p>
+<blockquote>
+<p>Wow. I am impressed with this CMS.</p>
+<p>It … it makes sense. It’s laid out like … normal people would lay it out. I shouldn’t be so shocked, but lo, I’m shocked.</p>
+</blockquote>
+<p>He’s not wrong. Most CMS user interfaces are <em>not good</em>. (The best I can say for <a href="http://wordpress.org">WordPress</a> is that I’ve gotten used to it. <a href="https://ghost.org">Ghost</a> is pretty good, but unfortunately doesn’t work for the exact workflow I described above.) That goes double for viewing them on mobile devices, and Forestry’s mobile view is actually quite good! The experience of writing in Forestry is also good, even on iOS, which is <em>very</em> unusual for web text editors—even more unusual than just working there at all. Unfortunately, though, it doesn’t support working with Git <em>branches</em>, only working with the single “master” branch of the repository. This makes it a non-starter for drafting totally new work at this point, as (at least for now) committing to <code>master</code> <em>publishes the post</em>!</p>
+<p>Netlify CMS handles that particular problem well via its <a href="https://www.netlifycms.org/docs/configuration-options/#publish-mode">Editorial Workflow</a>! However, where Forestry’s CMS UI is one of the <em>best</em> of its sort, Netlify CMS is… not. For one thing, it simply does not even try when it comes to mobile devices—not for displaying and certainly not for editing. Given that this is the context where I’m <em>most</em> apt to want a CMS, this makes it a non-starter on <em>that</em> end.</p>
+<p>The other reason I was particularly interested in Netlify CMS is that its Editorial Workflow supports <a href="https://www.netlifycms.org/docs/open-authoring/">Open Authoring</a>, and when I was initially doing my research, I <em>thought</em> this would allow me to accept corrections from <em>any</em> user. Unfortunately, as I dug into the docs, I found my initial reading to have been wrong. In fact, it just means that—</p>
+<blockquote>
+<p>you can use Netlify CMS to accept contributions from GitHub users without giving them access to your repository.</p>
+</blockquote>
+<p>This is fine so far as it goes, but if the users <em>already</em> have to be GitHub users, well… then the GitHub UI gets the job done well <em>enough</em> and doesn’t involve keeping another dependency up to date. There is a workaround using their Git Gateway workflow, but while you can restrict what kind of mischief users can get up to, it still looked like an invitation for would-be makers-of-mayhem to make for a very annoying day.<sup class="footnote-reference"><a href="#obnoxious">4</a></sup> As such I just ended up making the links for editing a post take users straight to GitHub. It’s not perfect, but it’s good enough.</p>
+<p>The net of all of this is that I had Forestry enabled for a while but eventually removed it. My Git-based workflow works well <em>enough</em> from any device, and works better than any CMS option I tried, that it wasn’t worth the hassle (however small). If you know of other good headless CMS systems which can just slot into this kind of Git-based workflow, I’d actually love to hear about them! I may or may not end up reaching for them with <em>this</em> site, but I run other sites in relatively similar ways, and it would be nice for <em>those</em>.</p>
+<div class="footnote-definition" id="pdfs-etc"><sup class="footnote-definition-label">3</sup>
+<p>I like being able to generate things which <em>aren’t</em> web pages from my content sometimes!</p>
+</div>
+<div class="footnote-definition" id="obnoxious"><sup class="footnote-definition-label">4</sup>
+<p>Internet users can be obnoxious. When one of my posts hit the top of Hacker News a few months ago, I had people “signing up” for <a href="https://rewrite.software">rewrite</a> updates with email addresses—I kid you not—like <code>dont-be-arrogant@rewrite.software</code> and <code>dont-advertise-your-own-software@chriskrycho.com</code>. Dumb? Very. The internet is <em>full</em> of dumb.</p>
+</div>
+<p>*[UI]: user interface</p>
+<h2>Domain registration</h2>
+<p>I buy <em>all</em> my domains at <a href="https://hover.com/">Hover</a>.<sup class="footnote-reference"><a href="#not-hover">5</a></sup> I first tried Hover after a podcast ad half a decade ago, and it worked out so well that in that span I have steadily moved <em>everything</em> there, and I have never regretted it. I don’t actually have a lot to say beyond that: Hover is easy to use to register a new domain, they have great customer service (when you need it, which has only happened to me once and because of a problem on a <em>different</em> registrar), and they even have a <em>nice</em> website!</p>
+<div class="footnote-definition" id="not-hover"><sup class="footnote-definition-label">5</sup>
+<p>This is <em>strictly</em> not true: I have a single domain registered at another registrar. That was, in retrospect, a mistake… for a variety of reasons. I won’t be repeating it. :insert grimacing emoji here:</p>
+</div>
+<h2>DNS: Cloudflare</h2>
+<p>I switched all of my DNS name servers to <a href="https://cloudflare.com/">Cloudflare</a> earlier this year. I had a longstanding goal of having my registration, my name servers, and my actual hosting and deployment in separate places for a few years now. I don’t remember where I first ran into the idea of keeping those separate, but it stuck—forcefully, by dint of experience.</p>
+<p>At one point I was managing all three—registration, name servers, and hosting—through an old-school shared hosting provider (<a href="https://www.stablehost.com">Stablehost</a>, still a pretty solid option in that space!)… and migrating <em>out</em> of that provider was incredibly painful. (It’s actually not 100% done! The hard parts are all done now, though, which is a relief.)</p>
+<p>After doing a bunch of research back in late June, I migrated all of my DNS to Cloudflare. <em>All</em> of it. This took <a href="https://v4.chriskrycho.com/2019/my-final-round-of-url-rewrites-ever.html">a fair bit of work</a> but it has made everything else since then <em>much</em> easier. Their domain name management control panel is really good—as good as any I’ve used—and in my experience it’s also incredibly <em>fast</em> to propagate the information around the web. That latter bit is particularly pleasant and important, as anyone who has ever had to mess with DNS knows!</p>
+<aside>
+<p>If you’re curious: yes, I <em>do</em> have thoughts on Cloudflare’s approach to deciding who to leave on the internet and who to kick off the internet, but I’ll save those for another day.</p>
+</aside>
+<h2>Summary</h2>
+<p>When you put all those pieces together, what you have is:</p>
+<ul>
+<li>Domain registered at Hover, configured with its nameservers to point to Cloudflare</li>
+<li>Cloudflare managing the DNS, pointing the URL <code>v5.chriskrycho.com</code> to the corresponding Netlify setup</li>
+<li>Netlify publishing the site as defined—both its content and its design—in a Git repository, which is hosted on GitHub</li>
+<li>Content all written in Markdown, with a variety of tools across macOS and iOS and iPadOS</li>
+</ul>
+<p>In a planned future post (which I have not even started writing yet, so no promises as to when it will appear), I will try to dig into the details of <em>how</em> I build the site—the design, the HTML, the custom implementation details, the fonts, you name it. If you’re curious in the meantime, the implementation is <a href="https://github.com/chriskrycho/v5.chriskrycho.com">all publicly available</a>—and you’re <a href="https://v5.chriskrycho.com/colophon/#copyright-and-license">welcome to crib from it</a>!</p>
+
+                            </body>
+                        </html>

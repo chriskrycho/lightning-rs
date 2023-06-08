@@ -1,0 +1,30 @@
+<html>
+                            <head>
+                                <link rel="stylesheet" href="/light.css" media="(prefers-color-scheme: light)" />
+                                <link rel="stylesheet" href="/dark.css" media="(prefers-color-scheme: dark)" />
+                            </head>
+                            <body>
+                                <p>:::note</p>
+<p>Over the weekend I wrote up the following on <a href="https://github.com/emberjs/rfcs/pull/669#issuecomment-739320902">an Ember RFC discussion</a>. Since it’s intentionally <em>not</em> specific to that RFC, I’m republishing it here for the broader Ember community to see, with only the slightest tweak to the intro to give more context. (It might be a bit less polished than usual, as a result!)</p>
+<p>:::</p>
+<p>For what it’s worth, as the Octane migration lead for LinkedIn.com, I see these kinds of issues—existing designs that just don’t translate directly from Classic to Octane—all the time as folks migrate from Ember Classic patterns—and precisely <em>because</em> of that experience, I strongly agree with <a href="https://www.pzuraq.com">@pzuraq</a> and others on the framework team that we don’t want to provide primitives which let you “go around” the autotracking system’s design and primitives. Accordingly, and without digging into that specific example, I’d like to offer a general comment here in hopes that it’ll be useful more generally for the community thinking around migrating to Octane.</p>
+<p>Fundamentally, Octane entails a new programming model—one that is <em>not</em> a direct translation of the old model into some new syntax. That means that some patterns that you’re used to using in the Classic paradigm simply do not work in the new paradigm (though not very many). However, in literally every single one of those I’ve hit over the last year, I’ve ultimately been very happy to end up doing the work of substantially rethinking and reworking whatever abstraction or implementation was at hand.</p>
+<p>In practice, that has often meant a process something like this:</p>
+<ol>
+<li>Take a big step back and consciously choose to set aside the existing implementation’s constraints as inputs.</li>
+<li>Write down the actual constraints on the design: the problem it needs to solve, along with any <em>hard</em> constraints on the API design.</li>
+<li>Create a <em>new</em> Octane design that solves the problem.</li>
+<li>If necessary, because the old design was fundamentally coupled to Ember Classic idioms, design a migration path to the new API.</li>
+</ol>
+<p>(4) has been rare, but has occasionally happened. For example, over the summer we took a system that made heavy use of <code>Evented</code> and reworked it into a new approach that funneled each event into a single piece of tracked data, and let the rest of the system derive from that single source of truth. This isn’t something that we could do under the existing API, because the existing API was just <em>everyone using the events willy-nilly</em>. (The famous reason React exists—keeping message state in sync—hit our app in a <em>lot</em> of places as a result! And now… it doesn’t.) Migrating all consumers to the new design was and is a slow process, but everywhere we do it, we’re <em>really</em> happy we did.</p>
+<p>The single most common example of this kind of rewrite for us is figuring out how to replace uses of <code>didReceiveAttrs</code>. The easy, “translation”-style path is to grab <code>{{did-insert}}</code> and <code>{{did-update}}</code> and keep the implementation otherwise the same. And for the short term, this is sometimes reasonable. However, in every case we’ve hit, there was also a much better solution that involved rewriting in terms of derived state, using a custom modifier for managing DOM interactions, or a combination of the two. And when we make that investment, the result has consistently required <em>less code</em> that was <em>easier to understand and test</em> to solve the same problem than the original code or even a “translation” from Classic to Octane.</p>
+<p>This process is both harder and slower than just trying to translate directly from Ember Classic into Ember Octane syntactically, to be sure! It has also paid off handsomely, though.</p>
+<p>All of this to say: it’s very common to find your existing <abbr title="application programming interface">API</abbr>s and solutions to a problem aren’t Octane-friendly. One response is to say this is a problem with Octane. Depending on your views on software design, that might be fair! Another, though, is to say that it’s possible the abstraction would benefit from being reworked substantially. This is my POV, and again: every single place we’ve hit like this in our app has been <em>improved</em> by the rewrite—often massively so.</p>
+<p>That doesn’t mean Octane is perfect. For one, there are still gaps: this RFC addresses one, and the work to get resources and effects addresses another. For another, observable-based systems (like Ember Classic) and incremental computation systems (like Ember Octane) simply have different tradeoffs and affordances—and you might prefer the former! But the fact that a pattern that worked in Classic doesn’t work in Octane doesn’t mean that Octane is <em>wrong</em> or even that it is <em>missing</em> something. It does mean that it makes fundamentally different tradeoffs in the design space than Classic did.</p>
+<p>Me, I prefer the Octane flavor of the tradeoffs, and when you hit spots like this I encourage you to rethink the design. You may find yourself in a place that surprises you with how much cleaner and more maintainable it is! You may also occasionally find a spot where the tradeoffs are a little worse (hasn’t happened to me yet, but I’m sure it’s possible). But either way, the fundamental design is the way it is—and breaking the core abstraction would be much worse.</p>
+<p>*[RFC]: request for comments
+*[POV]: point of view
+*[API]: application programming interface</p>
+
+                            </body>
+                        </html>

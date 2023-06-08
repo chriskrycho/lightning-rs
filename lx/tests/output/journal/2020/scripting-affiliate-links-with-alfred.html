@@ -1,0 +1,24 @@
+<html>
+                            <head>
+                                <link rel="stylesheet" href="/light.css" media="(prefers-color-scheme: light)" />
+                                <link rel="stylesheet" href="/dark.css" media="(prefers-color-scheme: dark)" />
+                            </head>
+                            <body>
+                                <p>This evening, I found myself manually using a really terrible affiliate-link-builder UI to generate links to Alibris for <a href="https://buttondown.email/chriskrycho/archive/revision-is-a-permanent-state-of-affairs-across/">the latest issue of my newsletter</a>, and decided it was time to take the plunge and actually start automating some of these things so I could save time when doing it in the future.</p>
+<aside>
+<p>Weirdly, despite being a programmer by trade, I have not really spent a lot of time on this kind of personal automation in the past. I got into programming by way of visual design—HTML and CSS—<em>not</em> by way of either games or automation like so many of my peers. The majority of the automation I’ve done has been on iOS/iPadOS, and those mostly only as workarounds for things that are more difficult than they should be!</p>
+</aside>
+<p>The result of half an hour of messing with this was a <em>super</em> simple <a href="https://www.alfredapp.com">Alfred</a> workflow. I can just launch Alfred (by typing <kbd>⌘</kbd><kbd>⌥</kbd><kbd>Space</kbd>), type <code>aalink</code>, and paste a URL, and then immediately hit <kbd>⌘</kbd><kbd>V</kbd> in whatever writing app I’m using—and boom, the link is as it should be!</p>
+<p>Under the hood, Alfred takes in that given URL, encodes it, attaches the relevant parameters for the deep links, and copies the result to the clipboard so that I can immediately paste it into:</p>
+<p><img src="https://cdn.chriskrycho.com/file/chriskrycho-com/images/alfred-affiliate-workflow.png" alt="Alfred workflow for generating affiliate links" /></p>
+<p>I had a basic version of this tiny little workflow done in about five minutes. The rest of that half hour I spent figuring out how to make it <em>shareable for this blog post</em>. (You can snag it <a href="https://cdn.chriskrycho.com/file/chriskrycho-com/workflows/Alibris%20Affiliate%20Link%20builder.alfredworkflow">here</a>!) Honestly, having taken 30 minutes to build this and then get it to the point where I could actually export it to share it with you will has likely put me in <a href="https://www.xkcd.com/1319/">XKCD #1319</a> territory for the foreseeable… but I think I’m actually okay with that even if so, because I now have another tool in my toolbox for this kind of thing in the future. That tool actually made itself useful immediately: I realized that I <em>also</em> have a small but <em>very</em> repetitive task for updating the URL for every item I put in my CDN on <a href="https://www.backblaze.com/b2/cloud-storage.html">Backblaze B2</a> to point to <code>cdn.chriskrycho.com</code> instead of the Backblaze-specific URL. I did <em>that</em> in a matter of a <em>minute</em>.</p>
+<p>I don’t know if I’ll ever be one of those people who spends a <em>lot</em> of time automating things, but I <em>am</em> genuinely glad to have set this up and to have put the tool in my toolbox!</p>
+<p>…now to get back to drafting the rest of the newsletter that sent me down this rabbit hole in the first place.</p>
+<p>*[UI]: user interface
+*[HTML]: hyper-text markup language
+*[CSS]: cascading style sheets
+*[URL]: universal resource locator
+*[CDN]: content delivery network</p>
+
+                            </body>
+                        </html>

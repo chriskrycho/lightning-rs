@@ -1,0 +1,141 @@
+<html>
+                            <head>
+                                <link rel="stylesheet" href="/light.css" media="(prefers-color-scheme: light)" />
+                                <link rel="stylesheet" href="/dark.css" media="(prefers-color-scheme: dark)" />
+                            </head>
+                            <body>
+                                <p>Scrolling through my RSS feed this evening, I came across <a href="https://thoughtbot.com/blog/typescript-stop-using-any-there-s-a-type-for-that">this excellent post</a> on the Thoughtbot blog. I strongly agree with nearly everything in it: when we land TypeScript more broadly at LinkedIn, we will probably lint against <em>ever</em> using <code>any</code>.</p>
+<p>However, a couple things caught my attention as points for improvement in the code samples shared there, so I figured I’d share them more broadly so everyone can benefit from them.</p>
+<p>Under the heading <strong>I really don’t know what it is</strong>, the authors offer this example of using <code>unknown</code> instead of <code>any</code>:</p>
+<pre><code>type ParsedType = {
+  id: number
+}
+
+const parseApiResponse(
+  response: Record&lt;string, unknown&gt;
+): ParsedType =&gt; {
+  const convertedResponse = (response as ParsedType)
+
+  // without doing the type cast we would
+  // get a type error here
+  if (convertedResponse.id &gt;= 0) {
+    return convertedResponse
+  } else {
+    throw Error.new(&quot;Invalid response&quot;
+  }
+}
+</code></pre>
+<p>This definitely <em>is</em> preferable to using <code>any</code>… but what if we could eliminate the (<em>also</em> totally unsafe!) cast as well? Turns out we can! TypeScript’s notion of <a href="https://www.typescriptlang.org/docs/handbook/2/narrowing.html">type narrowing</a> gives us the ability to check for this <em>safely</em>:</p>
+<pre><code>type ParsedType = {
+  id: number
+}
+
+const parseApiResponse = (
+  response: Record&lt;string, unknown&gt;
+): ParsedType =&gt; {
+  if (typeof response.id === 'number' &amp;&amp; response.id &gt;= 0) {
+    let parsed = { id: response.id };
+    return parsed;
+  } else {
+    throw new Error(&quot;Invalid response&quot;)
+  }
+}
+</code></pre>
+<p>If the response were more detailed than this, and therefore required more validation, we could extend the checks in that <code>if</code> statement to cover more ground. What’s more, if we want to avoid the extra object allocation, we can do that by reaching for <a href="https://v5.chriskrycho.com/journal/writing-robust-typescript-libraries/">some utility types</a> which let us be as robust as we like. And we could go further in that case and parse even a response typed as <code>unknown</code>:</p>
+<pre><code>type ParsedType = {
+  id: number
+}
+
+function isValid(response: unknown): response is ParsedType {
+  return (
+    isObject(response) &amp;&amp;
+    has('id', response) &amp;&amp;
+    typeof response.id === 'number' &amp;&amp;
+    response.id &gt;= 0
+  );
+}
+
+const parseApiResponse = (response: unknown): ParsedType =&gt; {
+  if (isValid(response)) {
+    return response;
+  } else {
+    throw new Error(&quot;Invalid response&quot;)
+  }
+}
+</code></pre>
+<p>Now we have <em>no</em> type-casts, because our runtime code—which is required if this is actually going to be safe in either JavaScript or TypeScript!—proves to the compiler that this is actually a <code>ParsedType</code>. This means that we can use <code>parseApiResponse</code> with a call like <code>fetch</code> and its <code>data.json()</code>, which returns a <code>Promise&lt;any&gt;</code>.<sup class="footnote-reference"><a href="#1">1</a></sup></p>
+<p>Second, in their section <strong>I have to write a lot of code when I add types, <code>any</code> is less work</strong>, they offer this code sample as justification of the (entirely correct, in my view!) claim that “if we are writing code without types, we will likely add defensive code to make sure arguments and variables have the correct shape for the program to perform as intended:”</p>
+<pre><code>const fullName = (user: any) =&gt; {
+  if (user?.firstName &amp;&amp; user?.lastName) {
+    return `${user.lastName}, ${user.firstName}`
+  }
+
+  return user?.firstName || &quot;&quot;
+}
+</code></pre>
+<p>As a replacement, they suggest this:</p>
+<pre><code>interface User {
+  firstName: string
+  lastName?: string
+}
+
+const fullName = ({ firstName, lastName }: User) =&gt; {
+  if (lastName === undefined) {
+    return firstName
+  }
+
+  return `${lastName}, ${firstName}`;
+}
+</code></pre>
+<p>This is a great improvement<sup class="footnote-reference"><a href="#2">2</a></sup> However, I feel obliged to note that instead of the or <code>||</code> operator in their <code>any</code> example, it’s worth reaching for the <a href="http://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_Coalescing_Operator">nullish coalescing <code>??</code> operator</a>, which treats <code>0</code>, <code>&quot;&quot;</code>, etc. differently than <code>undefined</code> and <code>null</code>! Now, the second example is still better code, and we don’t even <em>need</em> it in that case, but nullish coalescing is a great tool to have in your toolbox. You can imagine that in the case where the <code>User</code> argument here <em>was</em> optional—perhaps as part of some other set of arguments, or because you were dealing with untrusted data, that it would still be useful:</p>
+<pre><code>interface User {
+  firstName: string
+  lastName?: string
+}
+
+const fullName = (user?: User) =&gt; {
+  const first = user?.firstName ?? &quot;&quot;;
+  const last = user?.lastName ?? &quot;&quot;;
+  return `${first}, ${last}`;
+}
+</code></pre>
+<p>This is contrived, to be sure, but it shows how useful <a href="http://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Optional_chaining">optional chaining</a> and nullish coalescing can be even when you <em>do</em> have well-typed code.</p>
+<p>In sum: that post from Thoughtbot had great recommendations, but with a couple tweaks we can make it even stronger!</p>
+<p><em>[RSS]: really simple syndication</em></p>
+<div class="footnote-definition" id="1"><sup class="footnote-definition-label">1</sup>
+<p>Shameless plug: I would not throw an error here. Instead, I’d reach for a <code>Result</code> type, like the one in <a href="https://github.com/true-myth/true-myth" title="True Myth">the library a friend and I wrote a couple years ago</a>. That way I would be able to have type-safe error handling, as well! That would end up looking something like this:</p>
+<pre><code>import { Result } from &quot;true-myth&quot;;
+
+class ApiError extends Error {
+  constructor(readonly response: unknown) {
+    super(&quot;Invalid response&quot;);
+  }
+  
+  static from(response: unknown): ApiError {
+    return new ApiError(response);
+  }
+}
+
+const parseApiResponse =
+  (response: unknown): Result&lt;ParsedType, ApiError&gt; =&gt;
+    isValid(response)
+      ? Result.ok(response)
+      : Result.err(ApiError.from(response));
+</code></pre>
+<p>Now we have a well-typed error, which we can deal with as a value—no need for another <code>try</code>/<code>catch</code> block, and in fact we know <em>some</em> details about the kind of error we have!</p>
+</div>
+<div class="footnote-definition" id="2"><sup class="footnote-definition-label">2</sup>
+<p>Now, I would <em>absolutely</em> write this as a ternary and a single-expression function body instead:</p>
+<pre><code>interface User {
+  firstName: string
+  lastName?: string
+}
+
+const fullName = ({ firstName, lastName }: User) =&gt;
+  lastName ? `${lastName}, ${firstName}` : firstName;
+</code></pre>
+<p>…but for our purposes in this post that doesn’t much matter. 😅</p>
+</div>
+
+                            </body>
+                        </html>

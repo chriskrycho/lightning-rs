@@ -1,0 +1,40 @@
+<html>
+                            <head>
+                                <link rel="stylesheet" href="/light.css" media="(prefers-color-scheme: light)" />
+                                <link rel="stylesheet" href="/dark.css" media="(prefers-color-scheme: dark)" />
+                            </head>
+                            <body>
+                                <p>I spent some time today migrating my wife’s long-dormant (but soon to be no-longer dormant!) <a href="https://jaimiekrycho.com">website</a> from a shared hosting setup to a dedicated Linode setup I can manage myself. I ran into an interesting issue when <em>finishing</em> the setup, and figured I’d document it clearly to explain what the issue is and how to fix it.</p>
+<p>The defaults supplied out of the box on Linode’s One-Click app setup for WordPress have two issues for supporting this flow, which will :</p>
+<ol>
+<li>
+<p>Right out of the box, you will see Ulysses respond with an error indicating that there is a “compatibility problem.” This shows up because Ulysses communicates with WordPress via its XML-RPC API… and the default configuration from Linode <a href="https://www.linode.com/community/questions/18414/does-linode-block-xml-rpc">blocks XML-RPC</a>:<sup class="footnote-reference"><a href="#xml-rpc-api">1</a></sup></p>
+<pre><code>&lt;files xmlrpc.php&gt;
+    order allow,deny
+    deny from all
+&lt;/files&gt;
+</code></pre>
+<p>You can fix this by simply deleting that block.</p>
+<p>(There are a couple other blog posts out there on this same subject, and they recommend doing a bunch of other workarounds, all intended basically to allow XML-RPC connections to work while not exposing this particular file name. These workarounds as well as the original default exist because XML-RPC is occasionally a vector for attacks on servers. In my case, I’m not currently all that concerned about that; if it comes up I’ll deal with it then.)</p>
+</li>
+<li>
+<p>The <code>ServerName</code> value in the Apache config does not correctly work for <a href="https://certbot.eff.org">Certbot</a> to set up your site to automatically forward HTTP connections to HTTPS. Unfortunately, HTTPS connections are a (soft, but <em>highly</em> recommended) requirement for Ulysses to connect to the setup, and if forwarding isn’t enabled, Ulysses complains (as it should!). The problem here is that the default Apache config on the Linode One-Click WordPress app supplies the *IP address of the server—rather than the domain name for your site—as the <code>ServerName</code> value. Changing that fixes the Certbot issue, and thereby unblocks the Ulysses-WordPress connection.</p>
+<p>In our case, I needed to change it from <code>ServerName &lt;ip address&gt;</code> to <code>ServerName jaimiekrycho.com</code>, in both the <code>/etc/apache2/sites-enabled/wordpress.conf</code> and <code>/etc/apache2/sites-enabled/wordpress-le-ssl.conf</code> files, and then to run Certbot again to reinstall the certificate and configure it to forward all HTTP connections to HTTPS. At least on my machine, it wouldn’t do that last step until I had rewritten those <code>ServerName</code> entries.</p>
+</li>
+</ol>
+<p>Once I had made those two changes, everything worked nicely! I hope this ends up helping you if you run into the same.</p>
+<div class="footnote-definition" id="xml-rpc-api"><sup class="footnote-definition-label">1</sup>
+<p>If you’re thinking that it would be really nice if WordPress offered a modern JSON API instead of being stuck with XML-RPC, well… I’m with you.</p>
+<p>:::note
+A correction from <a href="https://jeremywsherman.com">a reader</a>! WordPress <a href="https://developer.wordpress.org/rest-api/"><em>does</em> have a JSON API</a>, and has for almost half a decade now! I have <em>no idea</em> why Ulysses is using XML-RPC instead of that API; at first blush <a href="https://developer.wordpress.org/rest-api/reference/posts/">it certainly looks like it could</a>. My bad for not checking this and just assuming the problem was on WordPress’ end rather than Ulysses’.
+:::</p>
+</div>
+<p>*[XML-RPC]: XML (“extensible markup language”) remote procedure call
+*[API]: application programming interface
+*[HTTPS]: HyperText Transfer Protocol Secure
+*[HTTP]: HyperText Transfer Protocol
+*[IP]: Internet Protocol
+*[JSON]: JavaScript Object Notation</p>
+
+                            </body>
+                        </html>

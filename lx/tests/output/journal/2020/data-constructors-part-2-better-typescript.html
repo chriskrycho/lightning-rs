@@ -1,0 +1,474 @@
+<html>
+                            <head>
+                                <link rel="stylesheet" href="/light.css" media="(prefers-color-scheme: light)" />
+                                <link rel="stylesheet" href="/dark.css" media="(prefers-color-scheme: dark)" />
+                            </head>
+                            <body>
+                                <p>In the <a href="https://v5.chriskrycho.com/journal/data-constructors-part-1-understanding-by-implementing/">first post</a> in this two-part series, I showed how you can use fairly standard TypeScript (or Java or C^♯^) to implement the idea of “data constructors” from the Standard ML (SML). That post covered everything you need to know to understand what they are and how they work. However, I intentionally used a minimal subset of TypeScript’s features to make it as approachable as possible for readers who aren’t TS experts, or who are coming from other languages like Java or C^♯^. TypeScript provides tools we can use to implement the same idea more robustly <em>and</em> with better performance, though. In this post, I’ll explore two of those—with the hope that you come out with a better idea of how to do interesting things with some advanced elements of TypeScript’s type system!</p>
+<p>*[SML]: Standard ML
+*[TS]: TypeScript</p>
+<h2>The existing implementation</h2>
+<p>First, let’s briefly review the existing implementation so that we’re on the same page about our starting point.</p>
+<pre><code>enum CabbageColor {
+  Red,
+  Green,
+}
+
+enum VeggieKind {
+  Squash,
+  Cabbage,
+  Broccoli,
+}
+
+type Matcher&lt;T&gt; = {
+  Squash: T;
+  Cabbage: (color: CabbageColor) =&gt; T;
+  Broccoli: T;
+};
+
+class Veggie {
+  private kind: VeggieKind;
+  private color?: CabbageColor;
+
+  private constructor(kind: VeggieKind, color?: CabbageColor) {
+    this.kind = kind;
+    this.color = color;
+  }
+
+  static Squash = new Veggie(VeggieKind.Squash);
+
+  static Cabbage = (color: CabbageColor) =&gt;
+    new Veggie(VeggieKind.Cabbage, color);
+
+  static Broccoli = new Veggie(VeggieKind.Broccoli);
+
+  match&lt;Output&gt;(matcher: Matcher&lt;Output&gt;): Output {
+    switch (this.kind) {
+      case VeggieKind.Squash:
+        return matcher.Squash;
+      case VeggieKind.Cabbage:
+        // SAFETY: we guarantee `color` is always defined with `Cabbage`
+        // in the public constructors.
+        return matcher.Cabbage(this.color!);
+      case VeggieKind.Broccoli:
+        return matcher.Broccoli;
+    }
+  }
+}
+</code></pre>
+<p>First, we have an <code>enum</code> for both <code>CabbageColor</code> and for <code>VeggieKind</code>. Second, we define a class with public constructors in the form of static methods or values, whose job it is to uphold the constraints that our <code>Veggie</code> have the right shape—for example, avoiding ending up with <code>kind: VeggieKind.Broccoli</code> <em>and</em> <code>color: CabbageColor.Red</code> instead of <code>color: undefined</code>. Finally, we have a <code>match</code> function which lets us “pattern-match” on the type we have.</p>
+<p>There are a number of type safety issues with this implementation. First off, the <em>only</em> thing which guarantees we do the right thing with our <code>Squash</code>, <code>Cabbage</code>, and <code>Broccoli</code> constructors is… that we’ve checked it very carefully (and maybe written some tests). This function has to use the <code>!</code> non-null assertion operator because the class as written cannot guarantee that <code>color</code> is always defined when <code>kind</code> is <code>VeggieKind.Cabbage</code>. <em>We</em> can see that, but we can’t <em>prove</em> it, for the same reason that we have to rely on the correct behavior of our static constructors to keep things correct in the first place.</p>
+<p>This approach has some performance issues as well. These are small in the grand scheme of things, but if we were building a <em>lot</em> of custom types like this, they might add up. First off, each <code>enum</code> here creates a fairly complicated object. Second, we need a class field for each value we could <em>ever</em> care about on the type. If we end up with something more complicated than just dealing with a single <code>CabbageColor</code> property—say, if we needed to store <em>multiple</em> other properties–this could end up adding up to a lot of extra “slots” on the class, which cost memory whether in use or not, and it could end up making it harder for the JavaScript VM’s just-in-time (JIT) compiler to optimize the class overall because of the inconsistent shapes (a problem sometimes called “megamorphism”).</p>
+<p>So let’s see how to fix these!</p>
+<p>*[VM]: virtual machine
+*[JIT]: just-in-time</p>
+<h2>Some advanced TypeScript features</h2>
+<p>We can make this implementation lighter-weight <em>and</em> more robustly type-safe by leaning into a set of “fancy” features in TypeScript:</p>
+<ol>
+<li><a href="#1-const-enums">Const enums</a></li>
+<li><a href="#2-literal-types">Literal types</a></li>
+<li><a href="#3-union-types">Union types</a></li>
+<li><a href="#4-tuple-types">Tuple types</a></li>
+</ol>
+<h3>1. Const enums</h3>
+<p>A <code>const enum</code> declaration works much the same as a normal <code>enum</code> declaration in Typescript, but it has one critical difference: normal <code>enum</code> declarations have a (surprisingly complicated) compiled output that still exists at runtime, while <code>const enum</code>s are compiled out of existence entirely, replaced by the constant value they represent. (By default, that’s a number, though you can give it a string value as well.)<sup class="footnote-reference"><a href="#1">1</a></sup></p>
+<p>Given this <code>const enum</code> declaration and usage–</p>
+<pre><code>const enum ConstEnum { A, B }
+
+function useConstEnum(x: ConstEnum) {
+  console.log(x);
+}
+
+useConstEnum(ConstEnum.A);
+</code></pre>
+<p>–here’s the compiled output (as of TS 3.9.2):</p>
+<pre><code class='JavaScript'><span class="source js"><span class="meta function declaration js"><span class="storage type function js">function</span> <span class="entity name function js">useConstEnum</span><span class="punctuation section group begin js">(</span><span class="variable parameter function js">x</span><span class="punctuation section group end js">)</span><span class="meta function declaration js"> </span></span><span class="meta block js"><span class="punctuation section block js">{</span>
+    <span class="meta function-call method js"><span class="support type object console js">console</span><span class="punctuation accessor js">.</span><span class="support function console js">log</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="variable other readwrite js">x</span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span><span class="punctuation terminator statement js">;</span>
+<span class="punctuation section block js">}</span></span>
+
+<span class="meta function-call js"><span class="variable function js">useConstEnum</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="constant numeric js">0</span> <span class="comment block js"><span class="punctuation definition comment js">/*</span> A <span class="punctuation definition comment js">*/</span></span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span><span class="punctuation terminator statement js">;</span>
+</span></code></pre>
+<p>Here is the same code implemented with a plain <code>enum</code> instead of a <code>const enum</code>:</p>
+<pre><code>enum RegularEnum { A, B }
+
+function useRegularEnum(x: RegularEnum) {
+  console.log(x);
+}
+
+useRegularEnum(RegularEnum.A);
+</code></pre>
+<p>And here is the corresponding output from TS 3.9.7:</p>
+<pre><code class='JavaScript'><span class="source js"><span class="storage type js">var</span> <span class="variable other readwrite js">RegularEnum</span><span class="punctuation terminator statement js">;</span>
+<span class="meta group js"><span class="punctuation section group js">(</span><span class="meta function declaration js"><span class="storage type function js">function</span> <span class="punctuation section group begin js">(</span><span class="variable parameter function js">RegularEnum</span><span class="punctuation section group end js">)</span><span class="meta function declaration js"> </span></span><span class="meta block js"><span class="punctuation section block js">{</span>
+    <span class="support class js">RegularEnum</span><span class="meta brackets js"><span class="punctuation section brackets js">[</span><span class="support class js">RegularEnum</span><span class="meta brackets js"><span class="punctuation section brackets js">[</span><span class="string quoted double js"><span class="punctuation definition string begin js">&quot;</span>A<span class="punctuation definition string end js">&quot;</span></span><span class="punctuation section brackets js">]</span></span> <span class="keyword operator assignment js">=</span> <span class="constant numeric js">0</span><span class="punctuation section brackets js">]</span></span> <span class="keyword operator assignment js">=</span> <span class="string quoted double js"><span class="punctuation definition string begin js">&quot;</span>A<span class="punctuation definition string end js">&quot;</span></span><span class="punctuation terminator statement js">;</span>
+    <span class="support class js">RegularEnum</span><span class="meta brackets js"><span class="punctuation section brackets js">[</span><span class="support class js">RegularEnum</span><span class="meta brackets js"><span class="punctuation section brackets js">[</span><span class="string quoted double js"><span class="punctuation definition string begin js">&quot;</span>B<span class="punctuation definition string end js">&quot;</span></span><span class="punctuation section brackets js">]</span></span> <span class="keyword operator assignment js">=</span> <span class="constant numeric js">1</span><span class="punctuation section brackets js">]</span></span> <span class="keyword operator assignment js">=</span> <span class="string quoted double js"><span class="punctuation definition string begin js">&quot;</span>B<span class="punctuation definition string end js">&quot;</span></span><span class="punctuation terminator statement js">;</span>
+<span class="punctuation section block js">}</span></span><span class="punctuation section group js">)</span></span><span class="meta group js"><span class="punctuation section group js">(</span><span class="variable other readwrite js">RegularEnum</span> <span class="keyword operator logical js">||</span> <span class="meta group js"><span class="punctuation section group js">(</span><span class="variable other readwrite js">RegularEnum</span> <span class="keyword operator assignment js">=</span> <span class="meta object-literal js"><span class="punctuation section block js">{</span><span class="punctuation section block js">}</span></span><span class="punctuation section group js">)</span></span><span class="punctuation section group js">)</span></span><span class="punctuation terminator statement js">;</span>
+
+<span class="meta function declaration js"><span class="storage type function js">function</span> <span class="entity name function js">useRegularEnum</span><span class="punctuation section group begin js">(</span><span class="variable parameter function js">x</span><span class="punctuation section group end js">)</span><span class="meta function declaration js"> </span></span><span class="meta block js"><span class="punctuation section block js">{</span>
+    <span class="meta function-call method js"><span class="support type object console js">console</span><span class="punctuation accessor js">.</span><span class="support function console js">log</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="variable other readwrite js">x</span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span><span class="punctuation terminator statement js">;</span>
+<span class="punctuation section block js">}</span></span>
+
+<span class="meta function-call js"><span class="variable function js">useRegularEnum</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="support class js">RegularEnum</span><span class="punctuation accessor js">.</span><span class="meta property object js">A</span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span><span class="punctuation terminator statement js">;</span>
+</span></code></pre>
+<p>Notice that there is much more code present at runtime for the plain <code>enum</code>. Most obviously, it comes with a declaration of a fancy object type. (This is makes it so that you can write <code>RegularEnum.A</code> and get out <code>0</code> <em>or</em> type <code>RegularEnum[0]</code> and get out <code>&quot;A&quot;</code>.<sup class="footnote-reference"><a href="#2">2</a></sup>) Second, note that the call <code>useRegularEnum(RegularEnum.A)</code> still refers to that fancy object type:</p>
+<pre><code class='JavaScript'><span class="source js"><span class="meta function-call js"><span class="variable function js">useRegularEnum</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="support class js">RegularEnum</span><span class="punctuation accessor js">.</span><span class="meta property object js">A</span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span><span class="punctuation terminator statement js">;</span>
+</span></code></pre>
+<p>Recall that the compiled call looked like this instead for the <code>const enum</code>:</p>
+<pre><code class='JavaScript'><span class="source js"><span class="meta function-call js"><span class="variable function js">useConstEnum</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="constant numeric js">0</span> <span class="comment block js"><span class="punctuation definition comment js">/*</span> A <span class="punctuation definition comment js">*/</span></span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span><span class="punctuation terminator statement js">;</span>
+</span></code></pre>
+<p>This is how TypeScript gets rid of the runtime object representing a <code>const enum</code>–it just substitutes in the concrete values each lookup represents. This means that we can have a <em>much</em> lower cost for the enums we’re using for <code>CabbageColor</code> and <code>VeggieKind</code>. They will ultimately just be integers used inline, which means they will have extremely low memory costs, and using them does not involve an object lookup! These are small wins in any individual point in a codebase, but over a large app or in hot paths in a library, they can become quite meaningful.</p>
+<p>After switching to <code>const enum</code>, the <code>CabbageColor</code> and <code>VeggieKind</code> declarations in the implementation look like this:</p>
+<pre><code>const enum CabbageColor { Red, Green }
+const enum VeggieKind { Broccoli, Cabbage, Squash }
+</code></pre>
+<p>The compiled output for those is <em>nothing at all</em>! When we use them later, they’ll just be compiled into integers: <code>0</code> for <code>CabbageColor.Red</code> and <code>1</code> for <code>CabbageColor.Green</code> and so on.<sup class="footnote-reference"><a href="#3">3</a></sup></p>
+<h3>2. Literal types</h3>
+<p>Next up, let’s talk about <em>literal</em> types. TypeScript allows us to specify that the type of something is an exact, specific value. For example:</p>
+<pre><code>type MyName = 'Chris Krycho';
+</code></pre>
+<p>If I specify that a given value is of the type <code>MyName</code>, it can <em>only</em> have <em>exactly</em> that value–no other string (or anything else) allowed:</p>
+<pre><code>let myNameBad: MyName = 'Christopher Krycho'; // TYPE ERROR
+let myNameGood: MyName = 'Chris Krycho';
+</code></pre>
+<p>Any value you can write out as a <em>literal</em> in JavaScript can be a literal type in TypeScript. So, for example, I could get <em>incredibly</em> specify about describing myself with a type:</p>
+<pre><code>type MeWhenWritingThisPost = {
+  name: 'Chris Krycho';
+  age: 33;
+  hairColor: 'brown';
+};
+</code></pre>
+<p>Then I could specify a value (in any location: a standalone variable, a field on an object, etc.) to have exactly this type, and the compiler will enforce it! In the case of the <code>Veggie</code> example, we’ll apply this in conjunction with our newly redefined <code>const enum</code> types: both <code>enum</code> and <code>const enum</code> values are <em>literal values</em> and can be used as <em>literal types</em>. For example, we could specify that a given function can <em>only</em> operation on squash:</p>
+<pre><code>function onlySquash(squash: VeggieKind.Squash) {
+  // ...
+}
+
+onlySquash(VeggieKind.Squash);   // Okay!
+onlySquash(VeggieKind.Cabbage);  // Not okay!
+onlySquash(VeggieKind.Broccoli); // Not okay!
+</code></pre>
+<h3>3. Union types</h3>
+<p>The next feature we need to make our better-performing, more type-safe implementation is <em>union types</em>. This is actually the same kind of thing we were implementing in the first place from languages like Grain, Elm, Haskell, F^♯^, OCaml/ReasonML, etc.! Here, we’re going to use TypeScript’s tuples in a way that those languages <em>cannot</em> do; below, we’ll implement another version which is closer in some ways, but further in others, from the thing we see in those languages.</p>
+<p>A union, in TypeScript, is <em>any</em> set of one or more types separated by <code>|</code> characters, representing that the type can be any <em>one</em> of the items in the set. So, for example, to specify <code>number</code> <em>or</em> <code>string</code>, we could write:</p>
+<pre><code>type NumOrStr = number | string;
+</code></pre>
+<p>That’s very similar to what we saw in the previous post for Grain’s <code>data</code> definitions, but with a key difference: this is operating on <em>existing</em> types, not just defining values of a <em>new</em> types.<sup class="footnote-reference"><a href="#4">4</a></sup></p>
+<p>Union types can be as complex as we like, and they can include literal types and tuple types and every other kind of type in the language. For example, I could define a set of kinds of vegetables I dislike by using a subset of <code>VeggeKind</code> literals:</p>
+<pre><code>type GrossVeggies = VeggieKind.Squash | VeggieKind.Cabbage;
+</code></pre>
+<p>Then a function could specify that it accepts <em>only</em> <code>GoodVeggies</code> as an argument:</p>
+<pre><code>function eat(veggies: GrossVeggies): string {
+  switch (veggie) {
+    case VeggieKind.Squash:
+      return 'always ends up mushy';
+    case VeggieKind.Cabbage:
+      return 'the second worst part of cole slaw';
+  }
+}
+
+eat(VeggieKind.Squash);   // &quot;always ends up mushy&quot;
+eat(VeggieKind.Cabbage);  // &quot;the second worst part of cole slaw&quot;
+eat(VeggieKind.Broccoli); // ‼️ TYPE ERROR
+</code></pre>
+<p>With everything we know so far, we actually have enough to solve our <em>type safety</em> problems: we could do it with object literals, using data shaped like this:</p>
+<pre><code>type VeggieData =
+  | { kind: VeggieKind.Squash }
+  | { kind: VeggieKind.Cabbage, color: CabbageColor }
+  | { kind: VeggieKind.Broccoli };
+</code></pre>
+<p>This union type uses the literal types from <code>VeggieKind</code> to distinguish each case, and <em>only</em> includes <code>color</code> when the <code>kind</code> is specifically <code>VeggieKind.Cabbage</code>. However, while this gets us <em>most</em> of the way to where we want, we can do a little better yet on the performance front by using tuple types!</p>
+<h3>4. Tuple types</h3>
+<p>TypeScript uses JavaScript arrays to represent <em>tuples</em>: structured data similar to objects, but without runtime key/value associations.<sup class="footnote-reference"><a href="#5">5</a></sup> JavaScript already uses this pattern in a number of places, including <a href="http://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/entries">the <code>Object.entries</code> API</a>. The syntax to define a tuple type looks like this:</p>
+<pre><code>type ThreeTuple = [string, number, boolean];
+</code></pre>
+<p>This is different from the syntax for an array which contains <code>string</code>, <code>number</code>, and <code>boolean</code>:</p>
+<pre><code>type MixedArrayLiteral = (string | number | boolean)[];
+type MixedArrayGeneric = Array&lt;string | number | boolean&gt;;
+</code></pre>
+<p>When you have a tuple type, the position you index at corresponds to the type in that position in the tuple:</p>
+<pre><code>let threeTuple: ThreeTuple = [&quot;hi&quot;, 12, true];
+
+// These all type-check!
+let first: string = threeTuple[0];  // 👍
+let second: number = threeTuple[1]; // 👍
+let third: boolean = threeTuple[2]; // 👍
+
+// These will *not* type-check!
+let firstBad: boolean = threeTuple[0]; // ‼️ TYPE ERROR
+let secondBad: string = threeTuple[1]; // ‼️ TYPE ERROR
+let thirdBad: number = threeTuple[2];  // ‼️ TYPE ERROR
+</code></pre>
+<p>With an array, each of these would have the type <code>string | number | boolean</code> and we would have to <em>check</em> which it was, using the <code>typeof</code> operator.</p>
+<p>A tuple has exactly and only the length of the type defined. If we tried to access or set <code>threeTuple[3]</code>, it would be a type error–unlike with an array, which has an indefinite length.</p>
+<p>We can also combine tuple types with literal types, to specify that only a particular value is allowed:</p>
+<pre><code>type Hello12 = [&quot;hello&quot;, 12];
+
+// This will type-check!
+let allowed: Hello12 = [&quot;hello&quot;, 12];  // 👍
+
+// These will *not* type-check
+let badFirst: Hello12 = [&quot;greetings&quot;, 12]; // ‼️ TYPE ERROR
+let badSecond: Hello12 = [&quot;hello&quot;, 32345]; // ‼️ TYPE ERROR
+let badBoth: Hello12 = [&quot;goodbye&quot;, 98765]; // ‼️ TYPE ERROR
+</code></pre>
+<p>*[API]: application programming interface</p>
+<h2>Two new implementations</h2>
+<p>With these tools in hand, we can now see a couple of ways we could approach improving both the type safety and performance of our original implementation.</p>
+<h3>a. Just make it safer</h3>
+<p>With all of these pieces in place, we can now see how to build a version of the implementation which has the best-possible-for-JS performance characteristics.</p>
+<p>First, we define the <code>CabbageColor</code> and <code>VeggieKind</code> types exactly as before, with <code>const enum</code>:</p>
+<pre><code>const enum CabbageColor { Red, Green }
+const VeggieKind { Broccoli, Cabbage, Squash }
+</code></pre>
+<p>Then we define the underlying data for the <code>Veggie</code> type as a union of literal tuple types:<sup class="footnote-reference"><a href="#6">6</a></sup></p>
+<pre><code>type VeggieData =
+  | [VeggieKind.Squash]
+  | [VeggieKind.Cabbage, CabbageColor]
+  | [VeggieKind.Broccoli];
+</code></pre>
+<p>This particular type definition brings together <em>all</em> of the concepts discussed above, so let’s see it in practice before we pull it into the <code>class Veggie</code> definition, just to help keep things clear.</p>
+<pre><code>let veggieData: VeggieData;
+
+// These will all type-check!
+veggieData = [VeggieKind.Squash];  // 👍
+veggieData = [VeggieKind.Broccoli];  // 👍
+veggieData = [VeggieKind.Cabbage, CabbageColor.Red];  // 👍
+veggieData = [VeggieKind.Cabbage, CabbageColor.Green];  // 👍
+
+// These will *not* type-check:
+veggieData = []
+veggieData = [VeggieKind.Broccoli, CabbageColor.Green];  // ‼️ TYPE ERROR
+veggieData = [VeggieKind.Cabbage];  // ‼️ TYPE ERROR
+veggieData = [VeggieKind.Squash, 23];  // ‼️ TYPE ERROR
+veggieData = [CabbageColor.Red, VeggieKind.Cabbage];  // ‼️ TYPE ERROR
+</code></pre>
+<p>We can now use this in conjunction with our class and <code>private</code> field to define our <code>Veggie</code> class. First, instead of defining the <code>kind</code> and <code>color</code> as separate fields, we can give it a private <code>data</code> field which uses the new <code>VeggieData</code> type.</p>
+<pre><code>const enum CabbageColor { Red, Green }
+const enum VeggieKind { Broccoli, Cabbage, Squash }
+
+type VeggieData =
+  | [VeggieKind.Broccoli]
+  | [VeggieKind.Cabbage, CabbageColor]
+  | [VeggieKind.Squash];
+
+class Veggie {
+  private readonly data: VeggieData;
+
+  private constructor(data: VeggieData) {
+    this.data = data;
+  }
+
+  static Squash = new Veggie([VeggieKind.Squash]);
+
+  static Cabbage = (color: CabbageColor) =&gt;
+    new Veggie([VeggieKind.Cabbage, color]);
+
+  static Broccoli = new Veggie([VeggieKind.Broccoli]);
+
+  match&lt;Output&gt;(matcher: {
+    squash: Output,
+    cabbage: (color: CabbageColor) =&gt; Output,
+    broccoli: Output,
+  }): Output {
+    switch (this.data[0]) {
+      case VeggieKind.Squash:
+        return matcher.squash;
+      case VeggieKind.Cabbage:
+        return matcher.cabbage(this.data[1]);
+      case VeggieKind.Broccoli:
+        return matcher.broccoli;
+    }
+  }
+}
+</code></pre>
+<p>This has a few critical differences from what we defined in the first post:</p>
+<ol>
+<li>
+<p>As with our first pass using objects instead of tuples, the types are defined in a way that means they can never be invalid. In the previous implementation, the only thing that made sure we never ended up with a <code>kind</code> of <code>Squash</code> <em>and</em> a <code>CabbageColor</code>, or with a <code>kind</code> of <code>Cabbage</code> but <em>without</em> a <code>CabbageColor</code>, was careful programming and double-checking ourselves. In the new scenario, we <em>cannot</em> create a <code>Veggie</code> with those invalid combinations, because our types won’t let us!</p>
+</li>
+<li>
+<p>Our private constructor now takes the <code>VeggieData</code> type. This means that even the calls from our <code>static</code> definitions for <code>Squash</code>, <code>Cabbage</code>, and <code>Broccoli</code> cannot accidentally pass in the wrong thing, either! Now, this type is one we would leave private to this module, because it’s <em>never</em> something an end user would care about. Within this module, though, it lets us turn the compiler into a tool for guaranteeing that we are doing exactly and only what we intend to do.</p>
+</li>
+<li>
+<p>Our <code>switch</code> statement can now just index directly into the tuple for the <code>Cabbage</code> scenario. Before, we needed the <code>!</code> non-null assertion operator when touching <code>color</code>, because we had no way to guarantee at the type system level that <code>color</code> was never set when it shouldn’t be and always set when it should be. Since we’ve defined <code>data</code> to be the union type <code>VeggieData</code>, though, TypeScript <em>knows</em> that <code>color</code> is always defined when <code>this.data.kind</code> is <code>VeggieKind.Cabbage</code>.</p>
+</li>
+<li>
+<p>Similarly, if we tried to access <code>this.data.color</code> in the <code>case</code> branches for <code>VeggieKind.Squash</code> or <code>VeggieKind.Broccoli</code>, we would see a type error like this:</p>
+<blockquote>
+<p>Property ‘color’ does not exist on type ‘kind: VeggieKind.Squash;’.</p>
+</blockquote>
+</li>
+<li>
+<p>Performance-wise, this is just about as cheap as it can get. We’re using integers to represent the different options here, and last time we even minimized the total number of these that will be constructed over the life of the app.<sup class="footnote-reference"><a href="#7">7</a></sup></p>
+</li>
+<li>
+<p>From the perspective of a <em>user</em> of the class, nothing has changed! Our public contract is identical with what we had in the previous implementation–but it’s now much more robust and we know that the type-checker will have our backs if we need to make a refactor here in the future.</p>
+</li>
+</ol>
+<p>*[JS]: JavaScript</p>
+<p>:::note</p>
+<p>It’s important to understand what types do <em>not</em> (and cannot!) buy us here as well as what they <em>do</em> buy us. They’ve helped us guarantee that we always have a valid shape to our data. But if we wire up our static constructors incorrectly, we will still end up with broken code. Nothing about our types here stops us from writing this horribly broken implementation, after all:</p>
+<pre><code>class Veggie {
+  private data: VeggieData;
+
+  constructor(data: VeggieData) {
+    this.data = data;
+  }
+
+  static Squash = new Veggie({ kind: VeggieKind.Broccoli });
+
+  static Cabbage = new Veggie({ kind: VeggieKind.Squash });
+
+  static Broccoli = new Veggie({
+    kind: VeggieKind.Cabbage,
+    color: CabbageColor.Green
+  });
+}
+</code></pre>
+<p>This is perfectly legal from a <em>type</em> perspective, but it’s completely wrong: <code>Veggie.Cabbage</code> is a <code>Squash</code>! However, it’s also worth note that this possibility only exists because we’re cobbling together this functionality in TypeScript. If we were working in a language like Grain, Elm, Haskell, F^♯^ , OCaml/ReasonML, Rust, etc., we would <em>not</em> have this problem, because data constructors are <em>built into the language</em>!</p>
+<p>:::</p>
+<h3>b. Something totally different</h3>
+<p>We could also use the same technique with union types and tuple literal types, but eliminate the <code>class</code> entirely. In place of the class, we can carefully design a set of module exports to provide the same basic interface, but purely in terms of functions and values. Instead of the <code>Veggie</code> class with its private constructors, we can rename <code>VeggieData</code> to <code>Veggie</code> and expose standalone values for <code>Squash</code>, <code>Cabbage</code>, and <code>Broccoli</code> as well as for the <code>CabbageColor</code> values:</p>
+<pre><code>const enum CabbageColor { Red, Green }
+const enum VeggieKind { Squash, Cabbage, Broccoli }
+
+export const { Red, Green } = CabbageColor;
+
+export type Veggie =
+  | [VeggieKind.Squash]
+  | [VeggieKind.Cabbage, CabbageColor]
+  | [VeggieKind.Broccoli];
+
+export const Squash = [VeggieKind.Squash];
+
+export const Cabbage = (color: CabbageColor): Veggie =&gt;
+  [VeggieKind.Cabbage, color];
+
+export const Broccoli = [VeggieKind.Broccoli];
+
+export function match&lt;Output&gt;(veggie: Veggie, matcher: {
+  squash: Output;
+  cabbage: (color: CabbageColor) =&gt; Output;
+  broccoli: Output;
+}): Output {
+  switch (veggie[0]) {
+    case VeggieKind.Squash:
+      return matcher.squash;
+    case VeggieKind.Cabbage:
+      return matcher.cabbage(veggie[1]);
+    case VeggieKind.Broccoli:
+      return matcher.broccoli;
+  }
+}
+</code></pre>
+<p>We could import it and use this implementation like this:</p>
+<pre><code>import { Cabbage, Squash, Broccoli, Red, Green, match } from './veggie';
+
+let veggies = [Cabbage(Red), Squash, Broccoli, Squash, Cabbage(Green)];
+
+let descriptions = veggies.map((veggie) =&gt; match(veggie, {
+  squash: 'green, yellow, you name it!',
+  cabbage: (color) =&gt; `this cabbage is ${color}`,
+  broccoli: 'always just green',
+});
+</code></pre>
+<p>This is the same kind of performance we had with the <code>class</code>… but with <em>even less</em> overhead, since there is no class sitting around. (A class doesn’t cost much, though, and this decrease is rather trivial given the optimizations we’ve already made.) Notice, though, that at this point we have very nearly the same syntax we had in the original example from Grain–we just had to do a bit more work to create the names to get there:</p>
+<pre><code>data CabbageColor = Red | Green 
+data Veggie =
+  | Squash
+  | Cabbage(CabbageColor)
+  | Broccoli
+</code></pre><pre><code>import * from './veggie';
+
+let colorToString = (color) =&gt; match (color) {
+  | Red =&gt; 'red'
+  | Green =&gt; 'green'
+}
+
+let veggies = [Cabbage(Red), Squash, Broccoli, Squash, Cabbage(Green)]
+
+let descriptions = List.map((veggies) =&gt; match (veggies) {
+  | Squash =&gt; 'green, yellow, you name it!'
+  | Cabbage(color) =&gt; 'this cabbage is ' + colorToString(color)
+  | Broccoli =&gt; 'always just green'
+});
+</code></pre>
+<h3>Evaluation</h3>
+<p>There is one significant downside to this implementation compared to the class implementation. We have coupled it to the use of the tuple types as values, by exposing that information to end users. In the <code>class</code>-based implementation, the structure of the data was <code>private</code>, and in fact we could have used a <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/Private_class_fields">private class field</a> to make it not only type-private but runtime-private, so that end users could not see the details even if they wanted to.</p>
+<p>What’s more, because we’ve exposed those implementation details, we’ve actually given away our control over the values in the system. It’s now perfectly legal from a type system perspective for a user to create their own instance of a red cabbage manually, using the substituted values of the <code>const enum</code>:</p>
+<pre><code>let redCabbage: Veggie = [1, 0];
+</code></pre>
+<p>Users <em>shouldn’t</em> do this, but that doesn’t mean they <em>won’t</em>. The same goes for the “tuples” we now expose to them: users <em>shouldn’t</em> treat those as arrays with all their normal operations and transformations, but they <em>can</em>.</p>
+<p>Given the extremely low overhead that a single class provides, I think the balance here leans strongly toward using a class. Remember, <code>Veggie</code> is effectively a singleton because it cannot be constructed apart from the constructors we supplied! And in fact, we could go further and make it <em>impossible</em> for outside callers to construct it apart from those constructors. Instead of exporting the class, we could just export the constructors (a pattern we’ve seen already for <em>other</em> reasons in this example):</p>
+<pre><code>class Veggie {
+  // ...
+}
+
+export const { Squash, Cabbage, Broccoli } = Veggie;
+export type Veggie = typeof Veggie;
+</code></pre>
+<p>In the end, I think this pattern is preferable: it gives us the best balance of developer ergonomics, safety, and performance. This actually surprised me a bit: when I started writing up these two posts, I fully expected to end up preferring the <code>class</code>-less approach, but evaluating the tradeoffs led me to like the <code>class</code>-based approach a bit better<sup class="footnote-reference"><a href="#8">8</a></sup></p>
+<h2>Bonus: one last optimization</h2>
+<p>Finally, for <em>both</em> implementations, there’s one further (tiny) optimization we could make performance-wise. As I noted in the previous post in this series when discussing the <code>Squash</code> and <code>Broccoli</code> constructors on <code>Veggie</code>, we can freely reuse those values because they’re immutable, so we don’t have to worry about changes to them confusing our system. The same actually goes for our <code>Cabbage</code> variant! We <em>know</em> that we there will only ever be two options there: the two colors. Accordingly, we can define <em>values</em> for those and use them directly instead of creating new arrays every time the constructor is used:</p>
+<pre><code>class Veggie {
+  private static RedCabbage =
+    new Veggie([VeggieKind.Cabbage, CabbageColor.Red]);
+  private static GreenCabbage =
+    new Veggie([VeggieKind.Cabbage, CabbageColor.Green]);
+
+  static Cabbage = (color: CabbageColor): Veggie =&gt;
+    color === CabbageColor.Red
+      ? Veggie.RedCabbage
+      : Veggie.GreenCabbage;
+</code></pre>
+<p>With that, there are only ever a <em>total</em> of four actual <code>Veggie</code> instances in the entire system, with the following <code>Data</code>:</p>
+<ol>
+<li><code>[VeggieKind.Squash]</code></li>
+<li><code>[VeggieKind.Cabbage, CabbageColor.Red]</code></li>
+<li><code>[VeggieKind.Cabbage, CabbageColor.Green]</code></li>
+<li><code>[VeggieKind.Broccoli]</code></li>
+</ol>
+<p>This is as cheap as things can get! On the one hand, it’s quite delightful that we <em>can</em> get here with TypeScript by thinking through every possible optimization point in our system. On the other hand, it’s the kind of thing we could just get for <em>free</em> if we were using a language that had these ideas built in from the outset.</p>
+<div class="footnote-definition" id="1"><sup class="footnote-definition-label">1</sup>
+<p>Note: only available when using TS to compile your code! If you’re using Babel to compile and only using TS to type-check, this doesn’t work. Compiling out <code>const enum</code> declarations requires having information about more than one file; Babel explicitly only works to transform the syntax of a single file.</p>
+</div>
+<div class="footnote-definition" id="2"><sup class="footnote-definition-label">2</sup>
+<p>Why this is necessary, I don’t know. I have never found a compelling use case for it!</p>
+</div>
+<div class="footnote-definition" id="3"><sup class="footnote-definition-label">3</sup>
+<p>You might worry about whether this means that you can also substitute <code>VeggieKind.Broccoli</code> for <code>CabbageColor.Red</code>, since they’d both just have the value <code>0</code> at runtime. The answer is <em>no</em>: unlike most places in TypeScript, where the ultimate “shape” is the only thing which matters, enums are treated as distinct types based on their <em>name</em>. You can see this distinction in practice in <a href="https://www.typescriptlang.org/play?#code/MYewdgzgLgBApmArgWxgeTHGBvGBBAGhgCEYBfAKFElgRRgBUB3EHfI0yigM0TGCgBLcDG4gQACgAeALnSYAlDkq9+QkQCMAhgCdpc5iCXYuYyYYB0eBQG4K2vRjhXbFIA">this playground</a>.</p>
+</div>
+<div class="footnote-definition" id="4"><sup class="footnote-definition-label">4</sup>
+<p>TypeScript’s types are <em>sets</em> in the mathematical sense. A lot of otherwise-surprising things about the type system flow out of the set-natured-ness of the types. For example, when you see <code>any</code>, you’re actually seeing the <em>everything</em> set–which means that if you ever see any other type combined with <code>any</code> in a union, like <code>number | any</code>, it’s pointless. You can think of it this way: if we were talking about sets of <em>numbers</em>, and we said “This value can be 1 or any number,” the first bit doesn’t matter, since “1” is included in “any number.” The same thing goes with <code>any</code>.</p>
+</div>
+<div class="footnote-definition" id="5"><sup class="footnote-definition-label">5</sup>
+<p>I qualify <em>runtime</em> key-value associations because TypeScript 4 is introducing the ability to use labels with tuples. As with essentially all TypeScript features–except non-<code>const</code> enums!–these have no existence at runtime.</p>
+</div>
+<div class="footnote-definition" id="6"><sup class="footnote-definition-label">6</sup>
+<p>With TypeScript 4.0, we could actually use labeled values for this tuples. The result would be quite expressive while maintaining exactly the semantics we need <em>and</em> the nice performance characteristics of tuple types:</p>
+<pre><code>type VeggieData =
+  | [kind: Kind.Squash]
+  | [kind: Kind.Cabbage, color: CabbageColor]
+  | [kind: Kind.Broccoli]
+</code></pre>
+<p>I’ve left the code sample without those, but if I were writing this in a codebase <em>today</em>, that’s how I would write it!</p>
+</div>
+<div class="footnote-definition" id="7"><sup class="footnote-definition-label">7</sup>
+<p>Strictly speaking, we can actually go slightly further on that front, by statically creating the cabbage variants as well:</p>
+<pre><code>const RedCabbageData: VeggieData = [VeggieKind.Cabbage, CabbageColor.Red];
+const GreenCabbageData: VeggieData = [VeggieKind.Cabbage, CabbageColor.Green];
+</code></pre>
+<p>Then we could use that in our static constructor:</p>
+<pre><code>class Veggie {
+  // ...
+  static Cabbage = (color: CabbageColor) =\&gt;
+    color == CabbageColor.Red
+      ? RedCabbageData
+      : GreenCabbageData;
+}
+</code></pre></div>
+<div class="footnote-definition" id="8"><sup class="footnote-definition-label">8</sup>
+<p>Fellow functional programming fans: consider this your friendly reminder that classes are just a useful language construct, and don’t <em>inherently</em> require you to use or support using them for inheritance!</p>
+</div>
+
+                            </body>
+                        </html>

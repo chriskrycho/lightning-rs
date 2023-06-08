@@ -1,0 +1,759 @@
+<html>
+                            <head>
+                                <link rel="stylesheet" href="/light.css" media="(prefers-color-scheme: light)" />
+                                <link rel="stylesheet" href="/dark.css" media="(prefers-color-scheme: dark)" />
+                            </head>
+                            <body>
+                                <p>Last week, <a href="https://v5.chriskrycho.com/journal/migrating-off-of-promiseproxymixin-in-ember-octane/" title="Migrating Off of PromiseProxyMixin in Ember Octane">I described</a> the use of a <code>load</code> helper and associated <code>AsyncData</code> type to move away from Ember’s <code>ObjectProxy</code> and <code>PromiseProxyMixin</code>. In this post, I’ll dig into the implementation of <code>load</code> and <code>AsyncData</code>. When you get to the end of this post, you should not only understand how this particular helper and data type work, but also have a better idea of how to think about both handling asynchronous data in JavaScript in general <em>and</em> how to put that to practice in Ember Octane with autotracking specifically.</p>
+<!-- omit in toc -->
+<h2>Overview</h2>
+<ul>
+<li><a href="#philosophy">Philosophy</a>
+<ul>
+<li><a href="#1-async-data-is-just-data">1. Async data is just data</a></li>
+<li><a href="#2-handling-all-data-states-is-important">2. Handling all data states is important</a></li>
+</ul>
+</li>
+<li><a href="#implementation">Implementation</a>
+<ul>
+<li><a href="#make-a-helper">Make a helper</a></li>
+<li><a href="#modeling-the-states">Modeling the states</a></li>
+<li><a href="#updating-the-state">Updating the state</a>
+<ul>
+<li><a href="#add-state-change-methods-to-asyncdata">Add state change methods to <code>AsyncData</code></a></li>
+<li><a href="#connect-the-promise-and-asyncdata-in-load">Connect the <code>Promise</code> and <code>AsyncData</code> in <code>load</code></a></li>
+</ul>
+</li>
+<li><a href="#return-the-same-asyncdata">Return the same <code>AsyncData</code></a></li>
+</ul>
+</li>
+<li><a href="#conclusion">Conclusion</a></li>
+<li><a href="#appendix-typescript">Appendix: TypeScript</a></li>
+</ul>
+<h2>Philosophy</h2>
+<p>Before we dig into the details of how <code>load</code> and <code>AsyncData</code> work, it’s worth understanding the philosophy behind them. When some colleagues and I built these helpers, it was with two key ideas in mind—so it’s worth understanding these ideas as we work through the implementation:</p>
+<ol>
+<li><em>Async data is just data</em></li>
+<li><em>Handling all data states is important</em></li>
+</ol>
+<h3>1. Async data is just data</h3>
+<p>The whole point of this data type is to make it possible for end users to call <code>load</code> on a <code>Promise</code> and then interact with it exactly like any other piece of data. This sometimes feels strange to people, <em>especially</em> when it’s used to define the return type of a getter. But while there are additional considerations when dealing with asynchronously loaded data as we do here, one of the key value propositions of <code>Promises</code> (and similar features in other languages, whether they go named <code>Task</code> or <code>Future</code> or something else entirely) is that they allow you to represent an asynchronous computation as <em>data</em>. This allows you to interact with that the same way you would with any <em>other</em> kind of data. The <code>AsyncData</code> type we work with here is just an extension of that same idea!</p>
+<h3>2. Handling all data states is important</h3>
+<p>When we’re dealing with <em>any</em> data, it’s important to understand the possible states it can be in, to guarantee that a given representation of that data cannot end up in <em>invalid</em> states, and—optimally—to make it so that we always handle all those states. The <code>AsyncData</code> type we’ll build in the rest of this post is designed to do all three of those.</p>
+<p>Fundamentally, an asynchronous data loading operation can be in at least three states: <em>loading</em>, <em>loaded</em>, or <em>error</em>. I say “at least” because there are other states you might care about, as well: <em>not started</em> and <em>slow</em> in particular. For our purposes I’ll leave those other options aside: in most cases <em>loading</em> and <em>not started</em> end up in the same place for users and <em>slow</em> is a variant of <em>loading</em>. In your particular scenarios, though, you might have different tradeoffs!</p>
+<p>It’s important particularly—though not only!—in dealing with user interfaces that we account for <em>all</em> of these scenarios. If we don’t, we might end up assuming that our data is always in a loaded state, and fail to show anything meaningful while it’s loading, or if there’s an error. At <em>best</em> this makes for a poor user experience. At worst, the result can be outright buggy! So this implementation exposes (and encourages you to think in terms of!) those states: <code>loading</code>, <code>loaded</code>, and <code>error</code>.<sup class="footnote-reference"><a href="#1">1</a></sup></p>
+<p>:::note</p>
+<p>This idea is far from original to me or my colleagues. I learned it from a series of talks and blog posts around the idea of “making illegal states impossible,” an idea which has a lot of traction in the typed functional programming community.</p>
+<p>:::</p>
+<h2>Implementation</h2>
+<p>Let’s start building, keeping these core ideas in mind.</p>
+<ol>
+<li><em>Async data is just data</em></li>
+<li><em>Handling all data states is important</em></li>
+</ol>
+<p>As we’re implementing, then—</p>
+<ul>
+<li>We need to <em>model</em> the three states of the data: <em>loading</em>, <em>loaded</em>, and <em>error</em>.</li>
+<li>We need to <em>update</em> the state of the data when the promise resolves or rejects.</li>
+<li>If users call <code>load</code> with the same <code>Promise</code>, we should always return the same <code>AsyncData</code>.</li>
+</ul>
+<p>That’s a lot! If we take it step by step, though, it won’t seem so bad, so we’ll tackle the implementation in phases:</p>
+<ol>
+<li>Make a helper</li>
+<li>Model the states</li>
+<li>Update the state</li>
+</ol>
+<h3>Make a helper</h3>
+<p>We’re going to build this as an Ember helper, so that it can be used in templates. The easiest way for us to get started is to use Ember <abbr title="command line interface">CLI</abbr>’s generator:</p>
+<pre><code class='Bourne Again Shell (bash)'><span class="source shell bash"><span class="meta function-call shell"><span class="variable function shell">ember</span></span><span class="meta function-call arguments shell"> generate helper load</span>
+</span></code></pre>
+<p>The result is this file:</p>
+<pre><code class='JavaScript'><span class="source js"><span class="meta import js"><span class="keyword control import-export js">import</span> <span class="meta block js"><span class="punctuation section block js">{</span> <span class="variable other readwrite js">helper</span> <span class="punctuation section block js">}</span></span> <span class="keyword control import-export js">from</span> <span class="string quoted single js"><span class="punctuation definition string begin js">&#39;</span>@ember/component/helper<span class="punctuation definition string end js">&#39;</span></span></span><span class="punctuation terminator statement js">;</span>
+
+<span class="meta export js"><span class="keyword control import-export js">export</span> <span class="keyword control import-export js">default</span> <span class="meta function-call js"><span class="variable function js">helper</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="meta function declaration js"><span class="storage type function js">function</span> <span class="entity name function js">load</span><span class="punctuation section group begin js">(</span><span class="variable parameter function js">params</span><span class="comment block js"><span class="punctuation definition comment js">/*</span>, hash<span class="punctuation definition comment js">*/</span></span><span class="punctuation section group end js">)</span><span class="meta function declaration js"> </span></span><span class="meta block js"><span class="punctuation section block js">{</span>
+  <span class="keyword control flow js">return</span> <span class="variable other readwrite js">params</span><span class="punctuation terminator statement js">;</span>
+<span class="punctuation section block js">}</span></span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span></span><span class="punctuation terminator statement js">;</span>
+</span></code></pre>
+<p>We’re going to start by pulling the <code>load</code> function out of the <code>helper</code> invocation so that we can use it in JavaScript:</p>
+<pre><code class='Diff'><span class="source diff">  import { helper } from &#39;@ember/component/helper&#39;;
+
+
+- export default helper(function load(params/*, hash*/) {
+-   return params;
+- });
++ export function load(params/*, hash*/) {
++   return params;
++ }
++
++ export default helper(load);
+</span></code></pre>
+<p>Using it in another JS module would look like this:</p>
+<pre><code class='JavaScript'><span class="source js"><span class="meta import js"><span class="keyword control import-export js">import</span> <span class="meta block js"><span class="punctuation section block js">{</span> <span class="variable other readwrite js">load</span> <span class="punctuation section block js">}</span></span> <span class="keyword control import-export js">from</span> <span class="string quoted single js"><span class="punctuation definition string begin js">&#39;</span>my-app/helpers/load<span class="punctuation definition string end js">&#39;</span></span></span><span class="punctuation terminator statement js">;</span>
+</span></code></pre>
+<p>Now, we know that we want to represent the state of any given promise, so we’ll change the definition of the <code>load</code> function accordingly. For now, we’ll just have the helper return the promise passed in, and we’ll figure out what we actually want to return in a minute.</p>
+<pre><code class='Diff'><span class="source diff">  import { helper } from &#39;@ember/component/helper&#39;;
+
+- export function load(params/*, hash*/) {
++ export function load(somePromise) {
++   // this isn&#39;t helpful, but we&#39;ll come back to it!
+-   return params;
++   return somePromise;
+  }
+
+  export default helper(load);
+</span></code></pre>
+<p>This would blow up if we tried to actually use the helper in a template, though! Helpers expect their first argument to be an array of the positional arguments to the helper. Since we’ll only ever want to load one promise at a time with this helper, we can fix that pretty easily, by reworking how we connect the function definition to the helper:</p>
+<pre><code class='Diff'><span class="source diff">  import { helper } from &#39;@ember/component/helper&#39;;
+
+  export function load(somePromise) {
+    // this isn&#39;t helpful, but we&#39;ll come back to it!
+    return somePromise;
+  }
+
+- export default helper(load);
++ export default helper(([promise]) =&gt; load(promise));
+</span></code></pre>
+<p>Now we need to think about what we want to return.</p>
+<h3>Modeling the states</h3>
+<p>We can start by defining a type which will represent the state of the data. We’ll use a <code>class</code> here because it’s a really convenient tool for defining data structures in JS—but we don’t intend for this to be subclassed, and so we’re not exporting it from our module.</p>
+<pre><code class='Diff'><span class="source diff">  import { helper } from &#39;@ember/component/helper&#39;;
+
++ class AsyncData {
++   /** @type {&#39;LOADING&#39; | &#39;LOADED&#39; | &#39;ERROR&#39;} */
++   state;
++ }
+
+  export function load(somePromise) {
+    // this isn&#39;t helpful, but we&#39;ll come back to it!
+    return somePromise;
+  }
+
+  export default helper(([promise]) =&gt; load(promise));
+</span></code></pre>
+<p>Notice that I’ve added a <code>@type</code> annotation in the JSDoc comment here. This will give us nice autocompletion and feedback for many editors, and if any users are using TypeScript directly <em>or</em> type-checking their JavaScript with TypeScript’s <code>checkJS</code> mode or <code>// @ts-check</code> notation, they’ll get errors if they try to compare the <code>AsyncData</code> type’s state to any value <em>besides</em> <code>'LOADING'</code>, <code>'LOADED'</code>, or <code>'ERROR'</code>.</p>
+<p>Initially, the state should always default to <code>'LOADING'</code>, since we don’t <em>know</em> the state of the promise we’ll consume:</p>
+<pre><code class='Diff'><span class="source diff">  import { helper } from &#39;@ember/component/helper&#39;;
+
+  class AsyncData {
+    /** @type {&#39;LOADING&#39; | &#39;LOADED&#39; | &#39;ERROR&#39;} */
+-   state;
++   state = &#39;LOADING&#39;;
+  }
+
+  export function load(somePromise) {
+    // this isn&#39;t helpful, but we&#39;ll come back to it!
+    return somePromise;
+  }
+
+  export default helper(([promise]) =&gt; load(promise));
+</span></code></pre>
+<p>Now we can create an <code>AsyncData</code> and return it from our <code>load</code> helper. This is completely useless for the moment, as it will just always remain in <code>'LOADING'</code>, but we’ll fix that shortly.</p>
+<pre><code class='Diff'><span class="source diff">  import { helper } from &#39;@ember/component/helper&#39;;
+
+  class AsyncData {
+    /** @type {&#39;LOADING&#39; | &#39;LOADED&#39; | &#39;ERROR&#39;} */
+-   state;
++   state = &#39;LOADING&#39;;
+  }
+
+  export function load(somePromise) {
+    // this isn&#39;t helpful, but we&#39;ll come back to it!
+-   return somePromise;
++   return new AsyncData();
+  }
+
+  export default helper(([promise]) =&gt; load(promise));
+</span></code></pre>
+<p>We’ll also need to track the value of the resolved data for when promises resolve (the <em>value</em>) and the rejection reason when the reject (the <em>error</em>). We could do this by just adding two new fields to the class, one for each of those two outcomes:</p>
+<pre><code class='Diff'><span class="source diff">  import { helper } from &#39;@ember/component/helper&#39;;
+
+  class AsyncData {
+    /** @type {&#39;LOADING&#39; | &#39;LOADED&#39; | &#39;ERROR&#39;} */
+    state = &#39;LOADING&#39;;
++
++   value;
++
++   error;
+  }
+
+  export function load(somePromise) {
+    // this isn&#39;t helpful, but we&#39;ll come back to it!
+    return new AsyncData();
+  }
+
+  export default helper(([promise]) =&gt; load(promise));
+</span></code></pre>
+<p>However, if we do this, and especially if we make it part of our public API, we are committing ourselves to <em>never</em> changing the way we manage our state. But there are ways we could make this more robust for ourselves in the future, especially if we were using TypeScript. For example, we might want our internal state to be <code>{ state: 'LOADING' }</code> <em>or</em> <code>{ state: 'LOADED', value }</code> <em>or</em> <code>{ state: 'ERROR', reason }</code>, so that we could never accidentally end up with a <code>state</code> of <code>'ERROR'</code> but have assigned <code>value</code> instead of <code>error</code>.</p>
+<p>Our best bet for now is to make the fields “private” and expose a getter for each of these instead, so that end users can’t write to it. (We’d <em>like</em> to use <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/Private_class_fields">private class fields</a>, but they’re incompatible with decorators, and that will be important when we <em>update</em> the state.<sup class="footnote-reference"><a href="#2">2</a></sup>) This will also make it so that if we want to refactor to something like that set of alternate types in the future, we <em>can</em>. We’ll make <code>state</code> “private” as well.</p>
+<pre><code class='Diff'><span class="source diff">  import { helper } from &#39;@ember/component/helper&#39;;
+
+  class AsyncData {
+-   /** @type {&#39;LOADING&#39; | &#39;LOADED&#39; | &#39;ERROR&#39;} */
++   /**
++     @type {&#39;LOADING&#39; | &#39;LOADED&#39; | &#39;ERROR&#39;}
++     @private
++    */
+-   state = &#39;LOADING&#39;;
++   _state = &#39;LOADING&#39;;
++
++   /** @private */
++   _value;
++
++   /** @private */
++   _error;
++
++   get state() {
++     return this._state;
++   }
++
++   get value() {
++     return this._value;
++   }
++
++   get error() {
++     return this._error;
++   }
+  }
+
+  export function load(somePromise) {
+    // this isn&#39;t helpful, but we&#39;ll come back to it!
+    return new AsyncData();
+  }
+
+  export default helper(([promise]) =&gt; load(promise));
+</span></code></pre>
+<p>This also lets us do a bit of runtime validation if we like: we can enforce that users <em>check the state</em> and make sure it’s valid before they try to get the <code>value</code> or <code>error</code> types, using assertions that only run in development or test:<sup class="footnote-reference"><a href="#3">3</a></sup></p>
+<pre><code class='Diff'><span class="source diff">  import { helper } from &#39;@ember/component/helper&#39;;
++ import { assert } from &#39;@ember/debug&#39;;
+
+  class AsyncData {
+    /**
+      @type {&#39;LOADING&#39; | &#39;LOADED&#39; | &#39;ERROR&#39;}
+      @private
+     */
+    _state = &#39;LOADING&#39;;
+ 
+    /** @private */
+    _value;
+ 
+    /** @private */
+    _error;
+ 
+    get state() {
+      return this._state;
+    }
+ 
+    get value() {
++     assert(
++       `You can only access &#39;value&#39; when &#39;state&#39; is &#39;LOADED&#39;, but it is ${this.state}`,
++       this.state === &#39;LOADED&#39;
++     );
++
+      return this._value;
+    }
+ 
+    get error() {
++     assert(
++       `You can only access &#39;error&#39; when &#39;state&#39; is &#39;ERROR&#39;, but it is ${this.state}`,
++       this.state === &#39;ERROR&#39;
++     );
++
+      return this._error;
+    }
+  }
+
+  export function load(somePromise) {
+    // this isn&#39;t helpful, but we&#39;ll come back to it!
+    return new AsyncData();
+  }
+
+  export default helper(([promise]) =&gt; load(promise));
+</span></code></pre>
+<p>This way, users will <em>only</em> be able to get the <code>value</code> when <code>state</code> is <code>'LOADED'</code>.</p>
+<p>At this point, we have a robust representation of the state and a way to expose the value of the resolved promise or the reason it rejected… but we don’t have a way to actually <em>change</em> the state or <em>set</em> the <code>value</code> or <code>error</code> properties. Let’s see how to do that!</p>
+<h3>Updating the state</h3>
+<p>First things first, we need to make the state reactive so that it will work in the template, using <code>@tracked</code>:</p>
+<pre><code class='Diff'><span class="source diff">  import { helper } from &#39;@ember/component/helper&#39;;
+  import { assert } from &#39;@ember/debug&#39;;
++ import { tracked } from &#39;@glimmer/tracking&#39;;
+
+  class AsyncData {
+    /**
+      @type {&#39;LOADING&#39; | &#39;LOADED&#39; | &#39;ERROR&#39;}
+      @private
+     */
+-   _state = &#39;LOADING&#39;;
++   @tracked _state = &#39;LOADING&#39;;
+ 
+    /** @private */
+-   _value;
++   @tracked _value;
+ 
+    /** @private */
+-   _error;
++   @tracked _error;
+ 
+    get state() {
+      return this._state;
+    }
+ 
+    get value() {
+      assert(
+        `You can only access &#39;value&#39; when &#39;state&#39; is &#39;LOADED&#39;, but it is ${this.state}`,
+        this.state === &#39;LOADED&#39;
+      );
+ 
+      return this._value;
+    }
+ 
+    get error() {
+      assert(
+        `You can only access &#39;error&#39; when &#39;state&#39; is &#39;ERROR&#39;, but it is ${this.state}`,
+        this.state === &#39;ERROR&#39;
+      );
+ 
+      return this._error;
+    }
+  }
+
+  export function load(somePromise) {
+    // this isn&#39;t helpful, but we&#39;ll come back to it!
+    return new AsyncData();
+  }
+
+  export default helper(([promise]) =&gt; load(promise));
+</span></code></pre>
+<p>Now, any end user of the code—whether a JavaScript getter or a reference in the template—will correctly update when any of these values change <em>or</em> any getter which references them changes.</p>
+<p>On the JavaScript side, we can define data in terms of the result of calling <code>load</code>—including in a getter. Since <code>args</code> are autotracked and <code>AsyncData</code> autotracks its internals, the <code>data</code> getter here will rerun any time <code>args.userId</code> changes and the <code>displayData</code> getter will rerun when the result of <code>data</code> changes (as long as <code>displayData</code> is used in the template).</p>
+<pre><code class='JavaScript'><span class="source js"><span class="meta import js"><span class="keyword control import-export js">import</span> <span class="variable other readwrite js">Component</span> <span class="keyword control import-export js">from</span> <span class="string quoted single js"><span class="punctuation definition string begin js">&#39;</span>@glimmer/component<span class="punctuation definition string end js">&#39;</span></span></span><span class="punctuation terminator statement js">;</span>
+<span class="meta import js"><span class="keyword control import-export js">import</span> <span class="meta block js"><span class="punctuation section block js">{</span> <span class="variable other readwrite js">load</span> <span class="punctuation section block js">}</span></span> <span class="keyword control import-export js">from</span> <span class="string quoted single js"><span class="punctuation definition string begin js">&#39;</span>my-app/helpers/load<span class="punctuation definition string end js">&#39;</span></span></span><span class="punctuation terminator statement js">;</span>
+<span class="meta import js"><span class="keyword control import-export js">import</span> <span class="meta block js"><span class="punctuation section block js">{</span> <span class="variable other readwrite js">fetchSomeData</span> <span class="punctuation section block js">}</span></span> <span class="keyword control import-export js">from</span> <span class="string quoted single js"><span class="punctuation definition string begin js">&#39;</span>my-app/data/fetchers<span class="punctuation definition string end js">&#39;</span></span></span><span class="punctuation terminator statement js">;</span>
+
+<span class="meta export js"><span class="keyword control import-export js">export</span> <span class="keyword control import-export js">default</span> <span class="meta class js"><span class="storage type class js">class</span> <span class="entity name class js">Neato</span> <span class="storage modifier extends js">extends</span> <span class="entity other inherited-class js">Component</span> <span class="meta class js"><span class="meta block js"><span class="punctuation section block js">{</span></span></span></span><span class="meta class js"><span class="meta block js">
+  <span class="meta function declaration js"><span class="storage type accessor js">get</span> <span class="entity name function js">data</span><span class="punctuation section group begin js">(</span><span class="punctuation section group end js">)</span><span class="meta function declaration js"> </span></span><span class="meta block js"><span class="punctuation section block js">{</span>
+    <span class="keyword control flow js">return</span> <span class="meta function-call js"><span class="variable function js">load</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="meta function-call js"><span class="variable function js">fetchSomeData</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="variable language this js">this</span><span class="punctuation accessor js">.</span><span class="meta property object js">args</span><span class="punctuation accessor js">.</span><span class="meta property object js">userId</span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span><span class="punctuation terminator statement js">;</span>
+  <span class="punctuation section block js">}</span></span>
+
+  <span class="meta function declaration js"><span class="storage type accessor js">get</span> <span class="entity name function js">displayData</span><span class="punctuation section group begin js">(</span><span class="punctuation section group end js">)</span><span class="meta function declaration js"> </span></span><span class="meta block js"><span class="punctuation section block js">{</span>
+    <span class="meta switch js"><span class="keyword control switch js">switch</span> <span class="meta group js"><span class="punctuation section group js">(</span><span class="variable language this js">this</span><span class="punctuation accessor js">.</span><span class="meta property object js">data</span><span class="punctuation accessor js">.</span><span class="meta property object js">state</span><span class="punctuation section group js">)</span></span> <span class="meta block js"><span class="punctuation section block js">{</span>
+      <span class="keyword control switch js">case</span> <span class="string quoted single js"><span class="punctuation definition string begin js">&#39;</span>LOADING<span class="punctuation definition string end js">&#39;</span></span><span class="punctuation separator js">:</span>
+        <span class="keyword control flow js">return</span> <span class="string quoted single js"><span class="punctuation definition string begin js">&#39;</span>loading...<span class="punctuation definition string end js">&#39;</span></span><span class="punctuation terminator statement js">;</span>
+      <span class="keyword control switch js">case</span> <span class="string quoted single js"><span class="punctuation definition string begin js">&#39;</span>LOADED<span class="punctuation definition string end js">&#39;</span></span><span class="punctuation separator js">:</span>
+        <span class="keyword control flow js">return</span> <span class="variable language this js">this</span><span class="punctuation accessor js">.</span><span class="meta property object js">data</span><span class="punctuation accessor js">.</span><span class="meta property object js">value</span><span class="punctuation terminator statement js">;</span>
+      <span class="keyword control switch js">case</span> <span class="string quoted single js"><span class="punctuation definition string begin js">&#39;</span>ERROR<span class="punctuation definition string end js">&#39;</span></span><span class="punctuation separator js">:</span>
+        <span class="keyword control flow js">return</span> <span class="string template js"><span class="punctuation definition string template begin js">`</span>Whoops! Something went wrong! </span><span class="meta template expression js"><span class="punctuation definition template-expression begin js">${</span></span><span class="meta template expression js"><span class="source js embedded expression"><span class="variable language this js">this</span><span class="punctuation accessor js">.</span><span class="meta property object js">data</span><span class="punctuation accessor js">.</span><span class="meta property object js">error</span><span class="punctuation accessor js">.</span><span class="meta property object js">message</span></span><span class="punctuation definition template-expression end js">}</span></span><span class="string template js"><span class="punctuation definition string template end js">`</span></span><span class="punctuation terminator statement js">;</span>
+    </span><span class="meta block js"><span class="punctuation section block js">}</span></span></span>
+  <span class="punctuation section block js">}</span></span>
+<span class="punctuation section block js">}</span></span></span></span>
+</span></code></pre>
+<p>Similarly, if we had a component which had a promise passed into it and used <code>load</code> as a helper:</p>
+<pre><code>{{#let (load @somePromise) as |data|}}
+  {{#if (eq data.state 'LOADING')}}
+    &lt;p&gt;{{data.value}}&lt;/p&gt;
+  {{else if (eq data.state 'LOADED')}}
+    &lt;p&gt;loading...&lt;/p&gt;
+  {{else if (eq data.state 'ERROR')}}
+    &lt;p&gt;Whoops! Something went wrong!&lt;/p&gt;
+    &lt;p&gt;{{data.error.message}}&lt;/p&gt;
+  {{/if}}
+{{/let}}
+</code></pre>
+<p>Using <code>eq</code> here to match the state with strings is a little cumbersome. It would be better if we could just check <code>{{#if data.isLoaded}}</code> and so on. We can do that easily enough by exposing a convenience getter for each state on <code>AsyncData</code>:</p>
+<pre><code class='Diff'><span class="source diff">  import { helper } from &#39;@ember/component/helper&#39;;
+  import { assert } from &#39;@ember/debug&#39;;
+  import { tracked } from &#39;@glimmer/tracking&#39;;
+
+  class AsyncData {
+    // SNIP: internal state and other getters are unchanged...
++
++   get isLoading() {
++     return this.state === &#39;LOADING&#39;;
++   }
++
++   get isLoaded() {
++     return this.state === &#39;LOADED&#39;;
++   }
++
++   get isError() {
++     return this.state === &#39;ERROR&#39;;
++   }
+  }
+
+  export function load(somePromise) {
+    // this isn&#39;t helpful, but we&#39;ll come back to it!
+    return new AsyncData();
+  }
+
+  export default helper(([promise]) =&gt; load(promise));
+</span></code></pre>
+<p>Now our template invocation could just look like this:</p>
+<pre><code>{{#let (load @somePromise) as |data|}}
+  {{#if data.isLoading}}
+    &lt;p&gt;loading...&lt;/p&gt;
+  {{else if data.isLoaded}}
+    &lt;p&gt;{{data.value}}&lt;/p&gt;
+  {{else if data.isError}}
+    &lt;p&gt;Whoops! Something went wrong!&lt;/p&gt;
+    &lt;p&gt;{{data.error.message}}&lt;/p&gt;
+  {{/if}}
+{{/let}}
+</code></pre>
+<p>So far, so good! Unfortunately, though, both the template and the backing class uses of <code>load</code> will <em>always</em> return the <code>'LOADING'</code> versions: we haven’t done anything to connect the <code>Promise</code> state to the <code>AsyncData</code>’s state. We need to do two things to connect them:</p>
+<ol>
+<li>Add methods to <code>AsyncData</code> for changing the state correctly.</li>
+<li>Use those methods when the <code>Promise</code> changes state!</li>
+</ol>
+<h4>Add state change methods to <code>AsyncData</code></h4>
+<p>We’ll start by adding two methods to <code>AsyncData</code>: one for when the promise <em>resolves</em> and one for when it <em>rejects</em>. We’ll name them <code>resolveWith</code> and <code>rejectWith</code> respectively, so that when we call them it will look like <code>resolveWith(value)</code> or <code>rejectWith(error)</code>.</p>
+<pre><code class='Diff'><span class="source diff">  import { helper } from &#39;@ember/component/helper&#39;;
+  import { assert } from &#39;@ember/debug&#39;;
+  import { tracked } from &#39;@glimmer/tracking&#39;;
+
+  class AsyncData {
+    // SNIP: internal state and getters are unchanged...
++
++   resolveWith(value) {
++     this._state = &#39;LOADED&#39;;
++     this._value = value;
++   }
++
++   rejectWith(error) {
++     this._state = &#39;ERROR&#39;;
++     this._error = error;
++   }
+  }
+
+  export function load(somePromise) {
+    // this isn&#39;t helpful, but we&#39;ll come back to it!
+    return new AsyncData();
+  }
+
+  export default helper(([promise]) =&gt; load(promise));
+</span></code></pre>
+<p>These two methods have one of the core responsibilities of <code>AsyncData</code>: managing internal state correctly. Providing this public interface and making the details of our state management private to callers lets us uphold the invariants that <code>AsyncData</code> needs to be used safely. If we happened to set <code>_value</code> instead of <code>_error</code> when calling <code>rejectWith</code>, things would be badly broken.</p>
+<p>This is a good argument for rigorous tests! It’s also another reason we might choose to use the variant types I described above, with <code>{ state: 'LOADED', value }</code> instead of making them discrete properties. I’ve chosen to leave them as they are here both for simplicity and to match the version we actually use internally today, but if I were implementing this from scratch myself, I would certainly do it differently for exactly that reason!</p>
+<p>At this point <code>AsyncData</code> is pretty much done! It’s time to connect it to the promise data flow.</p>
+<h4>Connect the <code>Promise</code> and <code>AsyncData</code> in <code>load</code></h4>
+<p>We now return to the <code>load</code> function implementation. When the promise <em>resolves</em>, we want to call <code>AsyncData.resolveWith</code>; when it <em>rejects</em>, we’ll call <code>AsyncData.rejectWith</code>:</p>
+<pre><code class='Diff'><span class="source diff">  import { helper } from &#39;@ember/component/helper&#39;;
+  import { assert } from &#39;@ember/debug&#39;;
+  import { tracked } from &#39;@glimmer/tracking&#39;;
+
+  class AsyncData {
+    // SNIP: class body is unchanged...
+  }
+
+  export function load(somePromise) {
+-   // this isn&#39;t helpful, but we&#39;ll come back to it!
+-   return new AsyncData();
++   let asyncData = new AsyncData();
++
++   somePromise.then(
++     (value) =&gt; asyncData.resolveWith(value),
++     (error) =&gt; asyncData.rejectWith(error)
++   );
++
++   return result;
+  }
+
+  export default helper(([promise]) =&gt; load(promise));
+</span></code></pre>
+<p>That’s actually all that’s required to connect them. At this point, we can use the helper or the function and things will work as we expect! We’re not <em>quite</em> done, though.</p>
+<h3>Return the same <code>AsyncData</code></h3>
+<p>What if two different parts of our code both call <code>load</code> with the same <code>Promise</code>? It would be quite wasteful to create another <code>AsyncData</code> to represent the same promise every time it was passed in! Instead, we want to be able to know if we’ve seen any given <code>Promise</code> before, and associate it with the same <code>AsyncData</code> if so. We <em>don’t</em> want to prevent <code>Promise</code> or <code>AsyncData</code> instances from getting cleaned up when the app is done with them, though: that would result in a memory leak! If we made heavy use of <code>load</code> across our app, we could end up with undead <code>Promise</code> and <code>AsyncData</code> instances floating around forever.</p>
+<p>Modern JavaScript has a tool for scenarios just like this: a <code>WeakMap</code>. A <code>WeakMap</code> is a <em>map</em> from keys to values, where the value can be anything but the key has to be an object. The neat thing about <code>WeakMap</code> is that it doesn’t interfere with garbage collection: if a <code>WeakMap</code> key is the last place that an object is used, it will get garbage collected and removed from the <code>WeakMap</code> automatically, along with the reference to whatever the key was pointing to in the map. That is, it has <em>weak</em> references to the objects it uses as keys. This is <em>not</em> like a normal <code>Map</code>, which can <em>also</em> use an object as its key. A normal <code>Map</code> will hold on to its keys <em>strongly</em>: you have to <em>remove the key explicitly</em> (using <code>Map.delete</code>) for the object to be allowed to be garbage-collected.  This makes <code>WeakMap</code>s a great choice for any time we want to create a link between two objects <em>without</em> creating a memory leak by preventing them from being freed.</p>
+<p>To use a <code>WeakMap</code> to link each <code>Promise</code> to an <code>AsyncData</code>, we will create a <code>WeakMap</code> instance in module scope. Then, in <code>load</code>, we will first check if the <code>somePromise</code> argument is already a key in the <code>WeakMap</code>, and if so return the <code>AsyncData</code> it points to. If it is a <code>Promise</code> we haven’t seen before, we’ll connect the <code>Promise</code> and the <code>AsyncData</code> by using <code>WeakMap.set</code>.</p>
+<pre><code class='Diff'><span class="source diff">  import { helper } from &#39;@ember/component/helper&#39;;
+  import { assert } from &#39;@ember/debug&#39;;
+  import { tracked } from &#39;@glimmer/tracking&#39;;
+
+  class AsyncData {
+    // SNIP: class body is unchanged...
+  }
+
++ const MAP = new WeakMap();
+
+  export function load(somePromise) {
++   let existingAsyncData = MAP.get(somePromise);
++   if (existingAsyncData) {
++     return existingAsyncData;
++   }
++
+    let asyncData = new AsyncData();
++   MAP.set(somePromise, asyncData);
+
+    somePromise.then(
+      (value) =&gt; asyncData.resolveWith(value),
+      (error) =&gt; asyncData.rejectWith(error)
+    );
+
+    return asyncData;
+  }
+
+  export default helper(([promise]) =&gt; load(promise));
+</span></code></pre>
+<p>Now we can call <code>load</code> on the same <code>Promise</code> as many times as we want; it will always return the same <code>AsyncData</code>.</p>
+<p>It’s important to understand that this only holds when it’s actually the same <code>Promise</code>, though—and when you chain off a <code>Promise</code> using its <code>.then</code> or <code>.catch</code> methods, you create a <em>new</em> <code>Promise</code>. That means that if you do this, you’ll end up creating two <code>AsyncData</code> instances:</p>
+<pre><code class='JavaScript'><span class="source js"><span class="meta import js"><span class="keyword control import-export js">import</span> <span class="meta block js"><span class="punctuation section block js">{</span> <span class="variable other readwrite js">load</span> <span class="punctuation section block js">}</span></span> <span class="keyword control import-export js">from</span> <span class="string quoted single js"><span class="punctuation definition string begin js">&#39;</span>my-app/helpers/load<span class="punctuation definition string end js">&#39;</span></span></span><span class="punctuation terminator statement js">;</span>
+
+<span class="storage type js">let</span> <span class="variable other readwrite js">promise</span> <span class="keyword operator assignment js">=</span> <span class="support class builtin js">Promise</span><span class="punctuation accessor js">.</span><span class="meta function-call method js"><span class="variable function js">resolve</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="string quoted single js"><span class="punctuation definition string begin js">&#39;</span>hello<span class="punctuation definition string end js">&#39;</span></span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span><span class="punctuation terminator statement js">;</span>
+<span class="storage type js">let</span> <span class="variable other readwrite js">firstAsyncData</span> <span class="keyword operator assignment js">=</span> <span class="meta function-call js"><span class="variable function js">load</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="variable other readwrite js">promise</span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span><span class="punctuation terminator statement js">;</span>
+<span class="storage type js">let</span> <span class="variable other readwrite js">chained</span> <span class="keyword operator assignment js">=</span> <span class="variable other object js">promise</span><span class="punctuation accessor js">.</span><span class="meta function-call method js"><span class="variable function js">then</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="meta function declaration js"><span class="punctuation section group begin js">(</span><span class="variable parameter function js">s</span><span class="punctuation section group end js">)</span><span class="meta function declaration js"> </span><span class="storage type function arrow js">=&gt;</span></span> <span class="meta block js"><span class="variable other object js">s</span><span class="punctuation accessor js">.</span><span class="meta property object js">length</span></span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span><span class="punctuation terminator statement js">;</span>
+<span class="storage type js">let</span> <span class="variable other readwrite js">secondAsyncData</span> <span class="keyword operator assignment js">=</span> <span class="meta function-call js"><span class="variable function js">load</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="variable other readwrite js">chained</span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span><span class="punctuation terminator statement js">;</span>
+
+<span class="meta function-call method js"><span class="support type object console js">console</span><span class="punctuation accessor js">.</span><span class="support function console js">log</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="variable other readwrite js">firstAsyncData</span> <span class="keyword operator comparison js">===</span> <span class="variable other readwrite js">secondAsyncData</span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span><span class="punctuation terminator statement js">;</span>  <span class="comment line double-slash js"><span class="punctuation definition comment js">//</span> false
+</span></span></code></pre>
+<p>This is <em>correct</em>. You could be triggering all sorts of <em>new</em> asynchronous behavior in those <code>.then</code> or <code>.catch</code> callbacks! Each <code>AsyncData</code> represents exactly <em>one</em> asynchronous data operation.</p>
+<h2>Conclusion</h2>
+<p>With that, we’ve implemented a solution that captures both philosophical commitments we laid out at the beginning:</p>
+<ol>
+<li><em>Async data is just data</em></li>
+<li><em>Handling all data states is important</em></li>
+</ol>
+<p>To implement those ideas:</p>
+<ul>
+<li>We created a <code>load</code> function we can use both in JS and as a helper in Glimmer templates.</li>
+<li>We modeled the states reactively with <code>@tracked</code> properties on an <code>AsyncData</code> class.</li>
+<li>We updated the state by wiring up the <code>Promise</code> transitions to methods on <code>AsyncData</code>.</li>
+<li>We also made sure that we always have exactly and only one <code>AsyncData</code> per promise, using a <code>WeakMap</code> to connect each <code>Promise</code> to an <code>AsyncData</code>.</li>
+</ul>
+<p>Here’s what it looks like with all of the pieces put together:<sup class="footnote-reference"><a href="#actual-impl">4</a></sup></p>
+<pre><code class='JavaScript'><span class="source js"><span class="meta import js"><span class="keyword control import-export js">import</span> <span class="meta block js"><span class="punctuation section block js">{</span> <span class="variable other readwrite js">helper</span> <span class="punctuation section block js">}</span></span> <span class="keyword control import-export js">from</span> <span class="string quoted double js"><span class="punctuation definition string begin js">&quot;</span>@ember/component/helper<span class="punctuation definition string end js">&quot;</span></span></span><span class="punctuation terminator statement js">;</span>
+<span class="meta import js"><span class="keyword control import-export js">import</span> <span class="meta block js"><span class="punctuation section block js">{</span> <span class="variable other readwrite js">assert</span> <span class="punctuation section block js">}</span></span> <span class="keyword control import-export js">from</span> <span class="string quoted double js"><span class="punctuation definition string begin js">&quot;</span>@ember/debug<span class="punctuation definition string end js">&quot;</span></span></span><span class="punctuation terminator statement js">;</span>
+<span class="meta import js"><span class="keyword control import-export js">import</span> <span class="meta block js"><span class="punctuation section block js">{</span> <span class="variable other readwrite js">tracked</span> <span class="punctuation section block js">}</span></span> <span class="keyword control import-export js">from</span> <span class="string quoted double js"><span class="punctuation definition string begin js">&quot;</span>@glimmer/tracking<span class="punctuation definition string end js">&quot;</span></span></span><span class="punctuation terminator statement js">;</span>
+
+<span class="meta class js"><span class="storage type class js">class</span> <span class="entity name class js">AsyncData</span> <span class="meta class js"><span class="meta block js"><span class="punctuation section block js">{</span></span></span></span><span class="meta class js"><span class="meta block js">
+  <span class="comment block documentation js"><span class="punctuation definition comment js">/**</span>
+    @type {&#39;LOADING&#39; | &#39;LOADED&#39; | &#39;ERROR&#39;}
+    @private
+   <span class="punctuation definition comment js">*/</span></span>
+  @tracked _state = &quot;LOADING&quot;;
+
+  <span class="comment block documentation js"><span class="punctuation definition comment js">/**</span> @private <span class="punctuation definition comment js">*/</span></span>
+  @tracked _value;
+
+  <span class="comment block documentation js"><span class="punctuation definition comment js">/**</span> @private <span class="punctuation definition comment js">*/</span></span>
+  @tracked _error;
+
+  <span class="meta function declaration js"><span class="storage type accessor js">get</span> <span class="entity name function js">state</span><span class="punctuation section group begin js">(</span><span class="punctuation section group end js">)</span><span class="meta function declaration js"> </span></span><span class="meta block js"><span class="punctuation section block js">{</span>
+    <span class="keyword control flow js">return</span> <span class="variable language this js">this</span><span class="punctuation accessor js">.</span><span class="meta property object js">_state</span><span class="punctuation terminator statement js">;</span>
+  <span class="punctuation section block js">}</span></span>
+
+  <span class="meta function declaration js"><span class="storage type accessor js">get</span> <span class="entity name function js">value</span><span class="punctuation section group begin js">(</span><span class="punctuation section group end js">)</span><span class="meta function declaration js"> </span></span><span class="meta block js"><span class="punctuation section block js">{</span>
+    <span class="meta function-call js"><span class="variable function js">assert</span><span class="meta group js"><span class="punctuation section group js">(</span>
+      <span class="string template js"><span class="punctuation definition string template begin js">`</span>You can only access &#39;value&#39; when &#39;state&#39; is &#39;LOADED&#39;, but it is </span><span class="meta template expression js"><span class="punctuation definition template-expression begin js">${</span></span><span class="meta template expression js"><span class="source js embedded expression"><span class="variable language this js">this</span><span class="punctuation accessor js">.</span><span class="meta property object js">state</span></span><span class="punctuation definition template-expression end js">}</span></span><span class="string template js"><span class="punctuation definition string template end js">`</span></span><span class="punctuation separator comma js">,</span>
+      <span class="variable language this js">this</span><span class="punctuation accessor js">.</span><span class="meta property object js">state</span> <span class="keyword operator comparison js">===</span> <span class="string quoted double js"><span class="punctuation definition string begin js">&quot;</span>LOADED<span class="punctuation definition string end js">&quot;</span></span>
+    </span><span class="meta group js"><span class="punctuation section group js">)</span></span></span><span class="punctuation terminator statement js">;</span>
+
+    <span class="keyword control flow js">return</span> <span class="variable language this js">this</span><span class="punctuation accessor js">.</span><span class="meta property object js">_value</span><span class="punctuation terminator statement js">;</span>
+  <span class="punctuation section block js">}</span></span>
+
+  <span class="meta function declaration js"><span class="storage type accessor js">get</span> <span class="entity name function js">error</span><span class="punctuation section group begin js">(</span><span class="punctuation section group end js">)</span><span class="meta function declaration js"> </span></span><span class="meta block js"><span class="punctuation section block js">{</span>
+    <span class="meta function-call js"><span class="variable function js">assert</span><span class="meta group js"><span class="punctuation section group js">(</span>
+      <span class="string template js"><span class="punctuation definition string template begin js">`</span>You can only access &#39;error&#39; when &#39;state&#39; is &#39;ERROR&#39;, but it is </span><span class="meta template expression js"><span class="punctuation definition template-expression begin js">${</span></span><span class="meta template expression js"><span class="source js embedded expression"><span class="variable language this js">this</span><span class="punctuation accessor js">.</span><span class="meta property object js">state</span></span><span class="punctuation definition template-expression end js">}</span></span><span class="string template js"><span class="punctuation definition string template end js">`</span></span><span class="punctuation separator comma js">,</span>
+      <span class="variable language this js">this</span><span class="punctuation accessor js">.</span><span class="meta property object js">state</span> <span class="keyword operator comparison js">===</span> <span class="string quoted double js"><span class="punctuation definition string begin js">&quot;</span>ERROR<span class="punctuation definition string end js">&quot;</span></span>
+    </span><span class="meta group js"><span class="punctuation section group js">)</span></span></span><span class="punctuation terminator statement js">;</span>
+
+    <span class="keyword control flow js">return</span> <span class="variable language this js">this</span><span class="punctuation accessor js">.</span><span class="meta property object js">_error</span><span class="punctuation terminator statement js">;</span>
+  <span class="punctuation section block js">}</span></span>
+
+  <span class="meta function declaration js"><span class="storage type accessor js">get</span> <span class="entity name function js">isLoading</span><span class="punctuation section group begin js">(</span><span class="punctuation section group end js">)</span><span class="meta function declaration js"> </span></span><span class="meta block js"><span class="punctuation section block js">{</span>
+    <span class="keyword control flow js">return</span> <span class="variable language this js">this</span><span class="punctuation accessor js">.</span><span class="meta property object js">state</span> <span class="keyword operator comparison js">===</span> <span class="string quoted double js"><span class="punctuation definition string begin js">&quot;</span>LOADING<span class="punctuation definition string end js">&quot;</span></span><span class="punctuation terminator statement js">;</span>
+  <span class="punctuation section block js">}</span></span>
+
+  <span class="meta function declaration js"><span class="storage type accessor js">get</span> <span class="entity name function js">isLoaded</span><span class="punctuation section group begin js">(</span><span class="punctuation section group end js">)</span><span class="meta function declaration js"> </span></span><span class="meta block js"><span class="punctuation section block js">{</span>
+    <span class="keyword control flow js">return</span> <span class="variable language this js">this</span><span class="punctuation accessor js">.</span><span class="meta property object js">state</span> <span class="keyword operator comparison js">===</span> <span class="string quoted double js"><span class="punctuation definition string begin js">&quot;</span>LOADED<span class="punctuation definition string end js">&quot;</span></span><span class="punctuation terminator statement js">;</span>
+  <span class="punctuation section block js">}</span></span>
+
+  <span class="meta function declaration js"><span class="storage type accessor js">get</span> <span class="entity name function js">isError</span><span class="punctuation section group begin js">(</span><span class="punctuation section group end js">)</span><span class="meta function declaration js"> </span></span><span class="meta block js"><span class="punctuation section block js">{</span>
+    <span class="keyword control flow js">return</span> <span class="variable language this js">this</span><span class="punctuation accessor js">.</span><span class="meta property object js">state</span> <span class="keyword operator comparison js">===</span> <span class="string quoted double js"><span class="punctuation definition string begin js">&quot;</span>ERROR<span class="punctuation definition string end js">&quot;</span></span><span class="punctuation terminator statement js">;</span>
+  <span class="punctuation section block js">}</span></span>
+
+  <span class="meta function declaration js"><span class="entity name function js">resolveWith</span><span class="punctuation section group begin js">(</span><span class="variable parameter function js">value</span><span class="punctuation section group end js">)</span><span class="meta function declaration js"> </span></span><span class="meta block js"><span class="punctuation section block js">{</span>
+    <span class="variable language this js">this</span><span class="punctuation accessor js">.</span><span class="meta property object js">_state</span> <span class="keyword operator assignment js">=</span> <span class="string quoted double js"><span class="punctuation definition string begin js">&quot;</span>LOADED<span class="punctuation definition string end js">&quot;</span></span><span class="punctuation terminator statement js">;</span>
+    <span class="variable language this js">this</span><span class="punctuation accessor js">.</span><span class="meta property object js">_value</span> <span class="keyword operator assignment js">=</span> <span class="variable other readwrite js">value</span><span class="punctuation terminator statement js">;</span>
+  <span class="punctuation section block js">}</span></span>
+
+  <span class="meta function declaration js"><span class="entity name function js">rejectWith</span><span class="punctuation section group begin js">(</span><span class="variable parameter function js">error</span><span class="punctuation section group end js">)</span><span class="meta function declaration js"> </span></span><span class="meta block js"><span class="punctuation section block js">{</span>
+    <span class="variable language this js">this</span><span class="punctuation accessor js">.</span><span class="meta property object js">_state</span> <span class="keyword operator assignment js">=</span> <span class="string quoted double js"><span class="punctuation definition string begin js">&quot;</span>ERROR<span class="punctuation definition string end js">&quot;</span></span><span class="punctuation terminator statement js">;</span>
+    <span class="variable language this js">this</span><span class="punctuation accessor js">.</span><span class="meta property object js">_error</span> <span class="keyword operator assignment js">=</span> <span class="variable other readwrite js">error</span><span class="punctuation terminator statement js">;</span>
+  <span class="punctuation section block js">}</span></span>
+<span class="punctuation section block js">}</span></span></span>
+
+<span class="storage type js">const</span> <span class="variable other constant js">MAP</span> <span class="keyword operator assignment js">=</span> <span class="meta instance constructor js"><span class="keyword operator word new js">new</span><span class="meta function-call constructor js"> <span class="support class builtin js">WeakMap</span><span class="meta group js"><span class="punctuation section group js">(</span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span></span><span class="punctuation terminator statement js">;</span>
+
+<span class="meta export js"><span class="keyword control import-export js">export</span> <span class="variable other readwrite js">function</span> </span><span class="meta function-call js"><span class="variable function js">load</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="variable other readwrite js">somePromise</span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span> <span class="meta block js"><span class="punctuation section block js">{</span>
+  <span class="storage type js">let</span> <span class="variable other readwrite js">existingAsyncData</span> <span class="keyword operator assignment js">=</span> <span class="variable other object js">MAP</span><span class="punctuation accessor js">.</span><span class="meta function-call method js"><span class="variable function js">get</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="variable other readwrite js">somePromise</span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span><span class="punctuation terminator statement js">;</span>
+  <span class="meta conditional js"><span class="keyword control conditional js">if</span> <span class="meta group js"><span class="punctuation section group js">(</span><span class="variable other readwrite js">existingAsyncData</span><span class="punctuation section group js">)</span></span> <span class="meta block js"><span class="punctuation section block js">{</span>
+    <span class="keyword control flow js">return</span> <span class="variable other readwrite js">existingAsyncData</span><span class="punctuation terminator statement js">;</span>
+  </span><span class="meta block js"><span class="punctuation section block js">}</span></span></span>
+
+  <span class="storage type js">let</span> <span class="variable other readwrite js">asyncData</span> <span class="keyword operator assignment js">=</span> <span class="meta instance constructor js"><span class="keyword operator word new js">new</span><span class="meta function-call constructor js"> <span class="variable type js">AsyncData</span><span class="meta group js"><span class="punctuation section group js">(</span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span></span><span class="punctuation terminator statement js">;</span>
+  <span class="variable other object js">MAP</span><span class="punctuation accessor js">.</span><span class="meta function-call method js"><span class="variable function js">set</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="variable other readwrite js">somePromise</span><span class="punctuation separator comma js">,</span> <span class="variable other readwrite js">asyncData</span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span><span class="punctuation terminator statement js">;</span>
+
+  <span class="variable other object js">somePromise</span><span class="punctuation accessor js">.</span><span class="meta function-call method js"><span class="variable function js">then</span><span class="meta group js"><span class="punctuation section group js">(</span>
+    <span class="meta function declaration js"><span class="punctuation section group begin js">(</span><span class="variable parameter function js">value</span><span class="punctuation section group end js">)</span><span class="meta function declaration js"> </span><span class="storage type function arrow js">=&gt;</span></span> <span class="meta block js"><span class="variable other object js">asyncData</span><span class="punctuation accessor js">.</span><span class="meta function-call method js"><span class="variable function js">resolveWith</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="variable other readwrite js">value</span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span></span><span class="punctuation separator comma js">,</span>
+    <span class="meta function declaration js"><span class="punctuation section group begin js">(</span><span class="variable parameter function js">error</span><span class="punctuation section group end js">)</span><span class="meta function declaration js"> </span><span class="storage type function arrow js">=&gt;</span></span> <span class="meta block js"><span class="variable other object js">asyncData</span><span class="punctuation accessor js">.</span><span class="meta function-call method js"><span class="variable function js">rejectWith</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="variable other readwrite js">error</span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span>
+  </span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span><span class="punctuation terminator statement js">;</span>
+
+  <span class="keyword control flow js">return</span> <span class="variable other readwrite js">asyncData</span><span class="punctuation terminator statement js">;</span>
+<span class="punctuation section block js">}</span></span>
+
+<span class="meta export js"><span class="keyword control import-export js">export</span> <span class="keyword control import-export js">default</span> <span class="meta function-call js"><span class="variable function js">helper</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="meta function declaration js"><span class="punctuation section group begin js">(</span>[<span class="variable parameter function js">promise</span>]<span class="punctuation section group end js">)</span><span class="meta function declaration js"> </span><span class="storage type function arrow js">=&gt;</span></span> <span class="meta block js"><span class="meta function-call js"><span class="variable function js">load</span><span class="meta group js"><span class="punctuation section group js">(</span><span class="variable other readwrite js">promise</span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span></span></span><span class="meta group js"><span class="punctuation section group js">)</span></span></span></span><span class="punctuation terminator statement js">;</span>
+</span></code></pre>
+<p>Hopefully you now have a better idea of how we can combine custom data structures built with JS classes, autotracking-powered reactivity, and modern JS features like <code>WeakMap</code> to build robust solutions for even tricky problems like asynchronous data flow!</p>
+<p>:::callout</p>
+<p>Feel free to respond with questions or comments on <a href="https://discuss.emberjs.com/t/async-data-and-autotracking-in-ember-octane/18177">Ember Discuss</a>!</p>
+<p>For further reading on autotracking, check out these posts by my friend and colleague Chris Garrett (<a href="https://www.pzuraq.com">@pzuraq</a>), who knows autotracking better than almost anyone else:</p>
+<ul>
+<li><a href="https://www.pzuraq.com/how-autotracking-works/">How Autotracking Works</a></li>
+<li><a href="https://www.pzuraq.com/autotracking-case-study-trackedmap/">Autotracking Case Study: TrackedMap</a></li>
+</ul>
+<p>:::</p>
+<h2>Appendix: TypeScript</h2>
+<p>As long-time readers of this blog (and many folks in the Ember community) know, I’m a huge advocate of TypeScript. I’m particularly a fan of using types to guarantee that our data is <em>always</em> in a valid state. In the implementation of <code>AsyncData</code> as we have it, we <em>do</em> always have data in a valid state—but that’s just because we’ve been careful, and our end users can pretty easily interact with <code>AsyncData</code> in unsafe ways. What might it look like to make it so that we can never <em>construct</em> invalid data, and so that our end users need to interact more safely with the data?</p>
+<p>:::note</p>
+<p>For this example, I am <em>assuming</em> rather than <em>explaining</em> the TypeScript features in use.</p>
+<p>:::</p>
+<p>One key challenge and constraint is that the <code>AsyncData</code> type has to work in <em>two</em> programming languages: JavaScript (or TypeScript) and Glimmer templates. The TypeScript features I would normally reach for here simply don’t work all that well in Glimmer templates. So take what follows with that in mind: trying to make this more robust will mean that it will be <em>slightly</em> harder to use in templates—and any concessions we make to the template ergonomics will <em>necessarily</em> make our implementation less type-safe. That means that the <em>most useful</em> ways to use this implementation will be a little different on the TS side than on the Glimmer template side.</p>
+<p>The key things to note here are:</p>
+<ul>
+<li>
+<p>I’ve done as I suggested in the main part of the post, and made the internal state be a union of object types. This means that it would be a type error if we wrote a type in the <code>resolveWith</code> or <code>rejectWith</code> methods. It also means that callers can actually use <code>AsyncValue.data</code> directly and <code>switch</code> on its <code>state</code> property to get safe access to <code>value</code> or <code>error</code>. (This is how I would <em>recommend</em> people access it!)</p>
+</li>
+<li>
+<p>Unfortunately, exposing the <code>state</code> and <code>value</code> and <code>error</code> getters means that users can <em>also</em> engage in <em>unsafe</em> runtime behavior. The unfortunate reality, though, is that until we have type-checked templates, even making users go through the <code>data</code> getter wouldn’t help here: you could always write <code>{{asyncData.data.value}}</code> and it would simply throw via the debug assertion when it wasn’t in the correct state.</p>
+</li>
+<li>
+<p>The use of the <code>assert</code> functions guarantees that our getters for <code>value</code> and <code>error</code> are in fact safe. The type for <code>assert</code> takes advantage of TypeScript 3.7’s <a href="https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-7.html#assertion-functions">assertion functions</a> to inform the type system of which variant the <code>Data</code> is in. This <em>helps</em> in that users will get those runtime failures in their tests if they don’t check the state correctly, but it unfortunately means that you can also just write <code>someAsyncData.value</code> and it will type-check.</p>
+</li>
+<li>
+<p>I have added <code>// SAFETY: ...</code> comments for the places where we have to make type casts. TypeScript cannot track the guarantees we’re upholding via our invariants. I <em>always</em> write this kind of comment on any type cast I write, so that it’s clear later what has to remain true for the cast to remain safe.<sup class="footnote-reference"><a href="#4">5</a></sup></p>
+</li>
+</ul>
+<p>Here’s what the TS implementation would look like:</p>
+<pre><code>import { helper } from '@ember/component/helper';
+import { assert } from '@ember/debug';
+import { tracked } from '@glimmer/tracking';
+
+type Data&lt;Value&gt; =
+  | { state: 'LOADING' }
+  | { state: 'LOADED', value: Value }
+  | { state: 'ERROR', error: unknown }
+  ;
+
+class AsyncData&lt;Value, Err = unknown&gt; {
+  @tracked private _data: Data&lt;Value&gt; = { state: 'LOADING' };
+
+  get data(): Data&lt;Value&gt; {
+    return this._data;
+  }
+
+  get state(): Data&lt;Value&gt;['state'] {
+    return this._data.state;
+  }
+
+  get value(): Value {
+    assert(
+      `cannot get 'value' with state ${this._data.state}`,
+      this._data.state === 'LOADED'
+    );
+
+    return this._data.value;
+  }
+
+  get error(): unknown {
+    assert(
+      `cannot get 'reason' with state ${this._data.state}`,
+      this._data.state === 'ERROR'
+    );
+
+    return this._data.error;
+  }
+
+  get isLoading(): boolean {
+    return this._data.state === 'LOADING';
+  }
+
+  get isLoaded(): boolean {
+    return this._data.state === 'LOADED';
+  }
+
+  get isError(): boolean {
+    return this._data.state === 'ERROR';
+  }
+
+  resolveWith(value: Value): void {
+    this._data = { state: 'LOADED', value };
+  }
+
+  rejectWith(error: Err): void {
+    this._data = { state: 'ERROR', error };
+  }
+}
+
+const MAP: WeakMap&lt;Promise&lt;unknown&gt;, AsyncData&lt;unknown&gt;&gt;
+  = new WeakMap();
+
+function load&lt;Value&gt;(
+  somePromise: Promise&lt;Value&gt;
+): AsyncData&lt;Value&gt; {
+  let existingAsyncData = MAP.get(somePromise);
+  if (existingAsyncData) {
+    // SAFETY: this cast only holds because we *know* that we've
+    // kept the `Promise` and the `AsyncData` instances in sync
+    // via the `WeakMap`. If that were not the case, this cast
+    // would be `unsafe`.
+    return existingAsyncData as unknown as AsyncData&lt;Value&gt;;
+  }
+
+  // SAFETY: this only holds because we are working with
+  // `Promise&lt;Value&gt;`.
+  let asyncData = new AsyncData&lt;Value&gt;();
+  MAP.set(somePromise, asyncData);
+
+  somePromise.then(
+    (value) =&gt; asyncData.resolveWith(value),
+    (error) =&gt; asyncData.rejectWith(error)
+  );
+
+  return asyncData;
+}
+
+export default helper(
+  ([somePromise]: [Promise&lt;unknown&gt;]) =&gt; load(somePromise)
+);
+</code></pre>
+<p>*[JS]: JavaScript
+*[API]: application programming interface</p>
+<div class="footnote-definition" id="1"><sup class="footnote-definition-label">1</sup>
+<p>I would actually seriously consider reworking this in terms of a tracked <code>WeakMap</code> implementation for use with TypeScript to make these guarantees that much more reliable!</p>
+</div>
+<div class="footnote-definition" id="2"><sup class="footnote-definition-label">2</sup>
+<p>We could actually implement true privacy ourselves, using the same technique that Babel and TypeScript use—a <code>WeakMap</code> associating each instance and a POJO containing its private fields—but it doesn’t <em>really</em> matter for our purposes, and might not be compatible with a future version of the decorators spec anyway.</p>
+<p>*[POJO]: plain old JavaScript object</p>
+</div>
+<div class="footnote-definition" id="3"><sup class="footnote-definition-label">3</sup>
+<p>If you reference <a href="https://gist.github.com/chriskrycho/306a82990dd82203073272e055df5cd1">the gist I published</a> for <code>load</code> and <code>AsyncData</code>, you’ll notice that these <code>assert</code>s are <em>not</em> present. This is a matter of backwards compatibility with pre-Octane code. We’ll be working with autotracking in the next section, and therefore <em>could</em> use plain getters to access the state and update correctly.</p>
+<p>However, <em>if</em> you refer to these getters with <code>@computed</code> or any of the computed property macros, using the <code>@dependentKeyCompat</code> decorator, this will cause problems, because classic computed properties actually invoke the getters for their dependent keys, and so will invoke these even when users don’t intend to.</p>
+</div>
+<div class="footnote-definition" id="actual-impl"><sup class="footnote-definition-label">4</sup>
+<p>If you look at the source gist for the implementation we’re using currently, you’ll see a few differences and additions to what I described in this post:</p>
+<ul>
+<li>
+<p>We use <code>@dependentKeyCompat</code> to interoperate with Ember Classic computed properties, and avoid the debug assertions in the <code>value</code> and <code>error</code> getters for the same reason.</p>
+</li>
+<li>
+<p>We have support for treating <code>AsyncData</code> as a “then-able”—that is, for making it possible to use it basically like you would a <code>Promise</code>. That is useful, but it’s not actually key to understanding the type and how to use it, so I left it aside in this discussion.</p>
+</li>
+<li>
+<p>We also support passing in non-<code>Promise</code> data, and turning it into a <code>Promise</code> and <code>AsyncData</code> which are immediately resolved. In retrospect, I’d really prefer to remove this and have people think about their data more carefully—even just requiring them to explicitly do <code>load(Promise.resolve(123))</code> in those cases instead of <code>load(123)</code>.</p>
+</li>
+</ul>
+</div>
+<div class="footnote-definition" id="4"><sup class="footnote-definition-label">5</sup>
+<p>This is an idea I stole from Rust, where most of the community idiomatically uses the same kind of comments anywhere that Rust’s <code>unsafe</code> keyword appears in code.</p>
+</div>
+
+                            </body>
+                        </html>

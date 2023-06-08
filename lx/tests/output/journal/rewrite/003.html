@@ -1,0 +1,119 @@
+<html>
+                            <head>
+                                <link rel="stylesheet" href="/light.css" media="(prefers-color-scheme: light)" />
+                                <link rel="stylesheet" href="/dark.css" media="(prefers-color-scheme: dark)" />
+                            </head>
+                            <body>
+                                <p>:::note</p>
+<p>You may notice in the URL that this is entry <code>003</code>. That’s because I <a href="https://v4.chriskrycho.com/rewrite-dev-journal/">started this back on v4</a> of this site. Previous entries (retroactively numbered):</p>
+<ul>
+<li>001: <a href="https://v4.chriskrycho.com/2019/rewrite-dev-journal-how-i-started.html">How I Started</a></li>
+<li>002: <a href="https://v4.chriskrycho.com/2019/rewrite-dev-journal-how-progress-doesnt-feel.html">How Progress Doesn’t Feel</a></li>
+</ul>
+<p>:::</p>
+<p>*[URL]: universal resource locator</p>
+<p>I’m starting building the visuals for the web view of <a href="https://rewrite.software"><b><i>re</i>write</b></a>, and I want this system to be <em>easy</em> to work on. While actively avoiding <a href="https://v5.chriskrycho.com/journal/infra-engineers-blind-spot-the/">the infra engineer’s blind spot</a>, I <em>do</em> want to engineer things well. I have concluded over the past few years that my preference is using (something like) <a href="https://css-tricks.com/lets-define-exactly-atomic-css/">Atomic CSS</a>—with a slight twist. Atomic CSS typically emphasizes putting all those classes in your stylesheet. I prefer to use the atoms to define semantic class names instead, which represent a meaningful <em>composition</em> of those styles. This combines the reliability of an atomic CSS approach with the reusability of a more component-oriented design pattern. In other words, it combines the ideas of atomic CSS with the ideas of <a href="https://atomicdesign.bradfrost.com">atomic <em>design</em></a>.</p>
+<p>Here’s what this looks like in practice, as I build out the design system for the first time today.</p>
+<p>11:45
+: I have <em>just</em> started. My CSS (technically <a href="https://sass-lang.com">SCSS</a>) looks like this:</p>
+<pre><code>```scss
+
+```
+
+(That’s not a mistake! It’s just literally empty, because I just started. It will fill up in the bits below.)
+</code></pre>
+<p>12:03
+: I have some CSS now! In the interest of minimizing time spent on typeface choices today, I’m going with just using the system fonts, via <a href="https://github.com/jonathantneal/system-font-css">this lovely setup</a>. But it’s time for the first decision here: do I apply this to the <code>body</code> element, as a default? It’s definitely the <em>safest</em>, as then it “just works” everywhere else. However, it also means that everywhere else has to explicitly <em>override it</em>. This is probably for the best, and it’s probably what I want in the system in general.</p>
+<p>13:39
+: I’ve made no progress on this in the last 90 minutes, because refinancing a home is complicated and involves a lot of time with a spreadsheet and on the phone. I am, however, thinking about the appropriate mix of “componentization” vs. just using the atomic styles directly… and how what I actually want is the ability to define a reusable block of styles which simply <em>compiles</em> to . This is the promise of many CSS-in-JS libraries, and it makes a lot of sense. On the other hand, maybe I solve that by just defining it as functions which return those sets of class names on the <em>Elm</em> side.</p>
+<p>16:18
+: The refinance work squared away, and I’ve had a good long conversation with a friend familiar with both this project and CSS. My list of atoms is slowly growing:</p>
+<pre><code>```scss
+.type-system {
+  font-family: system-ui, sans-serif;
+}
+
+.fs-base {
+  font-size: 16px;
+}
+
+.m-0 {
+  margin: 1rem;
+}
+
+.p-0 {
+  padding: 1rem;
+}
+```
+
+It currently gets applied to the app like this:
+
+```elm
+bodyClasses : Html.Attribute msg
+bodyClasses =
+    class &quot;type-system fs-base m-0&quot;
+```
+
+I have no idea whether I’ll end up keeping exactly these names (spoilers: I *probably* won’t), but the point today is to make progress. And I am!
+
+And my friend—humorously and kindly but not inaccurately described CSS as Crazy Stupid Stylesheets: “It’s wonderful, but also it’s crazy and kind of stupid.”
+</code></pre>
+<p>17:04
+: I added these lines to my atoms—</p>
+<pre><code>```scss    
+.grid {
+  display: grid;
+}
+```
+
+—and I immediately began to think about what the grid system needs to *be*. (I’m perfectly content only supporting browsers which support CSS Grid with this app. There’s no reason *not* to, in fact: IE11 will be well and truly dead soon.) I need a grid *system*, with well-defined defaults for gaps, reflow sizes, etc.
+</code></pre>
+<p>17:27
+: It’s time to go eat dinner, but I’ve made some progress: borrowing ideas from <a href="https://tailwindcss.com">Tailwind</a> and <a href="http://tachyons.io">Tachyons</a>, I’ve started building out a grid system I find reasonable. I now have a bunch of declarations like this:</p>
+<pre><code>```scss
+.grid-cols-12 {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+@media screen and (min-width: 480px) {
+  .med--grid-cols-12 {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+}
+
+@media screen and (min-width: 960px) {
+  .wide--grid-cols-12 {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+}
+
+@media screen and (min-width: 1440px) {
+  .x-wide--grid-cols-12 {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+}
+```
+
+Those get applied like this, now:
+
+```elm
+bodyClasses : Html.Attribute msg
+bodyClasses =
+    class &quot;type-system fs-base m-0 grid grid-cols-none wide--grid-cols-12&quot;
+```
+
+This makes it *not* use a set of grid template columns on smaller screens, 4 columns on “medium” sized screens, 8 columns on “wide” screens, and 12 columns on “extra-wide” screens. Note that this is a mobile-first approach! In my experience, if you start mobile-first, responsive design is if not *easy* then at least *very tractable*. If you start by assuming a large screen, designing back *down* to mobile is very hard.
+
+While this works reasonably well, I may also want to set a minimum size on those columns. We’ll see. I also don’t know yet if these sizes will work exactly right!
+
+The other important thing to notice here: many people use this kind of responsive grid to make a *fluid* grid system where things reflow dyanmically. This isn’t *quite* that: I’m aiming for a responsive flow, but not a totally fluid flow. Totally fluid flows work much better for *content*-oriented, rather than *application*-like web interfaces.
+</code></pre>
+<p>17:41
+: That’s a wrap on this particular session. Hopefully it was somewhat interesting and illuminating for you; I enjoyed documenting my thoughts this way as I did it. It actually helped me keep making progress all day, even if the progress was slower than it could in principle have been!</p>
+<p>*[CSS]: cascading style sheets
+*<a href="https://sass-lang.com">SCSS</a>: Sassy CSS
+*[JS]: JavaScript
+*[IE11]: Internet Explorer 11</p>
+
+                            </body>
+                        </html>

@@ -1,0 +1,611 @@
+<html>
+                            <head>
+                                <link rel="stylesheet" href="/light.css" media="(prefers-color-scheme: light)" />
+                                <link rel="stylesheet" href="/dark.css" media="(prefers-color-scheme: dark)" />
+                            </head>
+                            <body>
+                                <p>Today’s topic: <i>What is a “data constructor” in languages like <a href="https://elm-lang.org">Elm</a>, <a href="https://www.haskell.org">Haskell</a>, <a href="https://fsharp.org">F^♯^</a>, <a href="https://ocaml.org">OCaml</a>/<a href="https://reasonml.github.io">ReasonML</a>, <a href="https://grain-lang.org">Grain</a>, etc.?<sup class="footnote-reference"><a href="#swift-and-rust-too">1</a></sup> When you see syntax like this (taken from <a href="https://grain-lang.org/docs/guide/data_types">the Grain docs</a><sup class="footnote-reference"><a href="#grain-update">2</a></sup>)—</i></p>
+<pre><code>data CabbageColor = Red | Green
+data Veggie =
+  | Squash
+  | Cabbage(CabbageColor)
+  | Broccoli
+
+let redCabbage = Cabbage(Red)
+</code></pre>
+<p><i>—what does it mean, and how can we understand it in terms of things we can do in languages like Java, C^♯^, and TypeScript?</i></p>
+<p>Even to people with quite a bit of experience in a variety of programming languages, the syntax here is different enough from <em>all</em> the C-related languages most working developers use that it can be hard to wrap your head around. In fact, one of the smartest developers I know got stuck on trying to make sense of this syntax recently. So in this post, I’m going to explain it using TypeScript, in the same terms that made it make sense to that developer. If you’re familiar with any modern language with classes, this will likely make sense to you!</p>
+<p>We’re going to take this in two steps:</p>
+<ol>
+<li><a href="#what-the-syntax-means">What the Syntax Means</a></li>
+<li><a href="#understandingby-implementing">Understanding—by Implementing</a></li>
+</ol>
+<p>If you get through the first section and still feel a bit confused, that’s okay—in fact, it’s almost the point. Take a breather, go get a drink and take a walk or something, and then come back and read the second section!</p>
+<div class="footnote-definition" id="grain-update"><sup class="footnote-definition-label">2</sup>
+<p>Since I wrote this, Grain has made a change to their syntax which makes this <em>much</em> more familiar-looking to developers used to C-like languages. This sample would now look like this:</p>
+<pre><code>enum CabbageColor { Red, Green }
+enum Veggie {
+    Squash,
+    Cabbage(CabbageColor),
+    Broccoli
+}
+
+let redCabbage = Cabbage(Red)
+</code></pre>
+<p>I have chosen to leave the text of the post as is apart from this footnote because I think it’s helpful in exposing people to ML-ish syntaxes… <em>and</em> it would be an enormous amount of work to rewrite the whole thing at this stage!</p>
+</div>
+<h2>What the Syntax Means</h2>
+<p>First, let’s get some terms defined: each of those <code>type ...</code> is declaring a type. The name of the two types are <code>CabbageColor</code> and <code>Veggie</code>. The items after the <code>=</code>, separated by <code>|</code> characters, are the <em>values</em> of the type, sometimes called the <em>variants</em>. This kind of type goes by a lot of names, including “sum types,” “union types,” “user-defined types,” “custom types,” and more. The key is that they define a type—<code>CabbageColor</code> or <code>Veggie</code>—where instances of that type are exactly and only one of the named values. So when we see this—</p>
+<pre><code>data CabbageColor = Red | Green
+</code></pre>
+<p>—it just means that if you have a <code>CabbageColor</code>, you know it will be one of the values <code>Red</code> or <code>Green</code>. Those values <em>only</em> exist in the context of <code>CabbageColor</code> If you want to use the names <code>Red</code> and <code>Green</code> for values otherwise, you’ll need some way to specify <em>which</em> <code>Red</code>, like <code>CabbageColor.Red</code> in some languages. This is very similar to enums in C-descended languages. In at least some C-descended languages, the boolean type is defined pretty much exactly the same way that <code>CabbageColor</code> is here: an enum with variants named <code>true</code> and <code>false</code>.</p>
+<p>Using a basic custom type like this is pretty much like you’d expect:</p>
+<pre><code>let colorOne = Red     // type is CabbageColor
+let colorTwo = Green   // type is *also* CabbageColor
+</code></pre>
+<p>We could write a type annotation on that to make it extra explicit, even though we don’t <em>need</em> to:</p>
+<pre><code>let colorOne: CabbageColor = Red
+let colorTwo: CabbageColor = Green
+</code></pre>
+<p>Unlike enums in C-based languages, though, these types have a superpower: they can hold data. We can see this in the second type defined in the opening example:</p>
+<pre><code>data Veggie =
+  | Squash
+  | Cabbage(CabbageColor)
+  | Broccoli
+</code></pre>
+<p>The second type, <code>Cabbage</code>, includes a <code>CabbageColor</code>. This is <em>not</em> something you can do with a traditional enum in C, Java, C^♯^, or TypeScript. (This is <em>also</em> the point we’re going to spend the rest of the post on!)</p>
+<p>Creating an instance of <code>Veggie</code> looks like this:</p>
+<pre><code>let squash = Squash                 // type is Veggie
+let redCabbage = Cabbage(Red)       // type is Veggie
+let greenCabbage = Cabbage(Green)   // type is Veggie
+let broccoli = Broccoli             // type is Veggie
+</code></pre>
+<p>Each of these is a <code>Veggie</code>. We could prove it by spelling out the types rather than letting the compiler infer them for us, like this:</p>
+<pre><code>let squash: Veggie = Squash
+let redCabbage: Veggie = Cabbage(Red)
+let greenCabbage: Veggie = Cabbage(Green)
+let broccoli: Veggie = Broccoli
+</code></pre>
+<p>But what <em>exactly</em> is happening when we write <code>let squash = Squash</code> or, perhaps even more surprisingly, <code>let redCabbage = Cabbage(Red)</code>?</p>
+<ul>
+<li><code>Squash</code> is a value of type <code>Veggie</code>, so you can simply write <code>let squash: Veggie = Squash</code> and everything works</li>
+<li><code>Cabbage</code> is a function (which is still a kind of value!), which accepts a <code>CabbageColor</code> and returns a <code>Veggie</code>.</li>
+</ul>
+<p>That second point means we could also write this:</p>
+<pre><code>let color = Red                   // type is `CabbageColor`
+let cabbage = Cabbage             // type is `CabbageColor -&gt; Veggie`
+let redCabbage = cabbage(color)   // type is `Veggie`
+</code></pre>
+<p>For some of you, this might already make sense—but it’s still neat to see how you might reimplement it in another more commonly-used language. For others, this might still be hurting your head, and <em>that’s okay</em>. It took me quite a while for this all to make sense to me when I first encountered it! If your head is spinning a bit right now, that’s normal. Take a break and go enjoy some fresh air, drink some water, and let your brain relax for a few minutes. Or the rest of the day. Come back after that and read the next section, and things will probably click into place.</p>
+<h2>Understanding—by Implementing</h2>
+<p>People with backgrounds in languages like Java, C^♯^, or TypeScript often find it hard to translate the syntax we’ve just walked through into concepts they know. That’s totally fair: it’s pretty different, and it’s not <em>just</em> new syntax, it’s also new language features tied to that syntax. In this section, we’ll see how we could implement the exact same semantics in a language that’s more familiar, and hopefully that will help make sense of things.</p>
+<p>:::note</p>
+<p>I’m using TypeScript here because it’s the language in this family I’m most familiar with, but I’m going to keep it to a minimal subset of TypeScript that is extremely close to what you might see in Java or C^♯^. I’ll be using footnotes here to talk about some details around TypeScript itself, where Typescript can let us more directly approximate the things happening in languages like Grain, Elm, etc. However, those are footnotes for a reason: you don’t <em>need</em> to read or understand them to get the point of the rest of this post!</p>
+<p>:::</p>
+<p>First, let’s see what it would look like to build a type that represents the <code>CabbageColor</code>. For this we can just use a standard <code>enum</code> type:</p>
+<pre><code>enum CabbageColor {
+  Red,
+  Green,
+}
+</code></pre>
+<p>That’s it for that particular type. To get an instance of the type, we just do <code>CabbageColor.Red</code>:</p>
+<pre><code>let color = CabbageColor.Red;
+</code></pre>
+<p>As we’d expect, <code>color</code> is of type <code>CabbageColor</code>; we could easily have specified it (but don’t need to because of type inference in TypeScript, the same as in Grain):</p>
+<pre><code>let color: CabbageColor = CabbageColor.Red;
+</code></pre>
+<p>We can now use the normal <code>switch</code> statement semantics with this:<sup class="footnote-reference"><a href="#default-case">3</a></sup></p>
+<pre><code>function describe(color: CabbageColor): string {
+  switch (color) {
+    case CabbageColor.Red:
+      return &quot;It's red!&quot;;
+    case CabbageColor.Green:
+      return: &quot;It's green!&quot;;
+}
+</code></pre>
+<p>Even better: TypeScript will guarantee we cover all the cases of the <code>enum</code> in this <code>switch</code> statement, because it’s directly related to the <code>return</code> type. If we later added <code>Yellow</code> to the mix, but didn’t add a <code>case</code> for it, TypeScript would report:</p>
+<blockquote>
+<p>Function lacks ending return statement and return type does not include ‘undefined’.</p>
+</blockquote>
+<aside>
+<p>Unfortunately, there’s a small amount of runtime overhead to the result of creating an <code>enum</code> in TypeScript—it’s literally the only thing in the language like this. You might also be tempted to solve it by using a frozen object instead, like this:</p>
+<pre><code>const CabbageColor = Object.freeze({
+  Red: 'red',
+  Green: 'green',
+});
+</code></pre>
+<p>That won’t get us the same benefits as an <code>enum</code> without a <em>bunch</em> of extra type machinery, though—I covered the relevant details in two posts back when it was introduced (<a href="https://v4.chriskrycho.com/2016/keyof-and-mapped-types-in-typescript-21.html" title="keyof and mapped types in TypeScript 2.1">1</a>, <a href="https://v4.chriskrycho.com/2017/typescript-keyof-follow-up.html" title="TypeScript keyof Follow-Up">2</a>)—so we’re better just using the built-in <code>enum</code> type. TypeScript’s own <code>const enum</code> types would be one good solution to both of these problems (albeit with their own tradeoffs); I’ll show those in detail in the next post. </p>
+</aside>
+<p>We can’t do exactly this for the <code>Veggie</code> type, though: it would be fine for <code>Squash</code> and <code>Broccoli</code>, but <code>Cabbage</code> needs a <code>CabbageColor</code> to create it! That’s okay, though: we can still create a type that behaves the same way as the <code>Veggie</code> type does.</p>
+<p>Let’s start with an empty <code>class</code> definition:<sup class="footnote-reference"><a href="#classes">4</a></sup></p>
+<pre><code>class Veggie {
+}
+</code></pre>
+<p>The first thing we’ll want to do is define the kind of veggie this represents. We can do that with another <code>enum</code> for the <code>kind</code> (and notice that the <code>kind</code> here is marked as <code>readonly</code> because the <code>kind</code> of a <code>Veggie</code> is fixed: squash cannot turn into cabbage, etc.):<sup class="footnote-reference"><a href="#constructor-shorthand">5</a></sup></p>
+<pre><code>enum VeggieKind {
+  Squash,
+  Cabbage,
+  Broccoli,
+}
+
+class Veggie {
+  readonly kind: VeggieKind;
+
+  constructor(kind: VeggieKind) {
+    this.kind = kind;
+  }
+}
+</code></pre>
+<p>With this in place, we could actually construct a <code>Squash</code> or a <code>Broccoli</code> correctly:</p>
+<pre><code>let squash = new Veggie(VeggieKind.Squash);
+</code></pre>
+<p>This isn’t exactly what we see in the Grain example, but it’s a step in the right direction.</p>
+<p>Next, we need to deal with the extra data associated with the type when we are working with cabbage: the <code>CabbageColor</code> we defined above. We can put that in the constructor, too:</p>
+<pre><code>enum CabbageColor { Red, Green }
+enum VeggieKind { Squash, Cabbage, Broccoli }
+
+class Veggie {
+  readonly kind: VeggieKind;
+  readonly color?: CabbageColor;
+
+  constructor(kind: VeggieKidn, color?: CabbageColor) {
+    this.kind = kind;
+    this.color = color;
+  }
+}
+</code></pre>
+<p>Here, we have an <em>optional</em> <code>color</code> parameter: it can be left <code>undefined</code>. That makes sense: there is no <code>color</code> associated with a <code>Squash</code>. But it’s a problem, too: nothing currently prevents our end users from writing something like this:</p>
+<pre><code>let badSquash = new Veggie(VeggieKind.Squash, CabbageColor.Green);
+</code></pre>
+<p>We can solve this problem <em>and</em> get ourselves to something that looks a lot more like the syntax we’re aiming for in one fell swoop: by making our constructor <code>private</code> and providing other ways to create a <code>Veggie</code> which are guaranteed to be safe.</p>
+<p>:::note</p>
+<p>This is the part where people who are already familiar TypeScript with have to wait for the next post. There are ways we can make this <em>much</em> more type-safe. That’s not the point of <em>this</em> post, though! Here, we’re intentionally sticking to a “lowest common denominator” implementation to get at how we can do this in <em>any</em> class-based language.</p>
+<p>:::</p>
+<p>We’ll start by adding a <code>static</code> constructor for each of these types.</p>
+<pre><code>enum CabbageColor { Red, Green }
+enum VeggieKind { Squash, Cabbage, Broccoli }
+
+class Veggie {
+  readonly kind: VeggieKind;
+  readonly color?: CabbageColor;
+
+  private constructor(kind: VeggieKind, color?: CabbageColor) {
+    this.kind = kind;
+    this.color = color;
+  }
+
+  static Squash(): Veggie {
+    return new Veggie(VeggieKind.Squash);
+  }
+
+  static Cabbage(color: CabbageColor) {
+    return new Veggie(VeggieKind.Cabbage, color);
+  }
+
+  static Broccoli(): Veggie {
+    return new Veggie(VeggieKind.Broccoli);
+  }
+}
+</code></pre>
+<p>At this point, we’ve isolated the things needed to make the type behave the way it should in these constructors, so now we can only use it correctly. If we type a version of the same bad code as before—</p>
+<pre><code>let badSquash = Veggie.Squash(CabbageColor.Red);
+</code></pre>
+<p>—the compiler will tell us:</p>
+<blockquote>
+<p>Expected 0 arguments, but got 1.</p>
+</blockquote>
+<p>This is a good start! But we can do better.</p>
+<p>For one thing, <code>Squash</code> and <code>Broccoli</code> don’t need to be methods at all. We don’t actually need to be able to make a <em>new</em> <code>Squash</code> instance every time, because this class doesn’t actually have any state, or any way to change state. Not having any internal state that can change means it doesn’t actually matter if there is only ever one instance of <code>Squash</code> and one of <code>Broccoli</code> anywhere in our system. We can represent having multiple quantities of them by having more than one reference to the single value in a given array or other data structure, and because the type is stateless, that’s totally fine. There will <em>never</em> be any bugs from having the same value used in different spots—because it’s immutable.</p>
+<p>Instead of having those individual constructors, then, we can just create a single static <em>value</em> for the <code>Squash</code> and <code>Broccoli</code> veggies.</p>
+<pre><code>enum CabbageColor { Red, Green }
+enum VeggieKind { Squash, Cabbage, Broccoli }
+
+class Veggie {
+  private kind: VeggieKind;
+  private color?: CabbageColor;
+
+  private constructor(kind: VeggieKind, color?: CabbageColor) {
+    this.kind = kind;
+    this.color = color;
+  }
+
+  static Squash = new Veggie(VeggieKind.Squash);
+
+  static Cabbage = (color: CabbageColor) =&gt;
+    new Veggie(VeggieKind.Cabbage, color);
+
+  static Broccoli = new Veggie(VeggieKind.Broccoli);
+}
+</code></pre>
+<p>The private constructor makes it so the only way to create a <code>Veggie</code> is using one of its public, <code>static</code> fields. Critically, all three of of them are just values—yes, including the <code>Cabbage</code> function. In fact, we could actually use static method syntax for <code>Cabbage</code> here, but I intentionally used the static property function for <code>Cabbage</code> to make it more obvious that these are <em>all</em> just values attached to the class! <code>Veggie.Squash</code> and <code>Veggie.Broccoli</code> are values whose type is <code>Veggie</code>. <code>Veggie.Cabbage</code> is a value whose type is a function which accepts a <code>CabbageColor</code> and returns a <code>Veggie</code>. But even though one of those values is a function, they’re still all just values.</p>
+<p>Since <code>Squash</code>, <code>Cabbage</code>, and <code>Broccoli</code> are all just values, we can even bind any of them directly to a value in local scope:</p>
+<pre><code>let squash = Veggie.Squash;     // Veggie
+let broccoli = Veggie.Broccoli; // Veggie
+let cabbage = Veggie.Cabbage;   // (color: CabbageColor) -&gt; Veggie
+</code></pre>
+<p>Again, the difference is simply the <em>type</em> each one has: <code>squash</code> and <code>broccoli</code> are already <code>Veggie</code> here, but <code>cabbage</code> is a function: <code>(color: CabbageColor) =&gt; Veggie</code>.</p>
+<p>This same thing is true back in the ML languages, just with a different syntax:</p>
+<pre><code>squash = Squash      // Veggie
+broccoli = Broccoli  // Veggie
+cabbage = Cabbage    // CabbageColor -&gt; Veggie
+</code></pre>
+<p>The difference here is that, since this is the <em>normal</em> way of constructing these types in languages like Elm, you don’t need to use the scoped class for it. You can imagine that it’s as if we had used capital names for those letters in our bindings and exported them all from a module:</p>
+<pre><code>export const { Red, Green } = CabbageColor;
+export const { Squash, Cabbage, Broccoli } = Veggie;
+</code></pre>
+<p>Then we could import them and use them elsewhere:</p>
+<pre><code>import { Broccoli, Cabbage, Red } from 'veggies';
+
+let broccoli = Broccoli;
+let redCabbage = Cabbage(Red);
+</code></pre>
+<p>That’s exactly the same thing we’d see in Grain or any other ML-style language—just with TypeScript syntax instead!</p>
+<p>Summarizing so far:</p>
+<ol>
+<li>All of these variants are <em>values</em>. This is why we can bind them, export them, etc.</li>
+<li>The difference is what <em>type</em> each value is. <code>Veggie.Squash</code> and <code>Veggie.Broccoli</code> are both already <code>Veggie</code>s. <code>Veggie.Cabbage</code> is a function you can use to <em>build</em> a <code>Veggie</code> if you also supply a <code>CabbageColor</code>.</li>
+</ol>
+<p>The only real difference in what we’ve done in TypeScript and what we’d see in that original example from Grain is that Grain has built-in language support for these things because they’re the default instead of something we’re building on top of other language constructs.</p>
+<p>There <em>is</em> another difference, though, and it’s related to a downside in the code we’ve written. We can no longer use a <code>switch</code> statement to check this, because it’s too complicated a type for JavaScript’s very limited <code>switch</code> capability. All the SML-related languages I mentioned at the top have a feature called <em>pattern-matching</em> which supports working with these richer types:<sup class="footnote-reference"><a href="#matching">6</a></sup></p>
+<pre><code>let describeColor = (color) =&gt; match (color) {
+  | Red =&gt; &quot;red&quot;
+  | Green =&gt; &quot;green&quot;
+}
+
+let describe = (veggie) =&gt; match (veggie) {
+  | Squash =&gt; &quot;It's a squash&quot;
+  | Cabbage(color) =&gt; &quot;It's a &quot; + describeColor(color) + &quot; cabbage&quot;
+  | Broccoli =&gt; &quot;It's broccoli&quot;
+}
+</code></pre>
+<p>While <code>match</code> is not built into JavaScript, we can build our own using a method on the class, and it’s not actually very hard!</p>
+<p>What we want to end up with:</p>
+<pre><code>let describeColor = (color: CabbageColor): string =&gt; {
+  switch (color) {
+    case CabbageColor.Red:
+      return &quot;red&quot;;
+    case: CabbageColor.Green:
+      return &quot;green&quot;;
+  }
+};
+
+let describe = (veggie: Veggie): string =&gt; veggie.match({
+  Squash: &quot;It's a squash&quot;,
+  Cabbage: (color) =&gt; `It's a ${describeColor(color)} cabbage`,
+  Broccoli: &quot;It's broccoli&quot;,
+});
+</code></pre>
+<p><code>describeColor</code> can just be exactly this: there’s no reason for us to reinvent the wheel when the built-in language tools JS gives us—here, a <code>switch</code> statement—will do just fine. For <code>describe</code>, working with a <code>Veggie</code>, though, implementing this <code>match</code> method gives us a <em>lot</em> more expressiveness, and we <em>need</em> something besides the JS <code>switch</code> to deal with <code>Cabbage</code>! Happily, the method implementation is fairly straightforward.</p>
+<pre><code>enum CabbageColor { Red, Green }
+enum VeggieKind { Squash, Cabbage, Broccoli }
+
+type Matcher&lt;T&gt; = {
+  Squash: T;
+  Cabbage: (color: CabbageColor) =&gt; T;
+  Broccoli: T;
+};
+
+class Veggie {
+  private kind: VeggieKind;
+  private color?: CabbageColor;
+
+  // SNIP: the constructors are the same!
+
+  match&lt;Output&gt;(matcher: Matcher&lt;Output&gt;): Output {
+    switch (this.kind) {
+      case VeggieKind.Squash:
+        return matcher.Squash;
+      case VeggieKind.Cabbage:
+        // SAFETY: we guarantee `color` is always defined with `Cabbage`
+        // in the public constructors.
+        return matcher.Cabbage(this.color!);
+      case VeggieKind.Broccoli:
+        return matcher.Broccoli;
+    }
+  }
+}
+</code></pre>
+<p><em>All</em> we’ve done here is require the caller to pass us an object with names which match the names of the <code>VeggieKind</code> variants. The values on that object are either values of the desired resulting type <code>T</code> in the case of <code>Squash</code> and <code>Broccoli</code>, or a function which takes a <code>CabbageColor</code> and returns that same resulting type of <code>T</code>. Within the body of the <code>match</code> method, we return whichever one corresponds to <code>this.kind</code>.</p>
+<p>:::note</p>
+<p>Notice the <code>// SAFETY: ...</code> comment I added when using the non-null assertion operator <code>!</code> with <code>this.color</code>. I borrowed this idea from the Rust community, which marks all uses of <code>unsafe</code> with these kinds of comments. I use it <em>any time</em> I write a cast in TypeScript, for the sake of whoever is maintaining the code in the future… including future <em>me</em>. It’s important to know what might make a cast unsafe! For a way to not need this comment at all by having better safety, you’ll want to read the <em>next</em> post.</p>
+<p>:::</p>
+<p>With the <code>match</code> method in place, we can now <em>use</em> that to work with any of the variants, exactly as I showed above with the <code>describe</code> function definition:</p>
+<pre><code>let describeColor = (color: CabbageColor) =&gt; {
+  switch (color) {
+    case CabbageColor.Red:
+      return &quot;red&quot;;
+    case: CabbageColor.Green:
+      return &quot;green&quot;;
+  }
+};
+
+let describe = (veggie: Veggie) =&gt; veggie.match({
+  Squash: &quot;It's a squash&quot;,
+  Cabbage: (color) =&gt; `It's a ${describeColor(color)} cabbage`,
+  Broccoli: &quot;It's broccoli&quot;,
+});
+</code></pre>
+<p>Once we have that function, we can do pretty neat things with it! For example, if we have a list of <code>Veggie</code>s, we can now <code>map</code> over them in whatever ways we like. And since we have <code>describe</code>, we don’t even have to explicitly invoke <code>Veggie.match</code> to describe a list of <code>Veggie</code>s:</p>
+<pre><code>let veggies = [
+  Veggie.Squash,
+  Veggie.Cabbage(CabbageColor.Red),
+  Veggie.Squash,
+  Veggie.Broccoli,
+  Veggie.Broccoli,
+  Veggie.Cabbage(CabbageColor.Green),
+];
+
+veggies
+  .map((veggie) =&gt; describe(veggie))
+  .forEach((desc) =&gt; {
+    console.log(desc);
+  });
+// It's a squash
+// It's a red cabbage
+// It's a squash
+// It's broccoli
+// It's broccoli
+// It's a green cabbage 
+</code></pre>
+<p>Here’s the final version of our class, showing how we can implement the original code from Grain in TS:</p>
+<pre><code>enum CabbageColor {
+  Red,
+  Green,
+}
+
+enum VeggieKind {
+  Squash,
+  Cabbage,
+  Broccoli,
+}
+
+type Matcher&lt;T&gt; = {
+  Squash: T;
+  Cabbage: (color: CabbageColor) =&gt; T;
+  Broccoli: T;
+};
+
+class Veggie {
+  private kind: VeggieKind;
+  private color?: CabbageColor;
+
+  private constructor(kind: VeggieKind, color?: CabbageColor) {
+    this.kind = kind;
+    this.color = color;
+  }
+
+  static Squash = new Veggie(VeggieKind.Squash);
+
+  static Cabbage = (color: CabbageColor) =&gt;
+    new Veggie(VeggieKind.Cabbage, color);
+
+  static Broccoli = new Veggie(VeggieKind.Broccoli);
+
+  match&lt;Output&gt;(matcher: Matcher&lt;Output&gt;): Output {
+    switch (this.kind) {
+      case VeggieKind.Squash:
+        return matcher.Squash;
+      case VeggieKind.Cabbage:
+        // SAFETY: we guarantee `color` is always defined with `Cabbage`
+        // in the public constructors.
+        return matcher.Cabbage(this.color!);
+      case VeggieKind.Broccoli:
+        return matcher.Broccoli;
+    }
+  }
+}
+
+let describeColor = (color: CabbageColor) =&gt; {
+  switch (color) {
+    case CabbageColor.Red:
+      return &quot;red&quot;;
+    case CabbageColor.Green:
+      return &quot;green&quot;;
+  }
+};
+
+let describe = (veggie: Veggie) =&gt; veggie.match({
+  Squash: &quot;It's a squash&quot;,
+  Cabbage: (color) =&gt; `It's a ${describeColor(color)} cabbage`,
+  Broccoli: &quot;It's broccoli&quot;,
+});
+
+let redCabbage = Veggie.Cabbage(CabbageColor.Red);
+let description = describe(redCabbage);
+</code></pre>
+<p>And here’s the original Grain code again:</p>
+<pre><code>data CabbageColor = Red | Green
+data Veggie =
+  | Squash
+  | Cabbage(CabbageColor)
+  | Broccoli
+
+let describeColor = (color) =&gt; match (color) {
+  | Red =&gt; &quot;red&quot;
+  | Green =&gt; &quot;green&quot;
+}
+
+let describe = (veggie) =&gt; match (veggie) {
+  | Squash =&gt; &quot;It's a squash&quot;
+  | Cabbage(color) =&gt; &quot;It's a &quot; + describeColor(color) + &quot; cabbage&quot;
+  | Broccoli =&gt; &quot;It's broccoli&quot;
+}
+
+let redCabbage = Cabbage(Red)
+let description = describe(redCabbage)
+</code></pre>
+<p>Our TypeScript code is definitely longer, because we had to <em>create</em> the ability to do what Grain does at the language level. However, doing so means we can actually see what Grain is doing quite clearly. In particular, the original syntax <code>Cabbage(Red)</code> confuses a lot of people who aren’t familiar with the syntax of languages like Grain. Having implemented it in TypeScript, though, we can see that <code>Cabbage</code> is just a function which takes an argument, <code>CabbageColor</code>, and returns a <code>Veggie</code>.</p>
+<p>In fact, as we saw above, we can make it possible to write <em>exactly</em> the same thing in TypeScript to construct a <code>Veggie</code> as we do in Grain, by creating standalone versions of the “data constructors” for <code>Veggie</code> and <code>CabbageColor</code>:</p>
+<pre><code>const { Red, Green } = CabbageColor;
+
+const Squash = Veggie.Squash; // Veggie
+const Cabbage = Veggie.Cabbage; // (color: CabbageColor) =&gt; Veggie
+const Broccoli = Veggie.Broccoli; // Veggie
+</code></pre>
+<p>Once we have these, building a red cabbage looks exactly the same as it did in Grain:</p>
+<pre><code>let redCabbage = Cabbage(Red);
+</code></pre>
+<p>And that’s it! We’ve now seen how you can implement the kinds of data constructors and pattern matching you see in languages like Elm, Grain, Rust, etc. in a language like TypeScript. I hope that helps make data constructors and pattern matching seem a bit less magical. The thing which makes them so great in languages with them built in is that you don’t have to reimplement that functionality yourself for every time: the language handles it for you!</p>
+<p>In the next post, we’ll see how we can make this TypeScript implementation safer <em>and</em> cheaper—that is, how I would actually implement things in TypeScript!</p>
+<h2>Appendix: “Point Free”</h2>
+<p>One bonus bit of material here—this is totally unnecessary for the rest of the post, but it’s a neat thing I enjoy, so I’m sharing it here.</p>
+<p>Sometimes we end up using the same bit of pattern-matching behavior where we map from the <code>Veggie</code> variant into a particular output type over and over again. In that case, it’s convenient to extract a helper function for it. That can be particularly convenient when we’re working with methods like <code>Array.map</code> (or utilities like <a href="https://lodash.com">lodash</a> or <a href="https://ramdajs.com">Ramda</a>).</p>
+<p>This is exactly what we did with <code>describe</code> above:</p>
+<pre><code>let describe = (veggie: Veggie) =&gt; veggie.match({
+  Squash: &quot;It's a squash&quot;,
+  Cabbage: (color) =&gt; `It's a ${describeColor(color)} cabbage`,
+  Broccoli: &quot;It's broccoli&quot;,
+});
+</code></pre>
+<p>However, this still leaves us with quite a bit of repetition in terms of naming the types, <em>especially</em> if we write it out fully like we did above:</p>
+<pre><code>let veggies = [
+  Veggie.Squash,
+  Veggie.Cabbage(CabbageColor.Red),
+  Veggie.Squash,
+  Veggie.Broccoli,
+  Veggie.Broccoli,
+  Veggie.Cabbage(CabbageColor.Green),
+];
+
+veggies
+  .map((veggie) =&gt; describe(veggie))
+  .forEach((desc) =&gt; {
+    console.log(desc);
+  });
+</code></pre>
+<p>Notice that we have the <em>same</em> pattern of doing <code>(veggie) =&gt; &lt;some operation&gt;</code> more than once. For this, I like to use a style called “point free function application.” The name isn’t all that illuminating, unfortunately, unless you have a specific background in certain fields of mathematical theory. (I happen to think those fields are pretty cool, but realistically most working programmers aren’t familiar with them.) “Point free” really just means passing the function directly to another function by name, without creating another anonymous function in between to invoke it (“pointed”).</p>
+<pre><code>// Pointed
+let descriptions = veggies.map((veggie) =&gt; describe(veggie));
+
+// Point free
+let descriptions = veggies.map(describe);
+</code></pre>
+<p>I also like to name my functions in a way that works well in this kind of invocation, so that reading the line almost reads like a sentence. Here, I would pick the name <code>toDescription</code> instead of <code>describe</code>. Then the point-free invocation would read like this:</p>
+<pre><code>let descriptions = veggies.map(toDescription);
+</code></pre>
+<p>If we were using lodash, it would read <em>even more</em> like a sentence:</p>
+<pre><code>import { map } from 'lodash/map';
+
+let descriptions = map(veggies, toDescription);
+</code></pre>
+<p>Now, because I’ve gotten used to this way of doing things, I really enjoy being able to just work with functions like this in general. In fact, I like it <em>so</em> much that I’d really prefer that if I’m <em>only</em> using a given <code>.match</code> invocation one place, I could just use <code>Veggie.match</code> directly instead of having to do <code>(veggie) =&gt; veggie.match({ ... })</code>.<sup class="footnote-reference"><a href="#weird">7</a></sup></p>
+<p>In other words, what if instead of this—</p>
+<pre><code>let descriptions = veggies.map((veggie) =&gt; veggie.match({
+  Squash: &quot;It's a squash&quot;,
+  Cabbage: (color) =&gt; `It's a ${describeColor(color)} cabbage`,
+  Broccoli: &quot;It's broccoli&quot;,
+}));
+</code></pre>
+<p>—we could skip the creation of the intermediate anonymous function and just write this instead?</p>
+<pre><code>let descriptions = veggies.map(Veggie.match({
+  Squash: &quot;It's a squash&quot;,
+  Cabbage: (color) =&gt; `It's a ${describeColor(color)} cabbage`,
+  Broccoli: &quot;It's broccoli&quot;,
+}));
+</code></pre>
+<p>And if we <em>did</em> have this ability, we could skip the <code>(veggie: Veggie) =&gt; veggie.match({ ... })</code> when defining <code>toDescription</code>, too:</p>
+<pre><code>let toDescription = Veggie.match({
+  Squash: &quot;It's a squash&quot;,
+  Cabbage: (color) =&gt; `It's a ${describeColor(color)} cabbage`,
+  Broccoli: &quot;It's broccoli&quot;,
+});
+</code></pre>
+<p>It turns out, this is actually quite easy to implement in modern JavaScript or TypeScript. We just create a <code>static</code> version of <code>match</code>, which can live right next to the class method. The key is that we make <code>Veggie.match</code> return another function which takes a <code>Veggie</code> and returns the output type from the matcher.</p>
+<pre><code>class Veggie {
+  // SNIP: everything else is the same, and so is `match`; I've
+  // left it here just so you can see it working right next to
+  // the static method
+
+  match&lt;Output&gt;(matcher: Matcher&lt;Output&gt;): Output {
+    // SNIP: body is the same as before
+  }
+
+  static match&lt;T&gt;(matcher: Matcher&lt;T&gt;): (veggie: Veggie) =&gt; T {
+    return (veggie) =&gt; veggie.match(matcher);
+  }
+}
+</code></pre>
+<p>That’s it: the code samples I wrote above all just work now!</p>
+<p>We can actually go one better and use TypeScript’s overloading to make it so you can use this static version of <code>match</code> in either this “curried” form <em>or</em> a form that accepts a <code>Veggie</code> as its second parameter, in case you’re in a context where that makes things clearer, with an “overloaded” version of the function:</p>
+<pre><code>class Veggie {
+  // SNIP: everything else is the same
+
+  static match&lt;T&gt;(matcher: Matcher&lt;T&gt;): (veggie: Veggie) =&gt; T;
+  static match&lt;T&gt;(matcher: Matcher&lt;T&gt;, veggie: Veggie): T;
+  static match&lt;T&gt;(
+    matcher: Matcher&lt;T&gt;,
+    veggie?: Veggie
+  ): T | ((veggie: Veggie) =&gt; T) {
+    return veggie
+      ? veggie.match(matcher)
+      : (veggie) =&gt; veggie.match(matcher);
+  }
+}
+</code></pre>
+<p>Then we can use it in either mode, and TypeScript will resolve the type correctly:</p>
+<pre><code>let longDescFn = (veggie: Veggie) =&gt; Veggie.match({
+  Squash: &quot;It's a squash&quot;,
+  Cabbage: (color) =&gt; `It's a ${describeColor(color)} cabbage`,
+  Broccoli: &quot;It's broccoli&quot;,
+}, veggie);
+
+let shortDescFn = Veggie.match({
+  Squash: &quot;It's a squash&quot;,
+  Cabbage: (color) =&gt; `It's a ${describeColor(color)} cabbage`,
+  Broccoli: &quot;It's broccoli&quot;,
+});
+
+let descsFromLong = veggies.map(longDescFn);
+let descsFromShort = veggies.map(shortDescFn);
+assertDeepEqual(descsFromLong, descsFromShort);
+</code></pre>
+<p>In this case, there’s no particular value to adding that functionality, since it’s just the same as calling <code>veggie.match</code> instead of <code>Veggie.match</code> with the second argument. It <em>is</em> useful to understand the pattern, though, and the first variant where we <em>don’t</em> require the argument lets us create our <code>toDescription</code> function much more directly. Functions have become a thing we work with like any other value. While this takes some getting used to, it’s also an incredibly powerful tool to have in your toolbox!</p>
+<p>:::callout</p>
+<p>Enjoyed this? Check out <a href="/journal/data-constructors-part-2-better-typescript/">Part 2</a>, which covers how to reimplement this using more advanced features of TypeScript’s type system, resulting in more type safety <em>and</em> improved performance.</p>
+<p>:::</p>
+<p>*[SML]: Standard ML
+*[TS]: TypeScript</p>
+<div class="footnote-definition" id="swift-and-rust-too"><sup class="footnote-definition-label">1</sup>
+<p>Note that pretty much everything I say here goes, with minor differences in details, for Swift’s and Rust’s <code>enum</code> types as well!</p>
+</div>
+<div class="footnote-definition" id="default-case"><sup class="footnote-definition-label">3</sup>
+<p>You may notice that I don’t have a <code>default</code> case here. That’s on purpose. Because I specify the return type of the function as <code>string</code>, TypeScript will actually tell me if I don’t cover all the cases in the switch statement. TypeScript is smart enough to know that if we <em>don’t</em> cover all the cases, it <em>won’t</em> return a string.</p>
+<p>This comes for free in languages like Grain, in <em>all</em> contexts where you’re “matching” on a given item.</p>
+</div>
+<div class="footnote-definition" id="classes"><sup class="footnote-definition-label">4</sup>
+<p>You can use classes for all sorts of things, and not all of them have to do with inheritance! In this case, it’s just going to be a convenient tool for building up the data structure (and one that will be familiar to developers from <em>many</em> languages). As a bonus, you could implement an actual language similar to the way I will build up this type in the rest of this post.</p>
+</div>
+<div class="footnote-definition" id="constructor-shorthand"><sup class="footnote-definition-label">5</sup>
+<p>Here I’m using the normal JavaScript version of the <code>constructor</code> syntax, but for scenarios like this TypeScript provides a convenient shorthand:</p>
+<pre><code>class Veggie {
+  constructor(readonly kind: VeggieKind) {}
+}
+</code></pre>
+<p>If I were building this data type myself, that’s the declaration I would actually use!</p>
+</div>
+<div class="footnote-definition" id="matching"><sup class="footnote-definition-label">6</sup>
+<p>Two things to note about the example of pattern-matching here:</p>
+<ol>
+<li>
+<p>I’m taking a tiny liberty here with the Grain sample code and acting as if <code>+</code> does string concatenation. It… doesn’t yet. But that’s just because Grain is extremely young; at <em>some</em> point it’ll have something which does this and nicely!</p>
+</li>
+<li>
+<p>Pattern matching functionality is even deeper and richer than I’m showing here. Matching can deal with <em>nested</em> types, too. In this case, I wouldn’t actually (necessarily) break out <code>describe</code> and <code>describeColor</code> this way. Instead, I might just use a richer <code>match</code> expression:</p>
+<pre><code>let describe = (veggie) =&gt; match (veggie) {
+  | Squash =&gt; &quot;It's a squash&quot;
+  | Cabbage(Red) =&gt; &quot;It's a red cabbage&quot;
+  | Cabbage(Green) =&gt; &quot;It's a green cabbage&quot;
+  | Broccoli =&gt; &quot;It's broccoli&quot;
+}
+</code></pre>
+<p>If the type were further nested, we could further drill down in manually like this, “destructuring” the types as deeply as we need. This makes it <em>much</em> more powerful than a <code>switch</code> statement from JS/TS/Java/C^♯^  etc.</p>
+</li>
+</ol>
+</div>
+<div class="footnote-definition" id="weird"><sup class="footnote-definition-label">7</sup>
+<p>I admit, that might make me a little weird to some of you. That’s okay! I kind of enjoy being a little weird.</p>
+</div>
+<p>*[JS]: JavaScript</p>
+
+                            </body>
+                        </html>

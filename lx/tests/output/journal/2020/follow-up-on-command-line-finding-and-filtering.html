@@ -1,0 +1,24 @@
+<html>
+                            <head>
+                                <link rel="stylesheet" href="/light.css" media="(prefers-color-scheme: light)" />
+                                <link rel="stylesheet" href="/dark.css" media="(prefers-color-scheme: dark)" />
+                            </head>
+                            <body>
+                                <p>In my <a href="https://v5.chriskrycho.com/journal/find-grep-xargs-newlines-null/">previous post</a>, I used the <code>tr</code> utility to deal with needing to transform newlines into null characters. However, as I hoped when I put a request for a better way to do it in my <b>Epistemic Status</b> qualifier, a reader emailed me with a better solution!</p>
+<p>If you’re using the GNU version of <code>grep</code>, it has a <code>--null-data</code> (shortened as <code>-z</code>) flag which makes grep treat its input as null-character-separated. You can combine that with the <code>-print0</code> flag to <code>find</code> to get the same results as I got with <code>tr</code> (presumably with better performance because it doesn’t require doing the replacement in another tool):</p>
+<pre><code class='Bourne Again Shell (bash)'><span class="source shell bash"><span class="meta function-call shell"><span class="variable function shell">$</span></span><span class="meta function-call arguments shell"> find notes<span class="variable parameter option shell"><span class="punctuation definition parameter shell"> -</span>name</span> <span class="string quoted double shell"><span class="punctuation definition string begin shell">&quot;</span>.md<span class="punctuation definition string end shell">&quot;</span></span><span class="variable parameter option shell"><span class="punctuation definition parameter shell"> -</span>print0</span></span> <span class="keyword operator logical pipe shell">|</span><span class="punctuation separator continuation line shell">\
+</span>  grep --null-data &quot;notes/2020&quot; |\
+  xargs -0 wc -w
+</span></code></pre>
+<p>This reminded me that <a href="https://github.com/BurntSushi/ripgrep">ripgrep</a> has the same feature, with the same <code>--null-data</code> flag. Similarly, <a href="https://github.com/sharkdp/fd">fd</a> has a <code>--print0</code> (<code>-0</code>) option. You can combine <em>these</em> and (if you like) <a href="https://github.com/Freaky/cw">cw</a><sup class="footnote-reference"><a href="#cw">1</a></sup> to get the same effect:</p>
+<pre><code class='Bourne Again Shell (bash)'><span class="source shell bash"><span class="meta function-call shell"><span class="variable function shell">$</span></span><span class="meta function-call arguments shell"> fd notes<span class="variable parameter option shell"><span class="punctuation definition parameter shell"> --</span>print0</span> <span class="string quoted double shell"><span class="punctuation definition string begin shell">&quot;</span>.md<span class="punctuation definition string end shell">&quot;</span></span> notes</span> <span class="keyword operator logical pipe shell">|</span><span class="punctuation separator continuation line shell">\
+</span>  rg --null-data &#39;notes/2020&#39; |\
+  xargs -0 cw -w
+</span></code></pre>
+<p>Huzzah for versions of tools that understand these things and make this simpler than the solution I posted yesterday (and thanks to my reader for sending in that note)!</p>
+<div class="footnote-definition" id="cw"><sup class="footnote-definition-label">1</sup>
+<p><code>cw</code> is nice because with especially large sets of data, the fact that you can invoke across threads becomes very handy. If I word-count <em>all</em> of my notes with it (currently 667 files and just shy of 150,000 words), using 4 threads instead of 1 (the default, and all you get with <code>wc</code>) takes about 6–8 milliseconds off the run time. Not important at <em>this</em> scale… but if you’re dealing with <em>very</em> large amounts of data, it might be.</p>
+</div>
+
+                            </body>
+                        </html>

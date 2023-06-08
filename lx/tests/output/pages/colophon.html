@@ -1,0 +1,71 @@
+<html>
+                            <head>
+                                <link rel="stylesheet" href="/light.css" media="(prefers-color-scheme: light)" />
+                                <link rel="stylesheet" href="/dark.css" media="(prefers-color-scheme: dark)" />
+                            </head>
+                            <body>
+                                <h2>Privacy</h2>
+<p>I currently use <a href="https://usefathom.com">Fathom</a> for lightweight analytics on the site. I picked them because they don’t track you.</p>
+<p>I also use <a href="https://fonts.adobe.com">Adobe Fonts</a> for one of the typefaces on the site (see <a href="#typography">below</a>), and Adobe tracks font usage. If you find a type-face that has some of the same character as Cronos Pro, <a href="mailto:hello@chriskrycho.com?subject=Cronos%20Pro%20alternative">shoot me an email</a>. I will seriously consider replacing it if I find something I like equally well; I <em>loathe</em> Adobe’s approach to font licensing <em>and</em> to privacy.</p>
+<h2>Implementation</h2>
+<p>I built this version of the site with <a href="https://www.11ty.io">Eleventy</a>. You can find the entirety of the implementation (and indeed the entire <em>history</em> of the implementation) <a href="https://github.com/chriskrycho/v5.chriskrycho.com">on GitHub</a>. I’m using it with the following plugins:</p>
+<ul>
+<li>
+<p><b>typeset:</b> my own implementation of a plugin for <a href="https://typeset.lllllllllllllllll.com">typeset</a>, heavily inspired by <a href="https://github.com/johanbrook/eleventy-plugin-typeset">eleventy-plugin-typeset</a>.</p>
+</li>
+<li>
+<p><b><a href="https://github.com/markdown-it/markdown-it">markdown-it</a> plugins:</b></p>
+<ul>
+<li><a href="https://github.com/markdown-it/markdown-it-abbr">abbreviations</a></li>
+<li><a href="https://github.com/valeriangalliat/markdown-it-anchor">anchor</a></li>
+<li><a href="https://github.com/markdown-it/markdown-it-deflist">definition list</a></li>
+<li><a href="https://github.com/kickscondor/markdown-it-div">div</a></li>
+<li><a href="https://github.com/markdown-it/markdown-it-footnote">footnote</a></li>
+<li><a href="https://github.com/arve0/markdown-it-implicit-figures">implicit-figures</a></li>
+<li><a href="https://github.com/markdown-it/markdown-it-sup">superscript</a></li>
+</ul>
+</li>
+<li>
+<p><b>spacewell:</b> a little tool I built a few years ago to insert hair spaces around em dashes and thin spaces with non-breaking spans around number-separating en dashes; the source is colocated with the rest of the site.</p>
+</li>
+</ul>
+<h2>Typography</h2>
+<p>Perhaps my favorite part of web design, and also the part with which I spend the most part <em>fussing</em>.</p>
+<table><thead><tr><th>Context</th><th>Typeface</th></tr></thead><tbody>
+<tr><td>Body text</td><td><a href="https://www.myfonts.com/fonts/linotype/sabon/">Sabon</a>, designed by Jan Tschichold in the mid-1960s as a Garamond revival. In my opinion, the most beautiful Garamond in existence. Licensed via <a href="https://www.fonts.com">Fonts.com</a>.</td></tr>
+<tr><td>Headings</td><td><a href="https://www.myfonts.com/fonts/adobe/cronos/">Cronos</a>, designed by Robert Slimbach in 1996. A nice contrast to Sabon with its digital-era roots. The typeface I’ve been using on my site the longest at this point! Licensed via <a href="https://fonts.adobe.com">Adobe Fonts</a>.<sup class="footnote-reference"><a href="#adobe">1</a></sup></td></tr>
+<tr><td>Code</td><td><a href="https://sourcefoundry.org/hack/">Hack</a>, designed by Chris Simpkins in 2015 as an extension of the Deja Vu/Bitstream Vera lineage. Licensed in parts under the <abbr title="Massachusetts Instititue of Technology">MIT</abbr> License, the public domain, and Bitstream Vera License (see details <a href="https://github.com/source-foundry/Hack/blob/master/LICENSE.md">here</a>).</td></tr>
+</tbody></table>
+<div class="footnote-definition" id="adobe"><sup class="footnote-definition-label">1</sup>
+<p>Longtime readers may recall (and new readers may be curious about) my <a href="https://v4.chriskrycho.com/2019/cronos-follow-up.html">deep frustrations with this situation</a>. Nothing there has changed—but I ended up paying for Adobe’s Lightroom package when I <a href="https://v4.chriskrycho.com/2019/photography-ing-again.html">picked back up photography</a>, and it comes bundled. So here we are.</p>
+</div>
+<h2>Inspiration</h2>
+<p>While working on this design, I took more-or-less-direct inspiration in a variety of ways from some of my favorite current or previous designs around the web:</p>
+<ul>
+<li>
+<p><a href="https://tbrown.org">Tim Brown</a></p>
+</li>
+<li>
+<p><a href="https://ethanmarcotte.com">Ethan Marcotte</a></p>
+</li>
+<li>
+<p><a href="https://trentwalton.com">Trent Walton</a></p>
+</li>
+<li>
+<p><a href="https://craigmod.com">Craig Mod</a>—a truly wonderful site, but I actually loved the <em>previous</em> design iteration even more.</p>
+</li>
+<li>
+<p><a href="https://jensimmons.com">Jen Simmons</a>—as with Mod’s current site, I really like what she’s doing on her site now—it’s all sorts of fun layout-wise—but it’s quite distinct from what she was doing when I was stealing ideas from her late in 2018!</p>
+</li>
+<li>
+<p><a href="https://redalemeden.com">Reda Lemeden</a></p>
+</li>
+<li>
+<p><a href="http://jasonsantamaria.com/">Jason Santa Maria</a>—from whom, if I recall, I originally got <a href="https://v4.chriskrycho.com/2019/my-final-round-of-url-rewrites-ever.html">the idea</a> of a versioned website.</p>
+</li>
+</ul>
+<h2>Copyright and License</h2>
+<p>All content is {% copyright build.date, ‘content’ %}. All custom software components are {% copyright build.date, ‘implementation’ %}.</p>
+
+                            </body>
+                        </html>
