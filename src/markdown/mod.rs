@@ -20,7 +20,10 @@ impl From<Rendered> for String {
 
 pub(super) fn render<S: AsRef<str>>(src: S, syntax_set: &SyntaxSet) -> Result<Rendered, String> {
     let src = src.as_ref();
-    let parser = Parser::new_ext(src, Options::all());
+    let mut options = Options::all();
+    options.set(Options::ENABLE_OLD_FOOTNOTES, false);
+    options.set(Options::ENABLE_FOOTNOTES, true);
+    let parser = Parser::new_ext(src, options);
     let mut state = CodeHighlightingState::NotInCodeBlock;
 
     let mut events = Vec::<Event>::with_capacity(src.len() * 2);
@@ -41,7 +44,7 @@ pub(super) fn render<S: AsRef<str>>(src: S, syntax_set: &SyntaxSet) -> Result<Re
                         Some(definition) => {
                             let mut generator = ClassedHTMLGenerator::new_with_class_style(
                                 definition,
-                                &syntax_set,
+                                syntax_set,
                                 ClassStyle::Spaced,
                             );
                             events.push(Event::Html(
@@ -67,9 +70,7 @@ pub(super) fn render<S: AsRef<str>>(src: S, syntax_set: &SyntaxSet) -> Result<Re
                 }
             },
             Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(name))) => {
-                println!("syntax being parsed by token: '{name}'");
                 if let Some(looked_up) = syntax_set.find_syntax_by_token(name.as_ref()) {
-                    println!("\tsyntax '{name}' found!");
                     state = CodeHighlightingState::KnownSyntax(
                         ClassedHTMLGenerator::new_with_class_style(
                             looked_up,
@@ -80,7 +81,6 @@ pub(super) fn render<S: AsRef<str>>(src: S, syntax_set: &SyntaxSet) -> Result<Re
                     let html = format!("<pre><code class='{}'>", looked_up.name);
                     events.push(Event::Html(html.into()));
                 } else {
-                    println!("\tsyntax '{name}' not found!");
                     state = CodeHighlightingState::UnknownSyntax;
                     events.push(Event::Html("<pre><code>".into()));
                 }
